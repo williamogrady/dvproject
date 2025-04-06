@@ -44,8 +44,51 @@
           controlGroup.select("text")
             .attr("x", newX + 10)
             .attr("y", newY + 25);
+          // Update the startX and startY based on the new position of the control panel
+          startX = newX;
+          startY = newY;
         })
     );
+  
+    // Draw cursor lines (only when over the map area)
+    const lineGroup = svg.append("g");
+  
+    const horizontalLine = lineGroup.append("line")
+      .attr("stroke", "black")
+      .attr("stroke-dasharray", "5,5")
+      .style("visibility", "hidden");
+  
+    const verticalLine = lineGroup.append("line")
+      .attr("stroke", "black")
+      .attr("stroke-dasharray", "5,5")
+      .style("visibility", "hidden");
+  
+    svg.on("mousemove", function(event) {
+      const [x, y] = d3.pointer(event);
+  
+      // Check if cursor is within the control panel bounds (after dragging)
+      const isOverControlPanel = x >= startX && x <= startX + controlSize && y >= startY && y <= startY + controlSize;
+  
+      // Only show lines when cursor is inside the blue area (map) and not over the control panel
+      if (x >= 0 && x <= width && y >= 0 && y <= height && !isOverControlPanel) {
+        horizontalLine
+          .attr("x1", 0)
+          .attr("y1", y)
+          .attr("x2", width)
+          .attr("y2", y)
+          .style("visibility", "visible");
+  
+        verticalLine
+          .attr("x1", x)
+          .attr("y1", 0)
+          .attr("x2", x)
+          .attr("y2", height)
+          .style("visibility", "visible");
+      } else {
+        horizontalLine.style("visibility", "hidden");
+        verticalLine.style("visibility", "hidden");
+      }
+    });
   
     // Attach event to button (defined in index)
     document.getElementById("toggleView").innerText = "Switch to List View";

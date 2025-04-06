@@ -42,6 +42,43 @@
       .attr("font-size", "20px")
       .text("Control Panel");
   
+    // Draw cursor lines (only when over the map area)
+    const lineGroup = svg.append("g");
+  
+    const horizontalLine = lineGroup.append("line")
+      .attr("stroke", "black")
+      .attr("stroke-dasharray", "5,5")
+      .style("visibility", "hidden");
+  
+    const verticalLine = lineGroup.append("line")
+      .attr("stroke", "black")
+      .attr("stroke-dasharray", "5,5")
+      .style("visibility", "hidden");
+  
+    svg.on("mousemove", function(event) {
+      const [x, y] = d3.pointer(event);
+  
+      // Only show lines when cursor is inside the blue area (left side of the screen)
+      if (x >= 0 && x <= mid && y >= 0 && y <= height) {
+        horizontalLine
+          .attr("x1", 0)
+          .attr("y1", y)
+          .attr("x2", mid)
+          .attr("y2", y)
+          .style("visibility", "visible");
+  
+        verticalLine
+          .attr("x1", x)
+          .attr("y1", 0)
+          .attr("x2", x)
+          .attr("y2", height)
+          .style("visibility", "visible");
+      } else {
+        horizontalLine.style("visibility", "hidden");
+        verticalLine.style("visibility", "hidden");
+      }
+    });
+  
     // Attach event to button
     document.getElementById("toggleView").innerText = "Switch to Map View";
     document.getElementById("toggleView").onclick = window.toggleView;
