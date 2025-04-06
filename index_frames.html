@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DV Project Early Test</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    #toggleView {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #currentView {
+      position: absolute;
+      top: 50px;
+      right: 10px;
+      background: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.2);
+      z-index: 10;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <button id="toggleView">Switch View</button>
+  <div id="currentView">Current View: <strong>Map</strong></div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const oldScript = document.getElementById("viewScript");
+        if (oldScript) {
+          oldScript.remove();
+        }
+  
+        const script = document.createElement("script");
+        script.src = src;
+        script.id = "viewScript";
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
+      });
+    }
+  
+    function switchView() {
+      const isMap = document.getElementById("currentView").innerText.includes("Map");
+      const nextView = isMap ? "listview.js" : "frames.js";
+      const nextLabel = isMap ? "List" : "Map";
+  
+      // Clear previous SVG first
+      d3.select("svg").remove();
+  
+      // Load new view after clearing
+      loadScript(nextView)
+        .then(() => {
+          document.getElementById("currentView").innerHTML = `Current View: <strong>${nextLabel}</strong>`;
+        })
+        .catch((err) => {
+          console.error("Error loading script:", err);
+          alert("Failed to load view.");
+        });
+    }
+  
+    window.toggleView = switchView;
+  
+    // Initial load
+    loadScript("frames.js")
+      .then(() => {
+        document.getElementById("currentView").innerHTML = `Current View: <strong>Map</strong>`;
+      });
+  </script>  
+</body>
+</html>
