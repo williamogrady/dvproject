@@ -55,7 +55,7 @@
   
     function switchView() {
       const isMap = document.getElementById("currentView").innerText.includes("Map");
-      const nextView = isMap ? "listview.js" : "mapview.js";
+      const nextView = isMap ? "./js/listview.js" : "./js/mapview.js";
       const nextLabel = isMap ? "List" : "Map";
   
       // Clear previous SVG first
@@ -75,10 +75,11 @@
     window.toggleView = switchView;
   
     // Initial load
-    loadScript("mapview.js")
+    loadScript("./js/mapview.js")
       .then(() => {
         document.getElementById("currentView").innerHTML = `Current View: <strong>Map</strong>`;
       });
-  </script>  
+  </script> 
+  <script src="./js/main.js"></script> 
 </body>
 </html>

@@ -1,0 +1,169 @@
+[
+        {
+        "station": "BREED",
+        "busNumber": 10,
+        "fuelType": "Coal",
+        "ratedMinMW": 150,
+        "ratedMaxMW": 550,
+        "rampRate": 20,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "DEERC",
+        "busNumber": 113,
+        "fuelType": "Gas Turbine",
+        "ratedMinMW": 25,
+        "ratedMaxMW": 100,
+        "rampRate": 20,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "DEERCR",
+        "busNumber": 31,
+        "fuelType": "Hydro",
+        "ratedMinMW": 8,
+        "ratedMaxMW": 107,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "DELAWA",
+        "busNumber": 32,
+        "fuelType": "Gas Turbine",
+        "ratedMinMW": 25,
+        "ratedMaxMW": 100,
+        "rampRate": 20,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "FTWAYN",
+        "busNumber": 15,
+        "fuelType": "Gas Turbine",
+        "ratedMinMW": 10,
+        "ratedMaxMW": 100,
+        "rampRate": 20,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "KANKAK",
+        "busNumber": 6,
+        "fuelType": "Hydro",
+        "ratedMinMW": 5,
+        "ratedMaxMW": 100,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "LINCOL",
+        "busNumber": 19,
+        "fuelType": "Hydro",
+        "ratedMinMW": 5,
+        "ratedMaxMW": 100,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "MADISO",
+        "busNumber": 27,
+        "fuelType": "Hydro",
+        "ratedMinMW": 5,
+        "ratedMaxMW": 100,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "MCKINL",
+        "busNumber": 18,
+        "fuelType": "Gas Turbine",
+        "ratedMinMW": 25,
+        "ratedMaxMW": 100,
+        "rampRate": 20,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "NWCARL",
+        "busNumber": 4,
+        "fuelType": "Hydro",
+        "ratedMinMW": 5,
+        "ratedMaxMW": 100,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "OLIVE",
+        "busNumber": 8,
+        "fuelType": "Hydro",
+        "ratedMinMW": 5,
+        "ratedMaxMW": 100,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "RIVERS",
+        "busNumber": 1,
+        "fuelType": "Hydro",
+        "ratedMinMW": 5,
+        "ratedMaxMW": 100,
+        "rampRate": 200,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "TANNERS-1",
+        "busNumber": 26,
+        "fuelType": "Coal",
+        "ratedMinMW": 100,
+        "ratedMaxMW": 414,
+        "rampRate": 15,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "TANNERS-2",
+        "busNumber": 25,
+        "fuelType": "Coal",
+        "ratedMinMW": 100,
+        "ratedMaxMW": 320,
+        "rampRate": 10,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        },
+        {
+        "station": "TWINBROOK",
+        "busNumber": 12,
+        "fuelType": "Combined Cycle",
+        "ratedMinMW": 100,
+        "ratedMaxMW": 185,
+        "rampRate": 7,
+        "region": "West",
+        "emissionIntensity": 0,
+        "costPerMW": 0
+        }
+    ]
+      
+  

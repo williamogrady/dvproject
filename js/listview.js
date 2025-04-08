@@ -1,18 +1,21 @@
 (function() {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  const controlSize = 150;
-  let startX = 20;
-  let startY = 20;
+  const mid = width / 2;
 
   const svg = d3.select("body")
     .append("svg")
     .attr("width", width)
     .attr("height", height);
 
-  // Blue background (map)
-  svg.append("rect")
-    .attr("width", width)
+  // 1. Create a group for the map area (blue background)
+  const mapGroup = svg.append("g").attr("class", "map");
+
+  // Left: Blue map area (for power grid)
+  mapGroup.append("rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", mid)
     .attr("height", height)
     .attr("fill", "steelblue");
 
@@ -26,6 +29,7 @@
     y: Math.random() * (height - 100) + 50
   });
 
+  /*
   // Create the power grid graph: generators (circles), loads (triangles), and transmission lines (edges)
   const generators = [];
   const loads = [];
@@ -86,42 +90,39 @@
       lines.push(line);
     }
   }
+  */
+  // 3. Create a group for the control panel (red area)
+  const controlGroup = svg.append("g").attr("class", "control");
 
-  const controlGroup = svg.append("g");
+  // Right: Red control panel
+  controlGroup.append("rect")
+    .attr("x", mid)
+    .attr("y", 0)
+    .attr("width", mid)
+    .attr("height", height)
+    .attr("fill", "crimson");
 
-  const controlPanel = controlGroup.append("rect")
-    .attr("x", startX)
-    .attr("y", startY)
-    .attr("width", controlSize)
-    .attr("height", controlSize)
-    .attr("fill", "crimson")
-    .attr("opacity", 0.9);
+  // Divider line
+  controlGroup.append("line")
+    .attr("x1", mid)
+    .attr("y1", 0)
+    .attr("x2", mid)
+    .attr("y2", height)
+    .attr("stroke", "white")
+    .attr("stroke-width", 2);
 
+  // Label
   controlGroup.append("text")
-    .attr("x", startX + 10)
-    .attr("y", startY + 25)
+    .attr("x", mid + 20)
+    .attr("y", 30)
     .attr("fill", "white")
-    .attr("font-size", "16px")
+    .attr("font-size", "20px")
     .text("Control Panel");
 
-  controlGroup.call(
-    d3.drag()
-      .on("drag", function (event) {
-        let newX = event.x - controlSize / 2;
-        let newY = event.y - controlSize / 2;
-        newX = Math.max(0, Math.min(newX, width - controlSize));
-        newY = Math.max(0, Math.min(newY, height - controlSize));
-        controlPanel.attr("x", newX).attr("y", newY);
-        controlGroup.select("text")
-          .attr("x", newX + 10)
-          .attr("y", newY + 25);
-        // Update the startX and startY based on the new position of the control panel
-        startX = newX;
-        startY = newY;
-      })
-  );
+  // 4. Move controlGroup to the front (on top of powergrid)
+  controlGroup.raise();
 
-  // Draw cursor lines (only when over the map area)
+  // 5. Draw cursor lines
   const lineGroup = svg.append("g");
 
   const horizontalLine = lineGroup.append("line")
@@ -137,15 +138,11 @@
   svg.on("mousemove", function(event) {
     const [x, y] = d3.pointer(event);
 
-    // Check if cursor is within the control panel bounds (after dragging)
-    const isOverControlPanel = x >= startX && x <= startX + controlSize && y >= startY && y <= startY + controlSize;
-
-    // Only show lines when cursor is inside the blue area (map) and not over the control panel
-    if (x >= 0 && x <= width && y >= 0 && y <= height && !isOverControlPanel) {
+    if (x >= 0 && x <= mid && y >= 0 && y <= height) {
       horizontalLine
         .attr("x1", 0)
         .attr("y1", y)
-        .attr("x2", width)
+        .attr("x2", mid)
         .attr("y2", y)
         .style("visibility", "visible");
 
@@ -161,7 +158,7 @@
     }
   });
 
-  // Attach event to button (defined in index)
-  document.getElementById("toggleView").innerText = "Switch to List View";
+  // 6. Set up view toggle
+  document.getElementById("toggleView").innerText = "Switch to Map View";
   document.getElementById("toggleView").onclick = window.toggleView;
 })();
