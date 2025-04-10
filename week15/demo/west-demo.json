@@ -1,0 +1,35 @@
+[
+    {
+      "station": "BREED",
+      "busNumber": 10,
+      "fuelType": "Coal",
+      "ratedMinMW": 150,
+      "ratedMaxMW": 550,
+      "region": "West",
+      "costPerMW": 45,
+      "emissionIntensity": 0.9,
+      "currentOutputMW": 0
+    },
+    {
+      "station": "DEERC",
+      "busNumber": 113,
+      "fuelType": "Gas Turbine",
+      "ratedMinMW": 25,
+      "ratedMaxMW": 100,
+      "region": "West",
+      "costPerMW": 60,
+      "emissionIntensity": 0.7,
+      "currentOutputMW": 0
+    },
+    {
+      "station": "FTWAYN",
+      "busNumber": 15,
+      "fuelType": "Gas Turbine",
+      "ratedMinMW": 10,
+      "ratedMaxMW": 100,
+      "region": "West",
+      "costPerMW": 65,
+      "emissionIntensity": 0.6,
+      "currentOutputMW": 0
+    }
+  ]
