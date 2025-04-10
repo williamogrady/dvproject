@@ -1,0 +1,21 @@
+[
+    { "station": "BELLEF", "busNumber": 74, "fuelType": "Hydro", "ratedMinMW": 5, "ratedMaxMW": 100, "rampRate": 200, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "CABINC", "busNumber": 80, "fuelType": "Coal", "ratedMinMW": 150, "ratedMaxMW": 577, "rampRate": 15, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "CLAYTO", "busNumber": 103, "fuelType": "Hydro", "ratedMinMW": 8, "ratedMaxMW": 140, "rampRate": 200, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "DANRIV", "busNumber": 111, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 136, "rampRate": 25, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "DANVIL", "busNumber": 112, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "DARRAH", "busNumber": 76, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "FIELDA", "busNumber": 110, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "GLEN L", "busNumber": 100, "fuelType": "Combined Cycle", "ratedMinMW": 100, "ratedMaxMW": 352, "rampRate": 15, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "HANCOC", "busNumber": 104, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "HILLSB", "busNumber": 72, "fuelType": "Hydro", "ratedMinMW": 10, "ratedMaxMW": 100, "rampRate": 200, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "HINTON", "busNumber": 99, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "KYGERC", "busNumber": 116, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "PORTSM", "busNumber": 70, "fuelType": "Gas Turbine", "ratedMinMW": 30, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "REUSEN", "busNumber": 107, "fuelType": "Hydro", "ratedMinMW": 8, "ratedMaxMW": 100, "rampRate": 200, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "ROANOK", "busNumber": 105, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "SARGEN", "busNumber": 73, "fuelType": "Hydro", "ratedMinMW": 5, "ratedMaxMW": 100, "rampRate": 200, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "SPORN-2", "busNumber": 69, "fuelType": "Coal", "ratedMinMW": 80, "ratedMaxMW": 800, "rampRate": 30, "region": "South", "costPerMW": 0, "emissionIntensity": 0 },
+    { "station": "TURNER", "busNumber": 77, "fuelType": "Gas Turbine", "ratedMinMW": 25, "ratedMaxMW": 100, "rampRate": 20, "region": "South", "costPerMW": 0, "emissionIntensity": 0 }
+  ]
+  
