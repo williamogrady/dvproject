@@ -1,0 +1,536 @@
+[
+    {
+      "id": 1,
+      "hasGenerator": true,
+      "connectedTo": [
+        2,
+        3,
+        5
+      ],
+      "region": "West",
+      "x": 0,
+      "y": 0,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 2,
+      "hasGenerator": false,
+      "connectedTo": [
+        1,
+        6,
+        12
+      ],
+      "region": "West",
+      "x": 5,
+      "y": 0,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 3,
+      "hasGenerator": false,
+      "connectedTo": [
+        1,
+        25
+      ],
+      "region": "West",
+      "x": 10,
+      "y": 0,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 4,
+      "hasGenerator": true,
+      "connectedTo": [
+        9
+      ],
+      "region": "West",
+      "x": 15,
+      "y": 0,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 5,
+      "hasGenerator": false,
+      "connectedTo": [
+        1,
+        10
+      ],
+      "region": "West",
+      "x": 20,
+      "y": 0,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 6,
+      "hasGenerator": true,
+      "connectedTo": [
+        2,
+        10
+      ],
+      "region": "West",
+      "x": 25,
+      "y": 0,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 7,
+      "hasGenerator": false,
+      "connectedTo": [
+        8
+      ],
+      "region": "West",
+      "x": 30,
+      "y": 0,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 8,
+      "hasGenerator": true,
+      "connectedTo": [
+        7,
+        9,
+        30
+      ],
+      "region": "West",
+      "x": 35,
+      "y": 0,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 9,
+      "hasGenerator": false,
+      "connectedTo": [
+        4,
+        8,
+        10,
+        11
+      ],
+      "region": "West",
+      "x": 40,
+      "y": 0,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 10,
+      "hasGenerator": true,
+      "connectedTo": [
+        5,
+        6,
+        9,
+        15
+      ],
+      "region": "West",
+      "x": 45,
+      "y": 0,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 11,
+      "hasGenerator": false,
+      "connectedTo": [
+        9,
+        13
+      ],
+      "region": "West",
+      "x": 0,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 12,
+      "hasGenerator": true,
+      "connectedTo": [
+        2,
+        25
+      ],
+      "region": "West",
+      "x": 5,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 13,
+      "hasGenerator": false,
+      "connectedTo": [
+        11,
+        14
+      ],
+      "region": "West",
+      "x": 10,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 14,
+      "hasGenerator": false,
+      "connectedTo": [
+        13,
+        16
+      ],
+      "region": "West",
+      "x": 15,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 15,
+      "hasGenerator": true,
+      "connectedTo": [
+        10,
+        17
+      ],
+      "region": "West",
+      "x": 20,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 16,
+      "hasGenerator": false,
+      "connectedTo": [
+        14,
+        17,
+        19
+      ],
+      "region": "West",
+      "x": 25,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 17,
+      "hasGenerator": false,
+      "connectedTo": [
+        15,
+        16,
+        18
+      ],
+      "region": "West",
+      "x": 30,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 18,
+      "hasGenerator": true,
+      "connectedTo": [
+        17,
+        21
+      ],
+      "region": "West",
+      "x": 35,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 19,
+      "hasGenerator": true,
+      "connectedTo": [
+        16,
+        20
+      ],
+      "region": "West",
+      "x": 40,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 20,
+      "hasGenerator": false,
+      "connectedTo": [
+        19,
+        21
+      ],
+      "region": "West",
+      "x": 45,
+      "y": 4,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 21,
+      "hasGenerator": false,
+      "connectedTo": [
+        18,
+        20,
+        22
+      ],
+      "region": "West",
+      "x": 0,
+      "y": 8,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 22,
+      "hasGenerator": false,
+      "connectedTo": [
+        21,
+        23
+      ],
+      "region": "West",
+      "x": 5,
+      "y": 8,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 23,
+      "hasGenerator": false,
+      "connectedTo": [
+        22,
+        24
+      ],
+      "region": "West",
+      "x": 10,
+      "y": 8,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 24,
+      "hasGenerator": false,
+      "connectedTo": [
+        23,
+        25
+      ],
+      "region": "West",
+      "x": 15,
+      "y": 8,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 25,
+      "hasGenerator": true,
+      "connectedTo": [
+        3,
+        12,
+        24,
+        26
+      ],
+      "region": "West",
+      "x": 20,
+      "y": 8,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 26,
+      "hasGenerator": true,
+      "connectedTo": [
+        25,
+        30
+      ],
+      "region": "West",
+      "x": 25,
+      "y": 8,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 27,
+      "hasGenerator": true,
+      "connectedTo": [
+        28,
+        32
+      ],
+      "region": "West",
+      "x": 30,
+      "y": 8,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 28,
+      "hasGenerator": false,
+      "connectedTo": [
+        27,
+        29
+      ],
+      "region": "West",
+      "x": 35,
+      "y": 8,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 29,
+      "hasGenerator": false,
+      "connectedTo": [
+        28,
+        31
+      ],
+      "region": "West",
+      "x": 40,
+      "y": 8,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 30,
+      "hasGenerator": false,
+      "connectedTo": [
+        8,
+        26,
+        38
+      ],
+      "region": "West",
+      "x": 45,
+      "y": 8,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 31,
+      "hasGenerator": true,
+      "connectedTo": [
+        29,
+        32,
+        36
+      ],
+      "region": "West",
+      "x": 0,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 32,
+      "hasGenerator": true,
+      "connectedTo": [
+        27,
+        31,
+        33
+      ],
+      "region": "West",
+      "x": 5,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 33,
+      "hasGenerator": false,
+      "connectedTo": [
+        32,
+        34
+      ],
+      "region": "West",
+      "x": 10,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 34,
+      "hasGenerator": true,
+      "connectedTo": [
+        33,
+        35
+      ],
+      "region": "West",
+      "x": 15,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 35,
+      "hasGenerator": false,
+      "connectedTo": [
+        34,
+        36
+      ],
+      "region": "West",
+      "x": 20,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 36,
+      "hasGenerator": true,
+      "connectedTo": [
+        31,
+        35,
+        37
+      ],
+      "region": "West",
+      "x": 25,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 37,
+      "hasGenerator": false,
+      "connectedTo": [
+        36,
+        38
+      ],
+      "region": "West",
+      "x": 30,
+      "y": 12,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 38,
+      "hasGenerator": false,
+      "connectedTo": [
+        30,
+        37,
+        65
+      ],
+      "region": "West",
+      "x": 35,
+      "y": 12,
+      "hasLoad": false,
+      "loadWeight": 0.0
+    },
+    {
+      "id": 39,
+      "hasGenerator": false,
+      "connectedTo": [
+        40
+      ],
+      "region": "West",
+      "x": 40,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    },
+    {
+      "id": 40,
+      "hasGenerator": true,
+      "connectedTo": [
+        39,
+        41
+      ],
+      "region": "West",
+      "x": 45,
+      "y": 12,
+      "hasLoad": true,
+      "loadWeight": 1.0
+    }
+  ]
