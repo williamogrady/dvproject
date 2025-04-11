@@ -1,0 +1,57 @@
+,station,busNumber,fuelType,ratedMinMW,ratedMaxMW,rampRate,region,costPerMW,emissionIntensity
+
+WEST
+
+11,RIVERS,1,Hydro,5,100,200,West,0,0
+9,NWCARL,4,Hydro,5,100,200,West,0,0
+5,KANKAK,6,Hydro,5,100,200,West,0,0
+10,OLIVE,8,Hydro,5,100,200,West,0,0
+0,BREED,10,Coal,150,550,20,West,0,0
+14,TWINBROOK,12,Combined Cycle,100,185,7,West,0,0
+4,FTWAYN,15,Gas Turbine,10,100,20,West,0,0
+8,MCKINL,18,Gas Turbine,25,100,20,West,0,0
+6,LINCOL,19,Hydro,5,100,200,West,0,0
+13,TANNERS-2,25,Coal,100,320,10,West,0,0
+12,TANNERS-1,26,Coal,100,414,15,West,0,0
+7,MADISO,27,Hydro,5,100,200,West,0,0
+2,DEERCR,31,Hydro,8,107,200,West,0,0
+3,DELAWA,32,Gas Turbine,25,100,20,West,0,0
+1,DEERC,113,Gas Turbine,25,100,20,West,0,0
+
+NORTH
+
+20,ROCKHI,34,Hydro,8,100,200,North,0,0
+21,STERLI,36,Gas Turbine,25,100,20,North,0,0
+28,WEST E,40,Hydro,8,100,200,North,0,0
+15,HOWARD,42,Hydro,8,100,200,North,0,0
+26,W.LANC,46,Gas Turbine,25,119,20,North,0,0
+19,PHILO,49,Combined Cycle,50,304,10,North,0,0
+24,TORREY,54,Combined Cycle,50,148,6,North,0,0
+27,WAGENH,55,Gas Turbine,25,100,20,North,0,0
+22,SUNNYS,56,Gas Turbine,25,100,20,North,0,0
+23,TIDD,59,Combined Cycle,50,255,10,North,0,0
+25,W.KAMM,61,Combined Cycle,50,260,10,North,0,0
+18,NATRIU,62,Gas Turbine,25,100,20,North,0,0
+16,MUSKNG-1,65,Coal,100,491,20,North,0,0
+17,MUSKNG-2,66,Coal,100,492,20,North,0,0
+
+SOUTH 
+
+45,SPORN-2,69,Coal,80,800,30,South,0,0
+41,PORTSM,70,Gas Turbine,30,100,20,South,0,0
+38,HILLSB,72,Hydro,10,100,200,South,0,0
+44,SARGEN,73,Hydro,5,100,200,South,0,0
+29,BELLEF,74,Hydro,5,100,200,South,0,0
+34,DARRAH,76,Gas Turbine,25,100,20,South,0,0
+46,TURNER,77,Gas Turbine,25,100,20,South,0,0
+30,CABINC,80,Coal,150,577,15,South,0,0
+39,HINTON,99,Gas Turbine,25,100,20,South,0,0
+36,GLEN L,100,Combined Cycle,100,352,15,South,0,0
+31,CLAYTO,103,Hydro,8,140,200,South,0,0
+37,HANCOC,104,Gas Turbine,25,100,20,South,0,0
+43,ROANOK,105,Gas Turbine,25,100,20,South,0,0
+42,REUSEN,107,Hydro,8,100,200,South,0,0
+35,FIELDA,110,Gas Turbine,25,100,20,South,0,0
+32,DANRIV,111,Gas Turbine,25,136,25,South,0,0
+33,DANVIL,112,Gas Turbine,25,100,20,South,0,0
+40,KYGERC,116,Gas Turbine,25,100,20,South,0,0
