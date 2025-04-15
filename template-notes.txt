@@ -154,3 +154,37 @@ function ForceGraph({
 }
 
 
+
+
+
+1. Create nodes
+You’ll have three types of nodes:
+
+Buses: { id: busId, group: "bus" }
+
+Generators: { id: "gen-busId", group: "generator" }
+
+Loads: { id: "load-busId", group: "load" }
+
+Example:
+
+{ id: 1, group: "bus" }
+{ id: "gen-1", group: "generator" }
+{ id: "load-1", group: "load" }
+
+
+2. Create links
+Connect:
+
+Each generator to its bus: { source: "gen-10", target: 10 }
+
+Each load to its bus: { source: "load-1", target: 1 }
+
+Each line from the lines.json: { source: from_number, target: to_number }
+
+3. Color Nodes by Group
+In your ForceGraph call, pass:
+
+nodeGroup: d => d.group,
+nodeGroups: ["bus", "generator", "load"],
+colors: ["#888", "green", "blue"],

@@ -600,6 +600,7 @@
       "hasGenerator": false,
       "region": "North",
       "connectedTo": [
+        59,
         64
       ],
       "hasLoad": false
@@ -609,6 +610,8 @@
       "hasGenerator": false,
       "region": "North",
       "connectedTo": [
+        61,
+        65
       ],
       "hasLoad": false
     },
@@ -643,7 +646,8 @@
       "hasGenerator": false,
       "region": "South",
       "connectedTo": [
-        81
+        81,
+        116
       ],
       "hasLoad": false
     },
@@ -819,12 +823,13 @@
       "hasGenerator": false,
       "region": "South",
       "connectedTo": [
+        87
       ],
       "hasLoad": true
     },
     {
       "id": 87,
-      "hasGenerator": false,
+      "hasGenerator": true,
       "region": "South",
       "connectedTo": [
       ],
