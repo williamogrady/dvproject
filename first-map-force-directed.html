@@ -9,7 +9,7 @@
     async function init() {
         const width = 1536;
         const height = 1024;
-
+    
         const svg = d3.select("svg")
             .attr("viewBox", [-width / 2, -height / 2, width, height]) // center origin
             .attr("preserveAspectRatio", "xMidYMid meet")
@@ -122,8 +122,6 @@
         .attr("fill", d => d.color);
 
 
-
-
     var drag = d3
         .drag()
         .on("start", dragstarted)
@@ -131,6 +129,7 @@
         .on("end", dragended);
 
     textsAndNodes.call(drag);
+
 
     function ticked() {
         textsAndNodes

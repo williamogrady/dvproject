@@ -24,6 +24,7 @@ var graph =
             { id: "J" }
         ],
 
+
         links: [
             {source: "A", target: "B"},
             {source: "A", target: "C"},
@@ -98,8 +99,6 @@ var circles = textsAndNodes
     .attr("fill", "red");
 
 
-
-
 var drag = d3
     .drag()
     .on("start", dragstarted)
@@ -150,7 +149,5 @@ function dragended(event, d) {
     d.fx = null;
     d.fy = null;
 }
-
-
 
 </script>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>West Buses with Clamped Links</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    svg {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const svg = d3.select("svg");
+
+    // Draw background quadrants
+    const quadrants = [
+      { x: 0, y: 0, color: "steelblue" },     // West
+      { x: 50, y: 0, color: "orange" },
+      { x: 0, y: 50, color: "orange" },
+      { x: 50, y: 50, color: "steelblue" }
+    ];
+
+    svg.selectAll("rect")
+      .data(quadrants)
+      .join("rect")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("width", 50)
+      .attr("height", 50)
+      .attr("fill", d => d.color);
+
+    // Load and place West buses
+    d3.json("week15/data/buses.json").then(buses => {
+      const westBuses = buses.filter(d => d.region === "West");
+
+      // Layout params
+      const spacing = 5;
+      const columns = 5;
+      const initialNodes = westBuses.map((bus, i) => {
+        const col = i % columns;
+        const row = Math.floor(i / columns);
+        return {
+          id: bus.id,
+          group: "bus",
+          x: col * spacing + 5,
+          y: row * spacing + 5,
+          connectedTo: bus.connectedTo
+        };
+      });
+
+      // Links only within West buses
+      const nodeIds = new Set(initialNodes.map(n => n.id));
+      const links = [];
+      initialNodes.forEach(source => {
+        source.connectedTo.forEach(targetId => {
+          if (nodeIds.has(targetId)) {
+            links.push({ source: source.id, target: targetId });
+          }
+        });
+      });
+
+      // Run force simulation
+      const simulation = d3.forceSimulation(initialNodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(5))
+        .force("charge", d3.forceManyBody().strength(-10))
+        .force("center", d3.forceCenter(25, 25))
+        .stop();
+
+      for (let i = 0; i < 100; ++i) simulation.tick();
+
+      // Clamp nodes inside the West quadrant
+      const minX = 0, maxX = 50, minY = 0, maxY = 50, padding = 2;
+      initialNodes.forEach(node => {
+        node.x = Math.max(minX + padding, Math.min(maxX - padding, node.x));
+        node.y = Math.max(minY + padding, Math.min(maxY - padding, node.y));
+      });
+
+      // Draw links
+      svg.append("g")
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y)
+        .attr("stroke", "#aaa")
+        .attr("stroke-width", 0.5);
+
+      // Draw nodes
+      const nodeGroup = svg.append("g");
+
+      nodeGroup.selectAll("circle")
+        .data(initialNodes)
+        .join("circle")
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", 1.5)
+        .attr("fill", "black");
+
+      nodeGroup.selectAll("text")
+        .data(initialNodes)
+        .join("text")
+        .text(d => d.id)
+        .attr("x", d => d.x)
+        .attr("y", d => d.y - 1.5)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 1.5)
+        .attr("fill", "white");
+    });
+  </script>
+</body>
+</html>
