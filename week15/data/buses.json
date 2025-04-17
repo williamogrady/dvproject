@@ -1,1123 +1,1118 @@
 [
-    {
-      "id": 1,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        2,
-        3
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 2,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        12
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 3,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        5,
-        12
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 4,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        5,
-        11
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 5,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        6,
-        11
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 6,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        7
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 7,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        12
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 8,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        9,
-        30
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 9,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        10
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 10,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 11,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        12,
-        13
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 12,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        14,
-        16,
-        117
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 13,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        15
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 14,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        15
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 15,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        17,
-        19,
-        33
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 16,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        17
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 17,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        18,
-        31,
-        113
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 18,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        19
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 19,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        20,
-        34
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 20,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        21
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 21,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        22
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 22,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        23
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 23,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        24,
-        25
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 24,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        70,
-        72
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 25,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        27
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 26,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        30
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 27,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        28,
-        32,
-        115
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 28,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        29
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 29,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        31
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 30,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        38
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 31,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        32
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 32,
-      "hasGenerator": true,
-      "region": "West",
-      "connectedTo": [
-        113,
-        114
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 33,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        37
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 34,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        36,
-        37,
-        43
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 35,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        36,
-        37
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 36,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 37,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        39,
-        40
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 38,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        65
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 39,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        40
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 40,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        41,
-        42
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 41,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        42
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 42,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        49,
-        49
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 43,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        44
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 44,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        45
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 45,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        46,
-        49
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 46,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        47,
-        48
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 47,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        49,
-        69
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 48,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        49
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 49,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        50,
-        51,
-        54,
-        54,
-        66,
-        66,
-        69
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 50,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        57
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 51,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        52,
-        58
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 52,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        53
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 53,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        54
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 54,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        55,
-        56,
-        59
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 55,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        56,
-        59
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 56,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        57,
-        58,
-        59
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 57,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 58,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 59,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        60,
-        61
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 60,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        61,
-        62
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 61,
-      "hasGenerator": true,
-      "region": "North",
-      "connectedTo": [
-        62
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 62,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-       66, 
-       67
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 63,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        59,
-        64
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 64,
-      "hasGenerator": false,
-      "region": "North",
-      "connectedTo": [
-        61,
-        65
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 65,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        68
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 66,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        67
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 67,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 68,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        81,
-        116
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 69,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        70,
-        75,
-        77
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 70,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        71,
-        74,
-        75
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 71,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        72,
-        73
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 72,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 73,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 74,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        75
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 75,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        77,
-        118
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 76,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        77,
-        118
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 77,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        78,
-        80,
-        80,
-        82
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 78,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        79
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 79,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        80
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 80,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        96,
-        97,
-        98,
-        99
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 81,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 82,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        83,
-        96
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 83,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        84,
-        85
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 84,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        85
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 85,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        86,
-        88,
-        89
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 86,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        87
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 87,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 88,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        89
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 89,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        90,
-        90,
-        92,
-        92
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 90,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        91
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 91,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        92
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 92,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        93,
-        94,
-        100,
-        104
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 93,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        94
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 94,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        95,
-        96,
-        100
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 95,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        96
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 96,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        97
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 97,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 98,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        100
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 99,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        100
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 100,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        101,
-        103,
-        104,
-        106
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 101,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        102
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 102,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 103,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        104,
-        105,
-        110
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 104,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        105
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 105,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        106,
-        107,
-        108
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 106,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        107
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 107,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 108,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        109
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 109,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-        110
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 110,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-        111,
-        112
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 111,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 112,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 113,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 114,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-        115
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 115,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 116,
-      "hasGenerator": true,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": false
-    },
-    {
-      "id": 117,
-      "hasGenerator": false,
-      "region": "West",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    },
-    {
-      "id": 118,
-      "hasGenerator": false,
-      "region": "South",
-      "connectedTo": [
-      ],
-      "hasLoad": true
-    }
-  ]
+  {
+    "id": 1,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      2,
+      3
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 2,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      12
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 3,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      5,
+      12
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 4,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      5,
+      11
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 5,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      6,
+      11
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 6,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      7
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 7,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      12
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 8,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      9,
+      30
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 9,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      10
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 10,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 11,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      12,
+      13
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 12,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      14,
+      16,
+      117
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 13,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      15
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 14,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      15
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 15,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      17,
+      19,
+      33
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 16,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      17
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 17,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      18,
+      31,
+      113
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 18,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      19
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 19,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      20,
+      34
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 20,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      21
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 21,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      22
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 22,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      23
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 23,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      24,
+      25
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 24,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      70,
+      72
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 25,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      27
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 26,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      30
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 27,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      28,
+      32,
+      115
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 28,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      29
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 29,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      31
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 30,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      38
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 31,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      32
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 32,
+    "hasGenerator": true,
+    "region": "West",
+    "connectedTo": [
+      113,
+      114
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 33,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      37
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 34,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      36,
+      37,
+      43
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 35,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      36,
+      37
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 36,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 37,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      39,
+      40
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 38,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      65
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 39,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      40
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 40,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      41,
+      42
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 41,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      42
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 42,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      49,
+      49
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 43,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      44
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 44,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      45
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 45,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      46,
+      49
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 46,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      47,
+      48
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 47,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      49,
+      69
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 48,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      49
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 49,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      50,
+      51,
+      54,
+      54,
+      66,
+      66,
+      69
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 50,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      57
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 51,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      52,
+      58
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 52,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      53
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 53,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      54
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 54,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      55,
+      56,
+      59
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 55,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      56,
+      59
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 56,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      57,
+      58,
+      59
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 57,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 58,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 59,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      60,
+      61
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 60,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      61,
+      62
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 61,
+    "hasGenerator": true,
+    "region": "North",
+    "connectedTo": [
+      62
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 62,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+     66, 
+     67
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 63,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+      64
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 64,
+    "hasGenerator": false,
+    "region": "North",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 65,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      68
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 66,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      67
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 67,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 68,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      81
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 69,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      70,
+      75,
+      77
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 70,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      71,
+      74,
+      75
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 71,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      72,
+      73
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 72,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 73,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 74,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      75
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 75,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      77,
+      118
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 76,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      77,
+      118
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 77,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      78,
+      80,
+      80,
+      82
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 78,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      79
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 79,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      80
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 80,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      96,
+      97,
+      98,
+      99
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 81,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 82,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      83,
+      96
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 83,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      84,
+      85
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 84,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      85
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 85,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      86,
+      88,
+      89
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 86,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 87,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 88,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      89
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 89,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      90,
+      90,
+      92,
+      92
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 90,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      91
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 91,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      92
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 92,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      93,
+      94,
+      100,
+      104
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 93,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      94
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 94,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      95,
+      96,
+      100
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 95,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      96
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 96,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      97
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 97,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 98,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      100
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 99,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      100
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 100,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      101,
+      103,
+      104,
+      106
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 101,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      102
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 102,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 103,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      104,
+      105,
+      110
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 104,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      105
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 105,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      106,
+      107,
+      108
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 106,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      107
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 107,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 108,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      109
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 109,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+      110
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 110,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+      111,
+      112
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 111,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 112,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 113,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 114,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+      115
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 115,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 116,
+    "hasGenerator": true,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": false
+  },
+  {
+    "id": 117,
+    "hasGenerator": false,
+    "region": "West",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  },
+  {
+    "id": 118,
+    "hasGenerator": false,
+    "region": "South",
+    "connectedTo": [
+    ],
+    "hasLoad": true
+  }
+]
