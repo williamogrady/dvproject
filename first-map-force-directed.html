@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>Force-Directed Graph Adapted</title>
+<svg width="1536" height="1024"></svg>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<script>
+    
+    async function init() {
+        const width = 1536;
+        const height = 1024;
+    
+        const svg = d3.select("svg")
+            .attr("viewBox", [-width / 2, -height / 2, width, height]) // center origin
+            .attr("preserveAspectRatio", "xMidYMid meet")
+            .attr("style", "max-width: 100%; height: auto;");
+    
+      const buses = await d3.json("week15/data/buses.json");
+      const lines = await d3.json("week15/data/lines.json");
+      const west = await d3.json("week15/data/generators/west_generators.json");
+      const north = await d3.json("week15/data/generators/north_generators.json");
+      const south = await d3.json("week15/data/generators/south_generators.json");
+    
+      const generators = [...west, ...north, ...south];
+    
+      const nodesList = [];
+      const linksList = [];
+    
+      // --- Buses ---
+      for (const bus of buses) {
+        nodesList.push({ id: bus.id, group: "bus" });
+    
+        if (bus.hasLoad) {
+          const loadId = `load-${bus.id}`;
+          nodesList.push({ id: loadId, group: "load" });
+          linksList.push({ source: loadId, target: bus.id });
+        }
+      }
+    
+      // --- Generators ---
+      for (const gen of generators) {
+        const genId = `gen-${gen.busNumber}`;
+        nodesList.push({ id: genId, group: "generator" });
+        linksList.push({ source: genId, target: gen.busNumber });
+      }
+    
+      // --- Bus-to-bus connections ---
+      for (const bus of buses) {
+        for (const connectedBusId of bus.connectedTo) {
+          linksList.push({ source: bus.id, target: connectedBusId });
+        }
+      }
+    
+      // --- Assign colors ---
+      for (const node of nodesList) {
+        node.color = node.group === "bus" ? "gray"
+                    : node.group === "generator" ? "green"
+                    : node.group === "load" ? "blue"
+                    : "black";
+      }
+    
+      // ✅ Now plug into your existing force-directed code using { nodes, links }
+    
+    var graph = {nodesList, linksList};
+
+    var simulation = d3
+        .forceSimulation(graph.nodesList)
+        .force("link", d3.forceLink(linksList).id(d => d.id).distance(5))
+        .force("charge", d3.forceManyBody().strength(-5)) // <- less pushing apart
+        .force("collide", d3.forceCollide(2))              // smaller spacing
+        .force("center", d3.forceCenter(0, 0))
+        .on("tick", ticked);
+
+    /*
+    var nodes = svg
+        .append("g")
+        .selectAll("circle")
+        .data(graph.nodesList)
+        .enter()
+        .append("circle")
+        .attr("r", 10)
+        .attr("fill", "steelblue");
+    */
+
+    var links = svg
+        .append("g")
+        .selectAll("line")
+        .data(graph.linksList)
+        .enter()
+        .append("line")
+        .attr("stroke-width", 2)
+        .style("stroke", "orange");
+
+
+    var texts = svg
+    .append("g")
+    .selectAll("text")
+    .data(graph.nodesList)
+    .enter();
+
+
+    var textsAndNodes = svg
+        .append("g")
+        .selectAll("g")
+        .data(graph.nodesList)
+        .enter()
+        .append("g");
+
+    var texts = textsAndNodes
+        .append("text")
+        .text(function(d) 
+            {return d.id}
+        )
+        .attr("font-size", 10)
+        .attr("fill", "black")
+        .attr("text-anchor", "middle")
+        .attr("dy", "-1em");
+
+    var circles = textsAndNodes
+        .append("circle")
+        .attr("r", 5)
+        .attr("fill", d => d.color);
+
+
+    var drag = d3
+        .drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+
+    textsAndNodes.call(drag);
+
+
+    function ticked() {
+        textsAndNodes
+        .attr("transform", function(d) {
+            return "translate(" + d.x + "," + d.y + ")";
+        });
+        /*nodes
+        .attr("cx", d => d.x = Math.max(10, Math.min(width - 10, d.x)))
+        .attr("cy", d => d.y = Math.max(10, Math.min(height - 10, d.y)));
+        */
+        links
+        .attr("x1", function(d) {
+            return d.source.x;
+        })
+        .attr("y1", function(d) {
+            return d.source.y;
+        })
+        .attr("x2", function(d) {
+            return d.target.x;
+        })
+        .attr("y2", function(d) {
+            return d.target.y;
+        });
+        
+        console.log(simulation.alpha());
+    }
+
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+}
+        init();
+        
+</script>
+    
