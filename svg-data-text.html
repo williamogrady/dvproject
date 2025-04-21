@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Power Grid Topology</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    svg {
+      background: #f9f9f9;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    line {
+      stroke: #888;
+      stroke-width: 1.5px;
+    }
+
+    .generator circle { fill: #56CF88; }
+    .bus rect { fill: #9BF8A6; }
+    .load path { fill: #0DA335; }
+
+    text {
+      font-size: 10px;
+      fill: #333;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <svg id="topology"></svg>
+
+  <script>
+    const svg = d3.select("#topology");
+    const svgGroup = svg.append("g");
+
+    const zoom = d3.zoom()
+      .scaleExtent([0.2, 4])
+      .on("zoom", (event) => {
+        svgGroup.attr("transform", event.transform);
+      });
+
+    svg.call(zoom);
+
+    Promise.all([
+      d3.json("./week15/data/topology/nodes.json"),
+      d3.json("./week15/data/topology/links.json")
+    ]).then(([nodes, links]) => {
+      const nodeById = Object.fromEntries(nodes.map(d => [d.id, d]));
+
+      // Auto-align generators and loads close to their bus
+      nodes.forEach(d => {
+        if (d.type === "generator") {
+          const bus = nodeById["Bus" + d.id.replace("Gen", "")];
+          if (bus) {
+            d.x = bus.x - 40;
+            d.y = bus.y;
+          }
+        } else if (d.type === "load") {
+          const bus = nodeById["Bus" + d.id.replace("Load", "")];
+          if (bus) {
+            d.x = bus.x + 40;
+            d.y = bus.y;
+          }
+        }
+      });
+
+      // Filter out broken links
+      const validLinks = links.filter(d =>
+        nodeById[d.source] && nodeById[d.target]
+      );
+
+      svgGroup.selectAll("line")
+        .data(validLinks)
+        .enter()
+        .append("line")
+        .attr("x1", d => nodeById[d.source].x)
+        .attr("y1", d => nodeById[d.source].y)
+        .attr("x2", d => nodeById[d.target].x)
+        .attr("y2", d => nodeById[d.target].y);
+
+      const nodeGroups = svgGroup.selectAll(".node")
+        .data(nodes)
+        .enter()
+        .append("g")
+        .attr("class", d => `node ${d.type}`)
+        .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+      nodeGroups.each(function(d) {
+        const g = d3.select(this);
+        if (d.type === "generator") {
+          g.append("circle").attr("r", 12);
+        } else if (d.type === "bus") {
+          g.append("rect").attr("x", -30).attr("y", -5).attr("width", 60).attr("height", 10);
+        } else if (d.type === "load") {
+          g.append("path")
+            .attr("d", d3.symbol().type(d3.symbolTriangle).size(300));
+        }
+      });
+
+      // Optional: show node labels
+      nodeGroups.append("text")
+        .text(d => d.id)
+        .attr("y", -15)
+        .attr("text-anchor", "middle");
+    });
+  </script>
+</body>
+</html>
