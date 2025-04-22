@@ -386,7 +386,7 @@
 <g id="NORTH GENERATORS">
 <circle id="Gen49" cx="2336" cy="635" r="25" fill="#E877EA"/>
 <circle id="Gen61" cx="2574" cy="538" r="25" fill="#E877EA"/>
-<path id="Gen42" d="M1994.5 50.9557C1994.5 64.7629 1983.31 75.9557 1969.5 75.9557C1955.69 75.9557 1944.5 64.7629 1944.5 50.9557C1944.5 37.1486 1955.69 25.9557 1969.5 25.9557C1983.31 25.9557 1994.5 37.1486 1994.5 50.9557Z" fill="#E877EA"/>
+<circle id="Gen42" cx="1945" cy="26" r="25" fill="#E877EA"/>
 <circle id="Gen54" cx="2209" cy="51" r="25" fill="#E877EA"/>
 <circle id="Gen40" cx="1729" cy="50" r="25" fill="#E877EA"/>
 <circle id="Gen34" cx="1587" cy="376" r="25" fill="#E877EA"/>

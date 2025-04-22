@@ -11,24 +11,25 @@
     }
 
     svg {
-      background: #f9f9f9;
+      background: #403944;
       width: 100vw;
       height: 100vh;
       display: block;
     }
 
-    line {
+    path.link {
       stroke: #888;
       stroke-width: 1.5px;
+      fill: none;
     }
 
-    .generator circle { fill: #56CF88; }
-    .bus rect { fill: #9BF8A6; }
-    .load path { fill: #0DA335; }
+    .generator circle { fill: #87e291; }
+    .bus rect { fill: #999999; }
+    .load path { fill: #54e2f7; }
 
     text {
       font-size: 10px;
-      fill: #333;
+      fill: #ffffff;
       pointer-events: none;
     }
   </style>
@@ -48,63 +49,154 @@
 
     svg.call(zoom);
 
+    function extractStartPoint(dString) {
+  const match = dString.match(/M\s*([\d.]+)[ ,]([\d.]+)/);
+  return match ? { x: +match[1], y: +match[2] } : null;
+}
+
+function extractEndPoint(dString) {
+  const commands = dString.trim().split(/[A-Za-z]/).filter(Boolean);
+  const last = commands.at(-1).trim().split(/[ ,]/).map(Number);
+  return { x: last[0], y: last[1] };
+}
+
     Promise.all([
-      d3.json("./week15/data/topology/nodes.json"),
-      d3.json("./week15/data/topology/links.json")
-    ]).then(([nodes, links]) => {
+      d3.json("./week15/data/topology/full_nodes.json"),
+      d3.json("./week15/data/topology/full_lines.json")
+    ]).then(([nodes, fullLinks]) => {
+      
       const nodeById = Object.fromEntries(nodes.map(d => [d.id, d]));
 
-      // Auto-align generators and loads close to their bus
-      nodes.forEach(d => {
-        if (d.type === "generator") {
-          const bus = nodeById["Bus" + d.id.replace("Gen", "")];
-          if (bus) {
-            d.x = bus.x - 40;
-            d.y = bus.y;
+      function extractStartPoint(dString) {
+        const match = dString.match(/M\\s*([\\d.]+)[ ,]([\\d.]+)/);
+        return match ? { x: +match[1], y: +match[2] } : null;
+      }
+
+      function extractEndPoint(dString) {
+        const commands = dString.trim().split(/[A-Za-z]/).filter(Boolean);
+        const last = commands.at(-1).trim().split(/[ ,]/).map(Number);
+        return { x: last[0], y: last[1] };
+      }
+
+      function distance(a, b) {
+        return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+      }
+
+      fullLinks.forEach(link => {
+        [link.source, link.target].forEach(id => {
+          const node = nodeById[id];
+          if (node && (node.type === "generator" || node.type === "load")) {
+            const start = extractStartPoint(link.d);
+            const end = extractEndPoint(link.d);
+            if (start && end) {
+              const closer = distance(node, start) < distance(node, end) ? start : end;
+              node.x = closer.x;
+              node.y = closer.y;
+            }
           }
-        } else if (d.type === "load") {
-          const bus = nodeById["Bus" + d.id.replace("Load", "")];
-          if (bus) {
-            d.x = bus.x + 40;
-            d.y = bus.y;
-          }
-        }
+        });
       });
 
-      // Filter out broken links
-      const validLinks = links.filter(d =>
-        nodeById[d.source] && nodeById[d.target]
-      );
+    // Snap generators and loads to the endpoint of their lines
+    const unmatchedNodes = [];
 
-      svgGroup.selectAll("line")
-        .data(validLinks)
+    fullLinks.forEach(link => {
+  const sourceNode = nodeById[link.source];
+  const targetNode = nodeById[link.target];
+
+  if (sourceNode && (sourceNode.type === "generator" || sourceNode.type === "load")) {
+    const start = extractStartPoint(link.d);
+    if (start && !isNaN(start.x) && !isNaN(start.y)) {
+      sourceNode.x = start.x;
+      sourceNode.y = start.y;
+    }
+  }
+
+  if (targetNode && (targetNode.type === "generator" || targetNode.type === "load")) {
+    const end = extractEndPoint(link.d);
+    if (end && !isNaN(end.x) && !isNaN(end.y)) {
+      targetNode.x = end.x;
+      targetNode.y = end.y;
+    }
+  }
+});
+
+    // Fallback for completely unmatched nodes
+    nodes.forEach(n => {
+      if ((n.type === "generator" || n.type === "load") &&
+          (typeof n.x !== 'number' || typeof n.y !== 'number')) {
+        unmatchedNodes.push(n.id);
+        n.x = -9999;
+        n.y = -9999;
+      }
+    });
+
+    console.log("🔎 Unmatched generator/load nodes:", unmatchedNodes);
+
+
+
+
+      // Draw curved paths from full_lines.json
+      svgGroup.selectAll("path.link")
+        .data(fullLinks)
         .enter()
-        .append("line")
-        .attr("x1", d => nodeById[d.source].x)
-        .attr("y1", d => nodeById[d.source].y)
-        .attr("x2", d => nodeById[d.target].x)
-        .attr("y2", d => nodeById[d.target].y);
+        .append("path")
+        .attr("class", "link")
+        .attr("d", d => d.d);
+      /*
+      // Debug: Red dots at source node positions
+      svgGroup.selectAll("circle.src-debug")
+        .data(fullLinks)
+        .enter()
+        .append("circle")
+        .attr("class", "src-debug")
+        .attr("cx", d => nodeById[d.source]?.x || 0)
+        .attr("cy", d => nodeById[d.source]?.y || 0)
+        .attr("r", 10)
+        .attr("fill", "red")
+
+      // Debug: Blue dots at target node positions
+      svgGroup.selectAll("circle.tgt-debug")
+        .data(fullLinks)
+        .enter()
+        .append("circle")
+        .attr("class", "tgt-debug")
+        .attr("cx", d => nodeById[d.target]?.x || 0)
+        .attr("cy", d => nodeById[d.target]?.y || 0)
+        .attr("r", 20)
+        .attr("fill", "blue")
+      */
 
       const nodeGroups = svgGroup.selectAll(".node")
         .data(nodes)
         .enter()
         .append("g")
         .attr("class", d => `node ${d.type}`)
-        .attr("transform", d => `translate(${d.x}, ${d.y})`);
+        .attr("transform", d => {
+          let base = `translate(${d.x}, ${d.y})`;
+          if (d.type === "bus" && d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
+            return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
+          }
+          return base;
+        });
+        
 
       nodeGroups.each(function(d) {
         const g = d3.select(this);
         if (d.type === "generator") {
           g.append("circle").attr("r", 12);
         } else if (d.type === "bus") {
-          g.append("rect").attr("x", -30).attr("y", -5).attr("width", 60).attr("height", 10);
+          g.append("rect")
+          .attr("x", d => -d.width / 2)
+          .attr("y", d => -d.height / 2)
+          .attr("width", d => d.width)
+          .attr("height", d => d.height);
         } else if (d.type === "load") {
           g.append("path")
             .attr("d", d3.symbol().type(d3.symbolTriangle).size(300));
         }
       });
 
-      // Optional: show node labels
       nodeGroups.append("text")
         .text(d => d.id)
         .attr("y", -15)
