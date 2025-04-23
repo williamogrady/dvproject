@@ -1,0 +1,23 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+  }
+
+  svg {
+    background: #403944;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+  }
+
+  path.link {
+    stroke: #888;
+    stroke-width: 1.5px;
+    fill: none;
+  }
+
+  text {
+    font-size: 10px;
+    fill: #ffffff;
+    pointer-events: none;
+  }
