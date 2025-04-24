@@ -11,7 +11,10 @@ let allNodes = [],
 let currentMode = "full"; // 'manual' is the other mode
 
 const svg = d3.select("#topology");
-const svgGroup = svg.append("g");
+const group = svg.append("g");
+
+const backgroundGroup = group.append("g").attr("id", "background-layer");
+const foregroundGroup = group.append("g").attr("id", "foreground-layer");
 
 //----------------------------------//
 // 2. Utility Functions
@@ -34,19 +37,18 @@ function distance(a, b) {
 //----------------------------------//
 // 3. Topology Drawing Function
 //----------------------------------//
-function drawTopology(nodes, links) {
-  svgGroup.selectAll("*").remove(); // Clear previous
+function drawTopology(group, nodes, links, faded = false) {
+  group.selectAll("*").remove(); // Clear previous content
 
-  // Draw links
-  svgGroup.selectAll("path.link")
+  group.selectAll("path.link")
     .data(links)
     .enter()
     .append("path")
     .attr("class", "link")
-    .attr("d", d => d.d);
+    .attr("d", d => d.d)
+    .attr("opacity", faded ? 0.1 : 1); // Fade effect
 
-  // Draw nodes
-  const nodeGroups = svgGroup.selectAll(".node")
+  const nodeGroups = group.selectAll(".node")
     .data(nodes)
     .enter()
     .append("g")
@@ -57,13 +59,14 @@ function drawTopology(nodes, links) {
         return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
       }
       return base;
-    });
+    })
+    .attr("opacity", faded ? 0.2 : 1); // Fade effect
 
   nodeGroups.each(function(d) {
     const g = d3.select(this);
     let fillColor = "#fff", radius = 12;
 
-    if (currentMode === "manual") {
+    if (currentMode === "manual" && !faded) {
       if (d.type === "generator") fillColor = "#6ecff6";
       if (d.type === "bus") fillColor = "#4aa3df";
       if (d.type === "load") fillColor = "#007acc";
@@ -92,7 +95,8 @@ function drawTopology(nodes, links) {
   nodeGroups.append("text")
     .text(d => d.id)
     .attr("y", -15)
-    .attr("text-anchor", "middle");
+    .attr("text-anchor", "middle")
+    .attr("opacity", faded ? 0.2 : 1);
 }
 
 //----------------------------------//
@@ -100,12 +104,20 @@ function drawTopology(nodes, links) {
 //----------------------------------//
 function drawFullTopology() {
   console.log("🔁 Drawing FULL topology");
-  drawTopology(allNodes, allLinks);
+  drawTopology(group, allNodes, allLinks);
 }
 
 function drawFilteredTopology(filteredNodes, filteredLinks) {
   console.log("🔁 Drawing MANUAL topology");
-  drawTopology(filteredNodes, filteredLinks);
+
+  backgroundGroup.lower();  // send to back
+  foregroundGroup.raise();  // bring to front
+
+  // Fade full network in background
+  drawTopology(backgroundGroup, allNodes, allLinks, true);
+
+  // Draw manual mode in full opacity
+  drawTopology(foregroundGroup, filteredNodes, filteredLinks, false);
 }
 
 //----------------------------------//
@@ -115,13 +127,12 @@ async function updateVisualization(mode) {
   console.log(`🧭 Switching to mode: ${mode}`);
 
   if (mode === "full") {
-    drawFullTopology();
+    backgroundGroup.selectAll("*").remove();
+    foregroundGroup.selectAll("*").remove();
+    drawTopology(group, allNodes, allLinks);
   } else {
     const busIds = new Set(opBuses.map(d => d.id));
     const genBusIds = new Set(opGenerators.map(d => d.busNumber));
-
-    console.log("✅ opGenerators", opGenerators.map(g => ({ id: g.id, bus: g.bus })));
-    console.log("✅ opLines", opLines.map(l => [l.from_number, l.to_number]));
 
     const matchedNodes = allNodes.filter(node => {
       const idNum = parseInt(node.id.replace(/(Bus|Gen|Load)/, ""));
@@ -134,19 +145,12 @@ async function updateVisualization(mode) {
       return false;
     });
 
-    const opLineKeys = new Set(opLines.map(l =>
-        [l.from_number, l.to_number].sort((a, b) => a - b).join("-")
-      ));
-      
-      const matchedLinks = allLinks.filter(link => {
-        const from = parseInt(link.source.replace(/(Bus|Gen|Load)/, ""));
-        const to = parseInt(link.target.replace(/(Bus|Gen|Load)/, ""));
-        const key = [from, to].sort((a, b) => a - b).join("-");
-        return opLineKeys.has(key);
-      });
+    const matchedNodeIds = new Set(matchedNodes.map(n => n.id));
 
-    console.log("✔️ Matched Generator Nodes:", matchedNodes.filter(n => n.type === "generator"));
-    console.log("✔️ Matched Links:", matchedLinks.length);
+    const matchedLinks = allLinks.filter(link =>
+      matchedNodeIds.has(link.source) && matchedNodeIds.has(link.target)
+    );
+
     drawFilteredTopology(matchedNodes, matchedLinks);
   }
 }
@@ -168,17 +172,24 @@ Promise.all([
   opLines = lines;
   nodeById = Object.fromEntries(nodes.map(d => [d.id, d]));
 
+  console.log("📦 Total topology nodes:", allNodes.length);
+  console.log("🧩 Generator nodes:", allNodes.filter(n => n.type === "generator"));
+
   // Snap generators and loads to the correct positions
   fullLinks.forEach(link => {
-    [link.source, link.target].forEach(id => {
-      const node = nodeById[id];
+    const sourceNode = nodeById[link.source];
+    const targetNode = nodeById[link.target];
+
+    [sourceNode, targetNode].forEach(node => {
       if (node && (node.type === "generator" || node.type === "load")) {
         const start = extractStartPoint(link.d);
         const end = extractEndPoint(link.d);
         if (start && end) {
           const closer = distance(node, start) < distance(node, end) ? start : end;
-          node.x = closer.x;
-          node.y = closer.y;
+          if (!node.x || !node.y) {
+            node.x = closer.x;
+            node.y = closer.y;
+          }
         }
       }
     });
@@ -208,7 +219,7 @@ document.getElementById("change-mode").addEventListener("click", () => {
 const zoom = d3.zoom()
   .scaleExtent([0.2, 4])
   .on("zoom", (event) => {
-    svgGroup.attr("transform", event.transform);
+    group.attr("transform", event.transform);
   });
 
 svg.call(zoom);
