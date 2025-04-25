@@ -8,7 +8,8 @@ let allNodes = [],
     opLines = [],
     nodeById = {};
 
-let currentMode = "full"; // 'manual' is the other mode
+let currentMode = "full";
+let mode = ""; 
 
 const svg = d3.select("#topology");
 const group = svg.append("g");
@@ -34,11 +35,50 @@ function distance(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
+const tooltip = d3.select("#tooltip");
+
+function showTooltip(event, d) {
+  tooltip
+    .style("visibility", "visible")
+    .html(d.id || d)
+    .style("left", (event.pageX + 10) + "px")
+    .style("top", (event.pageY + 10) + "px");
+}
+
+function moveTooltip(event) {
+  tooltip
+    .style("left", (event.pageX + 10) + "px")
+    .style("top", (event.pageY + 10) + "px");
+}
+
+function hideTooltip() {
+  tooltip.style("visibility", "hidden");
+}
+
 //----------------------------------//
 // 3. Topology Drawing Function
 //----------------------------------//
-function drawTopology(group, nodes, links, faded = false) {
+function drawTopology(group, nodes, links, faded = false, mode = "full") {
+
+  console.log("🚨 drawTopology() CALLED", {
+    group: group.attr("id") || "group",
+    faded,
+    nodesCount: nodes.length,
+    linksCount: links.length,
+    RECEIVED_MODE: mode,
+    GLOBAL_MODE: currentMode
+  });
+  
   group.selectAll("*").remove(); // Clear previous content
+  
+  // 🔍 Visual debug markers
+  group.append("text")
+    .attr("x", 50)
+    .attr("y", 50)
+    .attr("font-size", "16px")
+    .attr("fill", faded ? "gray" : "lime")
+    .text(faded ? "FADED BG DRAW" : `ACTIVE MODE: ${mode}`);
+
 
   group.selectAll("path.link")
     .data(links)
@@ -47,6 +87,11 @@ function drawTopology(group, nodes, links, faded = false) {
     .attr("class", "link")
     .attr("d", d => d.d)
     .attr("opacity", faded ? 0.1 : 1); // Fade effect
+
+    group.selectAll("path.link")
+    .on("mouseover", showTooltip)
+    .on("mousemove", moveTooltip)
+    .on("mouseout", hideTooltip);
 
   const nodeGroups = group.selectAll(".node")
     .data(nodes)
@@ -62,11 +107,16 @@ function drawTopology(group, nodes, links, faded = false) {
     })
     .attr("opacity", faded ? 0.2 : 1); // Fade effect
 
+    nodeGroups
+  .on("mouseover", showTooltip)
+  .on("mousemove", moveTooltip)
+  .on("mouseout", hideTooltip);
+
   nodeGroups.each(function(d) {
     const g = d3.select(this);
     let fillColor = "#fff", radius = 12;
 
-    if (currentMode === "manual" && !faded) {
+    if (mode === "manual" && !faded) {
       if (d.type === "generator") fillColor = "#6ecff6";
       if (d.type === "bus") fillColor = "#4aa3df";
       if (d.type === "load") fillColor = "#007acc";
@@ -87,50 +137,47 @@ function drawTopology(group, nodes, links, faded = false) {
         .attr("fill", fillColor);
     } else if (d.type === "load") {
       g.append("path")
-        .attr("d", d3.symbol().type(d3.symbolTriangle).size(300))
+        .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
         .attr("fill", fillColor);
     }
+    
   });
 
-  nodeGroups.append("text")
-    .text(d => d.id)
-    .attr("y", -15)
-    .attr("text-anchor", "middle")
-    .attr("opacity", faded ? 0.2 : 1);
+  
 }
 
 //----------------------------------//
 // 4. Full & Filtered Draw Wrappers
 //----------------------------------//
 function drawFullTopology() {
-  console.log("🔁 Drawing FULL topology");
-  drawTopology(group, allNodes, allLinks);
+  console.log("⬜ drawFullTopology()");
+  group.selectAll("*").remove();
+  drawTopology(group, allNodes, allLinks, false, "full");
 }
 
 function drawFilteredTopology(filteredNodes, filteredLinks) {
-  console.log("🔁 Drawing MANUAL topology");
+  console.log("🟦 drawFilteredTopology()", {
+    filteredNodes: filteredNodes.map(n => n.id),
+    filteredLinks: filteredLinks.map(l => `${l.source} → ${l.target}`)
+  });
 
-  backgroundGroup.lower();  // send to back
-  foregroundGroup.raise();  // bring to front
+  backgroundGroup.selectAll("*").remove();
+  foregroundGroup.selectAll("*").remove();
 
-  // Fade full network in background
-  drawTopology(backgroundGroup, allNodes, allLinks, true);
-
-  // Draw manual mode in full opacity
-  drawTopology(foregroundGroup, filteredNodes, filteredLinks, false);
+  drawTopology(backgroundGroup, allNodes, allLinks, true, "manual");
+  drawTopology(foregroundGroup, filteredNodes, filteredLinks, false, "manual");
 }
-
 //----------------------------------//
 // 5. Mode Switch Logic
 //----------------------------------//
 async function updateVisualization(mode) {
-  console.log(`🧭 Switching to mode: ${mode}`);
+  console.log("🧭 updateVisualization() called with mode:", mode);
 
   if (mode === "full") {
-    backgroundGroup.selectAll("*").remove();
-    foregroundGroup.selectAll("*").remove();
-    drawTopology(group, allNodes, allLinks);
+    console.log("UPDATE VIS ⬜ Drawing full topology...");
+    drawFullTopology();
   } else {
+    console.log("UPDATE VIS 🟦 Drawing filtered topology...");
     const busIds = new Set(opBuses.map(d => d.id));
     const genBusIds = new Set(opGenerators.map(d => d.busNumber));
 
@@ -151,6 +198,8 @@ async function updateVisualization(mode) {
       matchedNodeIds.has(link.source) && matchedNodeIds.has(link.target)
     );
 
+
+    console.log("🟦 Drawing manual topology...");
     drawFilteredTopology(matchedNodes, matchedLinks);
   }
 }
@@ -210,10 +259,10 @@ Promise.all([
 // 7. Event Listeners
 //----------------------------------//
 document.getElementById("change-mode").addEventListener("click", () => {
-  currentMode = currentMode === "full" ? "manual" : "full";
+  mode = mode === "full" ? "manual" : "full";
   document.getElementById("mode-indicator").textContent =
-    `Current Mode: ${currentMode === "full" ? "Full Topology" : "Manual Data"}`;
-  updateVisualization(currentMode);
+    `Current Mode: ${mode === "full" ? "Full Topology" : "Manual Data"}`;
+  updateVisualization(mode);
 });
 
 const zoom = d3.zoom()

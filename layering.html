@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Layer Switch Demo</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    svg {
+      background: #f0f0f0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    #mode-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 8px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="mode-controls">
+    <button id="change-mode">Switch Mode</button>
+    <div id="mode-indicator">Current Mode: Full</div>
+  </div>
+
+  <svg id="canvas"></svg>
+
+  <script>
+    let currentMode = "full";
+
+    const svg = d3.select("#canvas");
+    const group = svg.append("g");
+
+    const backgroundGroup = group.append("g").attr("id", "background-layer");
+    const foregroundGroup = group.append("g").attr("id", "foreground-layer");
+
+    function drawFullMode() {
+      console.log("⬜ Full mode");
+      backgroundGroup.selectAll("*").remove();
+      foregroundGroup.selectAll("*").remove();
+
+      backgroundGroup.append("rect")
+        .attr("x", 200)
+        .attr("y", 200)
+        .attr("width", 200)
+        .attr("height", 200)
+        .attr("fill", "steelblue")
+        .attr("opacity", 1);
+    }
+
+    function drawManualMode() {
+      console.log("🟥 Manual mode");
+      backgroundGroup.selectAll("*").remove();
+      foregroundGroup.selectAll("*").remove();
+
+      // Faded full topology background
+      backgroundGroup.append("rect")
+        .attr("x", 200)
+        .attr("y", 200)
+        .attr("width", 200)
+        .attr("height", 200)
+        .attr("fill", "steelblue")
+        .attr("opacity", 0.1);
+
+      // Foreground "operation data"
+      foregroundGroup.append("rect")
+        .attr("x", 220)
+        .attr("y", 220)
+        .attr("width", 160)
+        .attr("height", 160)
+        .attr("fill", "crimson")
+        .attr("opacity", 1);
+    }
+
+    function update() {
+      if (currentMode === "full") {
+        drawFullMode();
+      } else {
+        drawManualMode();
+      }
+
+      document.getElementById("mode-indicator").textContent =
+        `Current Mode: ${currentMode === "full" ? "Full" : "Manual"}`;
+    }
+
+    document.getElementById("change-mode").addEventListener("click", () => {
+      currentMode = currentMode === "full" ? "manual" : "full";
+      update();
+    });
+
+    // Initialize
+    update();
+  </script>
+</body>
+</html>
