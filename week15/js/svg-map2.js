@@ -12,6 +12,8 @@ let selectedGeneratorId = null;
 const svg = d3.select("#topology");
 const group = svg.append("g");
 
+const infoBubbleGroup = group.append("g").attr("id", "info-bubble-layer");
+
 const tooltip = d3.select("#tooltip");
 
 const backgroundGroup = group.append("g").attr("id", "background-layer");
@@ -36,17 +38,35 @@ function distance(a, b) {
 }
 
 function showTooltip(event, d) {
-    if (selectedGeneratorId === d.id) return; // Skip if already pinned
+    // Check: only allow hover tooltip if d has valid coordinates (node), otherwise do nothing
+    if (d.x == null || d.y == null) {
+      return;
+    }
   
-    tooltip
-      .style("visibility", "visible")
-      .html(d.id || d)
-      .style("left", (event.pageX + 10) + "px")
-      .style("top", (event.pageY + 10) + "px")
-      .style("font-size", "14px")
-      .style("pointer-events", "none")
-      .style("width", "auto");
+    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
+      // Show hover tooltip near mouse even when something is selected
+      tooltip
+        .style("visibility", "visible")
+        .html(d.id || d)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY + 10) + "px")
+        .style("font-size", "14px")
+        .style("width", "auto");
+      return;
+    }
+  
+    if (selectedGeneratorId === null) {
+      tooltip
+        .style("visibility", "visible")
+        .html(d.id || d)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY + 10) + "px")
+        .style("font-size", "14px")
+        .style("width", "auto");
+    }
   }
+  
+  
   
 
 function moveTooltip(event) {
@@ -54,10 +74,16 @@ function moveTooltip(event) {
     .style("top", (event.pageY + 10) + "px");
 }
 
-function hideTooltip() {
-    if (selectedGeneratorId !== null) return; // Don't hide if pinned
-    tooltip.style("visibility", "hidden");
+function hideTooltip(event, d) {
+    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
+      d3.select("#hover-tooltip").remove(); // Only remove lightweight hover tooltip
+      return;
+    }
+    if (selectedGeneratorId === null) {
+      tooltip.style("visibility", "hidden");
+    }
   }
+  
   
 
   function showPinnedTooltip(d) {
@@ -67,16 +93,45 @@ function hideTooltip() {
     tooltip
       .style("visibility", "visible")
       .style("left", `${d.x}px`)
-      .style("top", `${d.y - 30}px`) // SVG coordinates
+      .style("top", `${d.y - 30}px`)
       .style("font-size", "20px")
-      .style("width", "220px")
+      .style("width", "260px")
       .html(`
-        <div><strong>${d.id}</strong></div>
+        <div><strong>${d.id} (${opGen.station})</strong></div>
         <div>ratedMinMW: ${opGen.ratedMinMW}</div>
         <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
         <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
       `);
   }
+  
+
+  function showInfoBubble(d) {
+    const opGen = getOpGeneratorData(d.id);
+    if (!opGen) return;
+  
+    infoBubbleGroup.selectAll("*").remove(); // Only one bubble at a time
+  
+    infoBubbleGroup.append("foreignObject")
+      .attr("x", d.x + 10)
+      .attr("y", d.y - 50)
+      .attr("width", 220)
+      .attr("height", 120)
+      .append("xhtml:div")
+      .style("background", "white")
+      .style("border", "1px solid #ccc")
+      .style("border-radius", "8px")
+      .style("padding", "10px")
+      .style("font-family", "sans-serif")
+      .style("font-size", "14px")
+      .style("box-shadow", "0px 2px 10px rgba(0,0,0,0.2)")
+      .html(`
+        <div><strong>${d.id} (${opGen.station})</strong></div>
+        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
+        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
+        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
+      `);
+  }
+
   
   
 
@@ -146,15 +201,18 @@ function drawTopology(group, nodes, links, faded = false, mode = "full") {
         if (mode === "manual" && !faded) {
             circle.on("click", function(event) {
                 event.stopPropagation();
+                d3.select("#hover-tooltip").remove(); // Remove any hover
+              
                 if (selectedGeneratorId === d.id) {
                   selectedGeneratorId = null;
-                  tooltip.style("visibility", "hidden");
+                  infoBubbleGroup.selectAll("*").remove();
                 } else {
                   selectedGeneratorId = d.id;
-                  showPinnedTooltip(d);
+                  showInfoBubble(d);
                 }
                 updateVisualization("manual");
               });
+              
               
       }
       } else if (d.type === "bus") {
