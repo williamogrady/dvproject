@@ -5,12 +5,12 @@ let allNodes = [],
     allLinks = [],
     nodeById = {};
 
-let mode = "full"; // Start in "full" mode
+let mode = "manual"; 
 
 let selectedGeneratorId = null;
 
 const svg = d3.select("#topology");
-const group = svg.append("g");
+const group = svg.append("g");  
 
 const infoBubbleGroup = group.append("g").attr("id", "info-bubble-layer");
 
@@ -152,32 +152,48 @@ function drawTopology(group, nodes, links, faded = false, mode = "full") {
       .data(links)
       .enter()
       .append("path")
-      .attr("class", "link")
+      .attr("class", d => {
+        if (mode === "full") return "link link-full";
+        if (mode === "manual" && faded) return "link link-manual-faded";
+        return "link link-manual";
+      })
       .attr("d", d => d.d)
-      .attr("stroke", mode === "manual" && !faded ? "steelblue" : "#999999")
-      .attr("fill", "none")
-      .attr("stroke-width", 2)
-      .attr("opacity", faded ? 0.1 : 1)
       .on("mouseover", showTooltip)
       .on("mousemove", moveTooltip)
       .on("mouseout", hideTooltip);
   
     // Draw Nodes
     const nodeGroups = group.selectAll(".node")
-      .data(nodes)
-      .enter()
-      .append("g")
-      .attr("class", d => `node ${d.type}`)
-      .attr("transform", d => {
-        let base = `translate(${d.x}, ${d.y})`;
-        if (d.type === "bus" && d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
-          return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
-        }
-        return base;
-      })
-      .on("mouseover", showTooltip)
-      .on("mousemove", moveTooltip)
-      .on("mouseout", hideTooltip);
+  .data(nodes)
+  .enter()
+  .append("g")
+  .attr("class", d => {
+    let classes = ["node"];
+
+    if (mode === "full" || faded) {
+      classes.push("node-full", d.type);
+    } else if (mode === "manual" && !faded) {
+      if (d.type === "generator") classes.push("node-generator-manual");
+      if (d.type === "bus") classes.push("node-bus-manual");
+      if (d.type === "load") classes.push("node-load-manual");
+    }
+
+    if (selectedGeneratorId === d.id && mode === "manual" && !faded) {
+      classes.push("selected-generator");
+    }
+
+    return classes.join(" ");
+  })
+  .attr("transform", d => {
+    let base = `translate(${d.x}, ${d.y})`;
+    if (d.type === "bus" && d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
+      return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
+    }
+    return base;
+  })
+  .on("mouseover", showTooltip)
+  .on("mousemove", moveTooltip)
+  .on("mouseout", hideTooltip);
   
     nodeGroups.each(function(d) {
       const g = d3.select(this);
@@ -210,7 +226,8 @@ function drawTopology(group, nodes, links, faded = false, mode = "full") {
                   selectedGeneratorId = d.id;
                   showInfoBubble(d);
                 }
-                updateVisualization("manual");
+                updateVisualization(mode);
+                infoBubbleGroup.raise();
               });
               
               
@@ -281,11 +298,11 @@ async function updateVisualization(mode) {
 // 5. Data Loading
 //----------------------------------//
 Promise.all([
-    d3.json("./week15/data/topology/full_nodes.json"),
-    d3.json("./week15/data/topology/full_lines.json"),
-    d3.json("./week15/data/operation/buses.json"),
-    d3.json("./week15/data/operation/generators.json"),
-    d3.json("./week15/data/operation/lines.json")
+    d3.json("/prototype1/data/topology/full_nodes.json"),
+    d3.json("/prototype1/data/topology/full_lines.json"),
+    d3.json("/prototype1/data/operation/buses.json"),
+    d3.json("/prototype1/data/operation/generators.json"),
+    d3.json("/prototype1/data/operation/lines.json")
   ]).then(([nodes, fullLinks, buses, generators, lines]) => {
     allNodes = nodes;
     allLinks = fullLinks;
@@ -322,27 +339,28 @@ Promise.all([
     });
   
     allNodes.forEach(n => {
-      if ((n.type === "generator" || n.type === "load") &&
-          (typeof n.x !== 'number' || typeof n.y !== 'number')) {
-        n.x = -9999;
-        n.y = -9999;
+      if ((n.type === "generator" || n.type === "load")) {
+        if (typeof n.x !== 'number' || typeof n.y !== 'number' || isNaN(n.x) || isNaN(n.y)) {
+          n.x = -9999; // Move them way outside the screen
+          n.y = -9999;
+        }
       }
     });
-  
-    updateVisualization("full"); // Start with full topology
+    updateVisualization(mode);
   });
   
 
 //----------------------------------//
 // 6. Event Listeners
 //----------------------------------//
-document.getElementById("change-mode").addEventListener("click", () => {
-  mode = (mode === "full") ? "manual" : "full";
-  document.getElementById("mode-indicator").textContent =
-    `Current Mode: ${mode === "full" ? "Full Topology" : "Manual Data"}`;
+document.getElementById("toggle-topology").addEventListener("click", () => {
+  mode = (mode === "manual") ? "full" : "manual";
+
+  const button = document.getElementById("toggle-topology");
+  button.textContent = (mode === "manual") ? "Show Full Topology" : "Show Manual Data";
+
   updateVisualization(mode);
 });
-
 
 // Make the control panel draggable
 (function() {

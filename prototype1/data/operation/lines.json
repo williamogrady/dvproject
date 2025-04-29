@@ -1,0 +1,1559 @@
+[
+    {
+      "from_name": "RIVERS~1",
+      "from_number": 1,
+      "to_name": "POKAGO~1",
+      "to_number": 2,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "RIVERS~1",
+      "from_number": 1,
+      "to_name": "HICKRY~1",
+      "to_number": 3,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "POKAGO~1",
+      "from_number": 2,
+      "to_name": "TWINBR~1",
+      "to_number": 12,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HICKRY~1",
+      "from_number": 3,
+      "to_name": "TWINBR~1",
+      "to_number": 12,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HICKRY~1",
+      "from_number": 3,
+      "to_name": "OLIVE~2",
+      "to_number": 5,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NWCARL~1",
+      "from_number": 4,
+      "to_name": "SOUTHB~1",
+      "to_number": 11,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NWCARL~1",
+      "from_number": 4,
+      "to_name": "OLIVE~2",
+      "to_number": 5,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "OLIVE~2",
+      "from_number": 5,
+      "to_name": "SOUTHB~1",
+      "to_number": 11,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "OLIVE~2",
+      "from_number": 5,
+      "to_name": "KANKAK~1",
+      "to_number": 6,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "KANKAK~1",
+      "from_number": 6,
+      "to_name": "JACKSN~1",
+      "to_number": 7,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "JACKSN~1",
+      "from_number": 7,
+      "to_name": "TWINBR~1",
+      "to_number": 12,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "OLIVE~1",
+      "from_number": 8,
+      "to_name": "SORENS~1",
+      "to_number": 30,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "OLIVE~1",
+      "from_number": 8,
+      "to_name": "BEQUIN~1",
+      "to_number": 9,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "BEQUIN~1",
+      "from_number": 9,
+      "to_name": "BREED ~1",
+      "to_number": 10,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "SOUTHB~1",
+      "from_number": 11,
+      "to_name": "CONCOR~1",
+      "to_number": 13,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SOUTHB~1",
+      "from_number": 11,
+      "to_name": "TWINBR~1",
+      "to_number": 12,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TWINBR~1",
+      "from_number": 12,
+      "to_name": "COREY~1",
+      "to_number": 117,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TWINBR~1",
+      "from_number": 12,
+      "to_name": "N. E.~1",
+      "to_number": 16,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TWINBR~1",
+      "from_number": 12,
+      "to_name": "GOSHEN~1",
+      "to_number": 14,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CONCOR~1",
+      "from_number": 13,
+      "to_name": "FTWAYN~1",
+      "to_number": 15,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "GOSHEN~1",
+      "from_number": 14,
+      "to_name": "FTWAYN~1",
+      "to_number": 15,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FTWAYN~1",
+      "from_number": 15,
+      "to_name": "SORENS~2",
+      "to_number": 17,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FTWAYN~1",
+      "from_number": 15,
+      "to_name": "HAVILA~1",
+      "to_number": 33,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FTWAYN~1",
+      "from_number": 15,
+      "to_name": "LINCOL~1",
+      "to_number": 19,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "N. E.~1",
+      "from_number": 16,
+      "to_name": "SORENS~2",
+      "to_number": 17,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SORENS~2",
+      "from_number": 17,
+      "to_name": "DEERC~1",
+      "to_number": 113,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SORENS~2",
+      "from_number": 17,
+      "to_name": "DEERCR~1",
+      "to_number": 31,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SORENS~2",
+      "from_number": 17,
+      "to_name": "MCKINL~1",
+      "to_number": 18,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "MCKINL~1",
+      "from_number": 18,
+      "to_name": "LINCOL~1",
+      "to_number": 19,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "LINCOL~1",
+      "from_number": 19,
+      "to_name": "ROCKHI~1",
+      "to_number": 34,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "LINCOL~1",
+      "from_number": 19,
+      "to_name": "ADAMS~1",
+      "to_number": 20,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ADAMS~1",
+      "from_number": 20,
+      "to_name": "JAY~1",
+      "to_number": 21,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "JAY~1",
+      "from_number": 21,
+      "to_name": "RANDOL~1",
+      "to_number": 22,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "RANDOL~1",
+      "from_number": 22,
+      "to_name": "COLLCR~1",
+      "to_number": 23,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "COLLCR~1",
+      "from_number": 23,
+      "to_name": "TRENTO~1",
+      "to_number": 24,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "COLLCR~1",
+      "from_number": 23,
+      "to_name": "TANNRS~2",
+      "to_number": 25,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TRENTO~1",
+      "from_number": 24,
+      "to_name": "HILLSB~1",
+      "to_number": 72,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TRENTO~1",
+      "from_number": 24,
+      "to_name": "PORTSM~1",
+      "to_number": 70,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TANNRS~2",
+      "from_number": 25,
+      "to_name": "MADISO~1",
+      "to_number": 27,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TANNRS~1",
+      "from_number": 26,
+      "to_name": "SORENS~1",
+      "to_number": 30,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "MADISO~1",
+      "from_number": 27,
+      "to_name": "DELAWA~1",
+      "to_number": 32,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "MADISO~1",
+      "from_number": 27,
+      "to_name": "MEDFOR~1",
+      "to_number": 115,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "MADISO~1",
+      "from_number": 27,
+      "to_name": "MULLIN~1",
+      "to_number": 28,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "MULLIN~1",
+      "from_number": 28,
+      "to_name": "GRANT~1",
+      "to_number": 29,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "GRANT~1",
+      "from_number": 29,
+      "to_name": "DEERCR~1",
+      "to_number": 31,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SORENS~1",
+      "from_number": 30,
+      "to_name": "EASTLI~1",
+      "to_number": 38,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "DEERCR~1",
+      "from_number": 31,
+      "to_name": "DELAWA~1",
+      "to_number": 32,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "DELAWA~1",
+      "from_number": 32,
+      "to_name": "WMEDFO~1",
+      "to_number": 114,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "DELAWA~1",
+      "from_number": 32,
+      "to_name": "DEERC~1",
+      "to_number": 113,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HAVILA~1",
+      "from_number": 33,
+      "to_name": "EASTLI~2",
+      "to_number": 37,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ROCKHI~1",
+      "from_number": 34,
+      "to_name": "S.KENT~1",
+      "to_number": 43,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ROCKHI~1",
+      "from_number": 34,
+      "to_name": "EASTLI~2",
+      "to_number": 37,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ROCKHI~1",
+      "from_number": 34,
+      "to_name": "STERLI~1",
+      "to_number": 36,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WESTLI~1",
+      "from_number": 35,
+      "to_name": "EASTLI~2",
+      "to_number": 37,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WESTLI~1",
+      "from_number": 35,
+      "to_name": "STERLI~1",
+      "to_number": 36,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "EASTLI~2",
+      "from_number": 37,
+      "to_name": "WEST E~1",
+      "to_number": 40,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "EASTLI~2",
+      "from_number": 37,
+      "to_name": "NWLIBR~1",
+      "to_number": 39,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "EASTLI~1",
+      "from_number": 38,
+      "to_name": "MUSKNG~1",
+      "to_number": 65,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "NWLIBR~1",
+      "from_number": 39,
+      "to_name": "WEST E~1",
+      "to_number": 40,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WEST E~1",
+      "from_number": 40,
+      "to_name": "HOWARD~1",
+      "to_number": 42,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WEST E~1",
+      "from_number": 40,
+      "to_name": "S.TIFF~1",
+      "to_number": 41,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "S.TIFF~1",
+      "from_number": 41,
+      "to_name": "HOWARD~1",
+      "to_number": 42,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HOWARD~1",
+      "from_number": 42,
+      "to_name": "PHILO~1",
+      "to_number": 49,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HOWARD~1",
+      "from_number": 42,
+      "to_name": "PHILO~1",
+      "to_number": 49,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "S.KENT~1",
+      "from_number": 43,
+      "to_name": "WMVERN~1",
+      "to_number": 44,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WMVERN~1",
+      "from_number": 44,
+      "to_name": "N.NEWA~1",
+      "to_number": 45,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "N.NEWA~1",
+      "from_number": 45,
+      "to_name": "PHILO~1",
+      "to_number": 49,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "N.NEWA~1",
+      "from_number": 45,
+      "to_name": "W.LANC~1",
+      "to_number": 46,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "W.LANC~1",
+      "from_number": 46,
+      "to_name": "ZANESV~1",
+      "to_number": 48,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "W.LANC~1",
+      "from_number": 46,
+      "to_name": "CROOKS~1",
+      "to_number": 47,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CROOKS~1",
+      "from_number": 47,
+      "to_name": "SPORN~2",
+      "to_number": 69,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CROOKS~1",
+      "from_number": 47,
+      "to_name": "PHILO~1",
+      "to_number": 49,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ZANESV~1",
+      "from_number": 48,
+      "to_name": "PHILO~1",
+      "to_number": 49,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "WCAMBR~1",
+      "to_number": 50,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "SPORN~2",
+      "to_number": 69,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "MUSKNG~2",
+      "to_number": 66,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "NEWCMR~1",
+      "to_number": 51,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "MUSKNG~2",
+      "to_number": 66,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "TORREY~1",
+      "to_number": 54,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PHILO~1",
+      "from_number": 49,
+      "to_name": "TORREY~1",
+      "to_number": 54,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WCAMBR~1",
+      "from_number": 50,
+      "to_name": "WNWPHI~1",
+      "to_number": 57,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NEWCMR~1",
+      "from_number": 51,
+      "to_name": "WNWPHI~2",
+      "to_number": 58,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NEWCMR~1",
+      "from_number": 51,
+      "to_name": "SCOSHO~1",
+      "to_number": 52,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SCOSHO~1",
+      "from_number": 52,
+      "to_name": "WOOSTE~1",
+      "to_number": 53,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WOOSTE~1",
+      "from_number": 53,
+      "to_name": "TORREY~1",
+      "to_number": 54,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TORREY~1",
+      "from_number": 54,
+      "to_name": "TIDD~2",
+      "to_number": 59,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TORREY~1",
+      "from_number": 54,
+      "to_name": "SUNNYS~1",
+      "to_number": 56,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TORREY~1",
+      "from_number": 54,
+      "to_name": "WAGENH~1",
+      "to_number": 55,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WAGENH~1",
+      "from_number": 55,
+      "to_name": "TIDD~2",
+      "to_number": 59,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WAGENH~1",
+      "from_number": 55,
+      "to_name": "SUNNYS~1",
+      "to_number": 56,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SUNNYS~1",
+      "from_number": 56,
+      "to_name": "TIDD~2",
+      "to_number": 59,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SUNNYS~1",
+      "from_number": 56,
+      "to_name": "TIDD~2",
+      "to_number": 59,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SUNNYS~1",
+      "from_number": 56,
+      "to_name": "WNWPHI~2",
+      "to_number": 58,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SUNNYS~1",
+      "from_number": 56,
+      "to_name": "WNWPHI~1",
+      "to_number": 57,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TIDD~2",
+      "from_number": 59,
+      "to_name": "W.KAMM~1",
+      "to_number": 61,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TIDD~2",
+      "from_number": 59,
+      "to_name": "SWKAMM~1",
+      "to_number": 60,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SWKAMM~1",
+      "from_number": 60,
+      "to_name": "NATRIU~1",
+      "to_number": 62,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SWKAMM~1",
+      "from_number": 60,
+      "to_name": "W.KAMM~1",
+      "to_number": 61,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "W.KAMM~1",
+      "from_number": 61,
+      "to_name": "NATRIU~1",
+      "to_number": 62,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NATRIU~1",
+      "from_number": 62,
+      "to_name": "SUMMER~1",
+      "to_number": 67,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NATRIU~1",
+      "from_number": 62,
+      "to_name": "MUSKNG~2",
+      "to_number": 66,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TIDD~1",
+      "from_number": 63,
+      "to_name": "KAMMER~1",
+      "to_number": 64,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "MUSKNG~1",
+      "from_number": 65,
+      "to_name": "SPORN~1",
+      "to_number": 68,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "MUSKNG~2",
+      "from_number": 66,
+      "to_name": "SUMMER~1",
+      "to_number": 67,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SPORN~1",
+      "from_number": 68,
+      "to_name": "KANAWH~1",
+      "to_number": 81,
+      "normal_MVA_limit": 1200,
+      "emergency_MVA_limit": 1500,
+      "nominal_voltage": 345
+    },
+    {
+      "from_name": "SPORN~2",
+      "from_number": 69,
+      "to_name": "TURNER~1",
+      "to_number": 77,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SPORN~2",
+      "from_number": 69,
+      "to_name": "STHPOI~1",
+      "to_number": 75,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SPORN~2",
+      "from_number": 69,
+      "to_name": "PORTSM~1",
+      "to_number": 70,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PORTSM~1",
+      "from_number": 70,
+      "to_name": "STHPOI~1",
+      "to_number": 75,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PORTSM~1",
+      "from_number": 70,
+      "to_name": "BELLEF~1",
+      "to_number": 74,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "PORTSM~1",
+      "from_number": 70,
+      "to_name": "NPORTS~1",
+      "to_number": 71,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NPORTS~1",
+      "from_number": 71,
+      "to_name": "SARGEN~1",
+      "to_number": 73,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "NPORTS~1",
+      "from_number": 71,
+      "to_name": "HILLSB~1",
+      "to_number": 72,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BELLEF~1",
+      "from_number": 74,
+      "to_name": "STHPOI~1",
+      "to_number": 75,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "STHPOI~1",
+      "from_number": 75,
+      "to_name": "WHUNTN~1",
+      "to_number": 118,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "STHPOI~1",
+      "from_number": 75,
+      "to_name": "TURNER~1",
+      "to_number": 77,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "DARRAH~1",
+      "from_number": 76,
+      "to_name": "WHUNTN~1",
+      "to_number": 118,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "DARRAH~1",
+      "from_number": 76,
+      "to_name": "TURNER~1",
+      "to_number": 77,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TURNER~1",
+      "from_number": 77,
+      "to_name": "LOGAN~1",
+      "to_number": 82,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TURNER~1",
+      "from_number": 77,
+      "to_name": "CABINC~1",
+      "to_number": 80,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TURNER~1",
+      "from_number": 77,
+      "to_name": "CABINC~1",
+      "to_number": 80,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TURNER~1",
+      "from_number": 77,
+      "to_name": "CHEMIC~1",
+      "to_number": 78,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CHEMIC~1",
+      "from_number": 78,
+      "to_name": "CAPITL~1",
+      "to_number": 79,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CAPITL~1",
+      "from_number": 79,
+      "to_name": "CABINC~1",
+      "to_number": 80,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CABINC~1",
+      "from_number": 80,
+      "to_name": "BAILEY~1",
+      "to_number": 96,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CABINC~1",
+      "from_number": 80,
+      "to_name": "HINTON~1",
+      "to_number": 99,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CABINC~1",
+      "from_number": 80,
+      "to_name": "BRADLE~1",
+      "to_number": 98,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CABINC~1",
+      "from_number": 80,
+      "to_name": "SUNDIA~1",
+      "to_number": 97,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "LOGAN~1",
+      "from_number": 82,
+      "to_name": "BAILEY~1",
+      "to_number": 96,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "LOGAN~1",
+      "from_number": 82,
+      "to_name": "SPRIGG~1",
+      "to_number": 83,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SPRIGG~1",
+      "from_number": 83,
+      "to_name": "BEAVER~1",
+      "to_number": 85,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SPRIGG~1",
+      "from_number": 83,
+      "to_name": "BETSYL~1",
+      "to_number": 84,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BETSYL~1",
+      "from_number": 84,
+      "to_name": "BEAVER~1",
+      "to_number": 85,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BEAVER~1",
+      "from_number": 85,
+      "to_name": "CLINCH~1",
+      "to_number": 89,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BEAVER~1",
+      "from_number": 85,
+      "to_name": "FREMON~1",
+      "to_number": 88,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BEAVER~1",
+      "from_number": 85,
+      "to_name": "HAZARD~1",
+      "to_number": 86,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FREMON~1",
+      "from_number": 88,
+      "to_name": "CLINCH~1",
+      "to_number": 89,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLINCH~1",
+      "from_number": 89,
+      "to_name": "SALTVL~1",
+      "to_number": 92,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLINCH~1",
+      "from_number": 89,
+      "to_name": "HOLSTO~1",
+      "to_number": 90,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLINCH~1",
+      "from_number": 89,
+      "to_name": "SALTVL~1",
+      "to_number": 92,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLINCH~1",
+      "from_number": 89,
+      "to_name": "HOLSTO~1",
+      "to_number": 90,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HOLSTO~1",
+      "from_number": 90,
+      "to_name": "HOLSTO~2",
+      "to_number": 91,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HOLSTO~2",
+      "from_number": 91,
+      "to_name": "SALTVL~1",
+      "to_number": 92,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SALTVL~1",
+      "from_number": 92,
+      "to_name": "SMYTHE~1",
+      "to_number": 102,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SALTVL~1",
+      "from_number": 92,
+      "to_name": "GLEN L~1",
+      "to_number": 100,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SALTVL~1",
+      "from_number": 92,
+      "to_name": "SWITCH~1",
+      "to_number": 94,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SALTVL~1",
+      "from_number": 92,
+      "to_name": "TAZEWE~1",
+      "to_number": 93,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "TAZEWE~1",
+      "from_number": 93,
+      "to_name": "SWITCH~1",
+      "to_number": 94,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SWITCH~1",
+      "from_number": 94,
+      "to_name": "GLEN L~1",
+      "to_number": 100,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SWITCH~1",
+      "from_number": 94,
+      "to_name": "BAILEY~1",
+      "to_number": 96,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "SWITCH~1",
+      "from_number": 94,
+      "to_name": "CALDWE~1",
+      "to_number": 95,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CALDWE~1",
+      "from_number": 95,
+      "to_name": "BAILEY~1",
+      "to_number": 96,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BAILEY~1",
+      "from_number": 96,
+      "to_name": "SUNDIA~1",
+      "to_number": 97,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BRADLE~1",
+      "from_number": 98,
+      "to_name": "GLEN L~1",
+      "to_number": 100,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HINTON~1",
+      "from_number": 99,
+      "to_name": "GLENL~1",
+      "to_number": 100,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "GLEN L~1",
+      "from_number": 100,
+      "to_name": "CLAYTO~1",
+      "to_number": 103,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "GLEN L~1",
+      "from_number": 100,
+      "to_name": "HANCOC~1",
+      "to_number": 104,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "GLEN L~1",
+      "from_number": 100,
+      "to_name": "CLOVER~1",
+      "to_number": 106,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "GLEN L~1",
+      "from_number": 100,
+      "to_name": "WYTHE~1",
+      "to_number": 101,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WYTHE~1",
+      "from_number": 101,
+      "to_name": "SMYTHE~1",
+      "to_number": 102,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLAYTO~1",
+      "from_number": 103,
+      "to_name": "ROANOK~1",
+      "to_number": 105,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLAYTO~1",
+      "from_number": 103,
+      "to_name": "HANCOC~1",
+      "to_number": 104,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLAYTO~1",
+      "from_number": 103,
+      "to_name": "FIELDA~1",
+      "to_number": 110,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "HANCOC~1",
+      "from_number": 104,
+      "to_name": "ROANOK~1",
+      "to_number": 105,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ROANOK~1",
+      "from_number": 105,
+      "to_name": "REUSEN~1",
+      "to_number": 107,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ROANOK~1",
+      "from_number": 105,
+      "to_name": "BLAINE~1",
+      "to_number": 108,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "ROANOK~1",
+      "from_number": 105,
+      "to_name": "CLOVER~1",
+      "to_number": 106,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "CLOVER~1",
+      "from_number": 106,
+      "to_name": "REUSEN~1",
+      "to_number": 107,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "BLAINE~1",
+      "from_number": 108,
+      "to_name": "FRANKL~1",
+      "to_number": 109,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FRANKL~1",
+      "from_number": 109,
+      "to_name": "FIELDA~1",
+      "to_number": 110,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FIELDA~1",
+      "from_number": 110,
+      "to_name": "DANVIL~1",
+      "to_number": 112,
+      "normal_MVA_limit": 150,
+      "emergency_MVA_limit": 180,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "FIELDA~1",
+      "from_number": 110,
+      "to_name": "DANRIV~1",
+      "to_number": 111,
+      "normal_MVA_limit": 215,
+      "emergency_MVA_limit": 230,
+      "nominal_voltage": 138
+    },
+    {
+      "from_name": "WMEDFO~1",
+      "from_number": 114,
+      "to_name": "MEDFOR~1",
+      "to_number": 115,
+      "normal_MVA_limit": 75,
+      "emergency_MVA_limit": 90,
+      "nominal_voltage": 138
+    }
+  ]

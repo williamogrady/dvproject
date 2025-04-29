@@ -4,9 +4,11 @@
   <meta charset="UTF-8" />
   <title>dvproject</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <link rel="stylesheet" href="week15/css/styles.css" />
+  <link rel="stylesheet" href="/prototype1/css/styles.css" />
 </head>
 <body>
+
+  <div id="map-view-title">Map-Situated View</div>
 
   
   <div id="info-panel" style="position:absolute; top:80px; right:20px; width:200px; font-family:sans-serif;"></div>
@@ -16,9 +18,13 @@
     <div id="control-header">Control Panel</div>
   
     <div id="control-content">
-      <button id="change-mode">Change Mode</button>
-      <div id="mode-indicator">Current Mode: Full Topology</div>
+      <button id="toggle-topology">Show Full Topology</button>
     </div>
+    </div>
+  </div>
+
+  <div id="legend-box">
+    Legend
   </div>
 
 
@@ -36,7 +42,7 @@
 "></div>
   
   <svg id="topology"></svg>
-  <script src="week15/js/svg-map2.js"></script> 
+  <script src="./js/map-situated-view.js"></script> 
 
 </body>
 </html>

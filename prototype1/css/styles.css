@@ -1,0 +1,163 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+svg {
+  background: #2b2b2b;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+path.link {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  pointer-events: stroke; /* important for hover on lines */
+}
+
+/* Control Panel */
+#control-panel {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  width: 250px;
+  background: #ffffff;
+  border: 2px solid #007acc;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  font-family: sans-serif;
+  z-index: 20;
+  cursor: move;
+  user-select: none;
+}
+
+#control-header {
+  background: #007acc;
+  color: white;
+  padding: 10px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+#control-content {
+  padding: 10px;
+}
+
+#control-content button {
+  margin-bottom: 10px;
+}
+
+/* Text */
+text {
+  font-size: 10px;
+  fill: #ffffff;
+  pointer-events: none;
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  padding: 6px 10px;
+  background: white;
+  border: 1px solid black;
+  border-radius: 4px;
+  pointer-events: none;
+  font-size: 12px;
+  visibility: hidden;
+}
+
+/* Links - Manual mode */
+.link-manual {
+  stroke: rgb(134, 130, 130);
+  stroke-width: 2px;
+  opacity: 1;
+}
+
+.link-manual-outline {
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.link-manual-faded {
+  stroke: #999999;
+  opacity: 0.1;
+}
+
+/* Links - Full Topology */
+.link-full {
+  stroke: white;
+  stroke-width: 2px;
+  opacity: 0.3;
+}
+
+/* Nodes - Manual mode */
+.node-generator-manual circle {
+  fill: #a8e6a3; /* light green inside */
+  stroke: #2b7a0b; /* dark green border */
+  stroke-width: 3px;
+}
+
+.node-bus-manual rect {
+  fill: #d3d3d3; /* light gray */
+  stroke: none;
+}
+
+.node-load-manual path {
+  fill: #add8e6; /* light blue */
+  stroke: black;
+  stroke-width: 2px;
+}
+
+/* Nodes - Full Topology mode */
+.node-full circle,
+.node-full rect,
+.node-full path {
+  fill: white;
+  stroke: none;
+  opacity: 0.3;
+}
+
+/* Faded background nodes */
+.faded {
+  opacity: 0.2;
+}
+
+/* Selected generator highlight */
+.selected-generator circle {
+  fill: orange !important;
+  stroke: orange !important;
+}
+
+/* Legend Box */
+#legend-box {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: #eeeeee;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: sans-serif;
+  font-size: 14px;
+  color: #333;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+}
+
+/* Map View Title */
+#map-view-title {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  color: #888;
+  opacity: 0.75;
+  z-index: 1000;
+  pointer-events: none;
+  background: none;
+}

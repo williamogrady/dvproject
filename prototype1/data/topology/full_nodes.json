@@ -1,0 +1,2170 @@
+[
+  {
+    "id": "Gen24",
+    "x": 1418,
+    "y": 1218,
+    "type": "generator"
+  },
+  {
+    "id": "Gen72",
+    "x": 1514,
+    "y": 1283,
+    "type": "generator"
+  },
+  {
+    "id": "Gen73",
+    "x": 1524,
+    "y": 1392,
+    "type": "generator"
+  },
+  {
+    "id": "Gen74",
+    "x": 1595,
+    "y": 1417,
+    "type": "generator"
+  },
+  {
+    "id": "Gen70",
+    "x": 1701,
+    "y": 1218,
+    "type": "generator"
+  },
+  {
+    "id": "Gen76",
+    "x": 1926,
+    "y": 1379,
+    "type": "generator"
+  },
+  {
+    "id": "Gen82",
+    "x": 1916,
+    "y": 1715,
+    "type": "generator"
+  },
+  {
+    "id": "Gen77",
+    "x": 2039,
+    "y": 1589,
+    "type": "generator"
+  },
+  {
+    "id": "Gen80",
+    "x": 2165,
+    "y": 1496,
+    "type": "generator"
+  },
+  {
+    "id": "Gen92",
+    "x": 2095,
+    "y": 1829,
+    "type": "generator"
+  },
+  {
+    "id": "Gen104",
+    "x": 2513,
+    "y": 1662,
+    "type": "generator"
+  },
+  {
+    "id": "Gen100",
+    "x": 2396,
+    "y": 1781,
+    "type": "generator"
+  },
+  {
+    "id": "Gen99",
+    "x": 2398,
+    "y": 1379,
+    "type": "generator"
+  },
+  {
+    "id": "Gen85",
+    "x": 1561,
+    "y": 1946,
+    "type": "generator"
+  },
+  {
+    "id": "Gen90",
+    "x": 1893,
+    "y": 1954,
+    "type": "generator"
+  },
+  {
+    "id": "Gen111",
+    "x": 2451,
+    "y": 2122,
+    "type": "generator"
+  },
+  {
+    "id": "Gen89",
+    "x": 1824,
+    "y": 1827,
+    "type": "generator"
+  },
+  {
+    "id": "Gen87",
+    "x": 1726,
+    "y": 2001,
+    "type": "generator"
+  },
+  {
+    "id": "Gen91",
+    "x": 2096,
+    "y": 2063,
+    "type": "generator"
+  },
+  {
+    "id": "Gen66",
+    "x": 2396,
+    "y": 1118,
+    "type": "generator"
+  },
+  {
+    "id": "Gen69",
+    "x": 2096,
+    "y": 1081,
+    "type": "generator"
+  },
+  {
+    "id": "Gen116",
+    "x": 2272,
+    "y": 1152,
+    "type": "generator"
+  },
+  {
+    "id": "Gen65",
+    "x": 2405,
+    "y": 1271,
+    "type": "generator"
+  },
+  {
+    "id": "Gen103",
+    "x": 2459,
+    "y": 1903,
+    "type": "generator"
+  },
+  {
+    "id": "Gen62",
+    "x": 2654,
+    "y": 1117,
+    "type": "generator"
+  },
+  {
+    "id": "Gen110",
+    "x": 2653,
+    "y": 1976,
+    "type": "generator"
+  },
+  {
+    "id": "Gen112",
+    "x": 2726,
+    "y": 1976,
+    "type": "generator"
+  },
+  {
+    "id": "Gen105",
+    "x": 2653,
+    "y": 1665,
+    "type": "generator"
+  },
+  {
+    "id": "Gen107",
+    "x": 2741,
+    "y": 1665,
+    "type": "generator"
+  },
+  {
+    "id": "Load105",
+    "x": 2583,
+    "y": 1667,
+    "type": "load"
+  },
+  {
+    "id": "Load106",
+    "x": 2583,
+    "y": 1517,
+    "type": "load"
+  },
+  {
+    "id": "Load96",
+    "x": 2102,
+    "y": 1595,
+    "type": "load"
+  },
+  {
+    "id": "Load80",
+    "x": 2220,
+    "y": 1490,
+    "type": "load"
+  },
+  {
+    "id": "Load94",
+    "x": 2263,
+    "y": 1767,
+    "type": "load"
+  },
+  {
+    "id": "Load95",
+    "x": 2121,
+    "y": 1767,
+    "type": "load"
+  },
+  {
+    "id": "Load100",
+    "x": 2370,
+    "y": 1763,
+    "type": "load"
+  },
+  {
+    "id": "Load104",
+    "x": 2485,
+    "y": 1675,
+    "type": "load"
+  },
+  {
+    "id": "Load98",
+    "x": 2300,
+    "y": 1562,
+    "type": "load"
+  },
+  {
+    "id": "Load97",
+    "x": 2201,
+    "y": 1597,
+    "type": "load"
+  },
+  {
+    "id": "Load101",
+    "x": 2334,
+    "y": 2009,
+    "type": "load"
+  },
+  {
+    "id": "Load102",
+    "x": 2184,
+    "y": 2007,
+    "type": "load"
+  },
+  {
+    "id": "Load92",
+    "x": 2120,
+    "y": 1936,
+    "type": "load"
+  },
+  {
+    "id": "Load110",
+    "x": 2619,
+    "y": 2069,
+    "type": "load"
+  },
+  {
+    "id": "Load112",
+    "x": 2751,
+    "y": 2069,
+    "type": "load"
+  },
+  {
+    "id": "Load103",
+    "x": 2504,
+    "y": 2009,
+    "type": "load"
+  },
+  {
+    "id": "Load109",
+    "x": 2693,
+    "y": 1911,
+    "type": "load"
+  },
+  {
+    "id": "Load108",
+    "x": 2693,
+    "y": 1821,
+    "type": "load"
+  },
+  {
+    "id": "Load107",
+    "x": 2761,
+    "y": 1770,
+    "type": "load"
+  },
+  {
+    "id": "Load90",
+    "x": 1857,
+    "y": 2069,
+    "type": "load"
+  },
+  {
+    "id": "Load88",
+    "x": 1726,
+    "y": 1827,
+    "type": "load"
+  },
+  {
+    "id": "Load86",
+    "x": 1599,
+    "y": 2017,
+    "type": "load"
+  },
+  {
+    "id": "Load85",
+    "x": 1561,
+    "y": 1837,
+    "type": "load"
+  },
+  {
+    "id": "Load84",
+    "x": 1596,
+    "y": 1827,
+    "type": "load"
+  },
+  {
+    "id": "Load83",
+    "x": 1684,
+    "y": 1776,
+    "type": "load"
+  },
+  {
+    "id": "Load82",
+    "x": 1916,
+    "y": 1599,
+    "type": "load"
+  },
+  {
+    "id": "Load77",
+    "x": 1995,
+    "y": 1587,
+    "type": "load"
+  },
+  {
+    "id": "Load75",
+    "x": 1662,
+    "y": 1593,
+    "type": "load"
+  },
+  {
+    "id": "Load118",
+    "x": 1799,
+    "y": 1368,
+    "type": "load"
+  },
+  {
+    "id": "Load76",
+    "x": 1980,
+    "y": 1368,
+    "type": "load"
+  },
+  {
+    "id": "Load78",
+    "x": 2068,
+    "y": 1431,
+    "type": "load"
+  },
+  {
+    "id": "Load74",
+    "x": 1578,
+    "y": 1534,
+    "type": "load"
+  },
+  {
+    "id": "Load79",
+    "x": 2121,
+    "y": 1252,
+    "type": "load"
+  },
+  {
+    "id": "Load66",
+    "x": 2432,
+    "y": 1111,
+    "type": "load"
+  },
+  {
+    "id": "Load62",
+    "x": 2512,
+    "y": 1110,
+    "type": "load"
+  },
+  {
+    "id": "Load67",
+    "x": 2406,
+    "y": 909,
+    "type": "load"
+  },
+  {
+    "id": "Load70",
+    "x": 1676,
+    "y": 1085,
+    "type": "load"
+  },
+  {
+    "id": "Load93",
+    "x": 2155,
+    "y": 1767,
+    "type": "load"
+  },
+  {
+    "id": "Bus106",
+    "x": 2574.5,
+    "y": 1565,
+    "width": 293,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus104",
+    "x": 2510.5,
+    "y": 1715,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus105",
+    "x": 2621,
+    "y": 1715,
+    "width": 108,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus107",
+    "x": 2738.5,
+    "y": 1715,
+    "width": 83,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus108",
+    "x": 2668,
+    "y": 1858,
+    "width": 62,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2637,
+    "rotateY": 1855
+  },
+  {
+    "id": "Bus109",
+    "x": 2669.5,
+    "y": 1942,
+    "width": 65,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2637,
+    "rotateY": 1939
+  },
+  {
+    "id": "Bus112",
+    "x": 2731.5,
+    "y": 2028,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus110",
+    "x": 2609,
+    "y": 2026,
+    "width": 108,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus103",
+    "x": 2487.5,
+    "y": 1954,
+    "width": 189,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus111",
+    "x": 2574,
+    "y": 2161,
+    "width": 132,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2508,
+    "rotateY": 2158
+  },
+  {
+    "id": "Bus101",
+    "x": 2330,
+    "y": 1954,
+    "width": 82,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus100",
+    "x": 2376.5,
+    "y": 1715,
+    "width": 153,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus94",
+    "x": 2236.5,
+    "y": 1715,
+    "width": 85,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus95",
+    "x": 2139.5,
+    "y": 1715,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus93",
+    "x": 2178.5,
+    "y": 1813,
+    "width": 107,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus102",
+    "x": 2184,
+    "y": 1955,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus92",
+    "x": 2190,
+    "y": 1882,
+    "width": 272,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus91",
+    "x": 2077.5,
+    "y": 2004,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus89",
+    "x": 1865.5,
+    "y": 1882,
+    "width": 157,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus90",
+    "x": 1867,
+    "y": 2002,
+    "width": 102,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus88",
+    "x": 1730.5,
+    "y": 1882,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus82",
+    "x": 1929,
+    "y": 1646,
+    "width": 118,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus83",
+    "x": 1660,
+    "y": 1715,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus84",
+    "x": 1614,
+    "y": 1766,
+    "width": 74,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus85",
+    "x": 1612,
+    "y": 1884,
+    "width": 124,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus87",
+    "x": 1683.5,
+    "y": 2032,
+    "width": 51,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 1658,
+    "rotateY": 2029
+  },
+  {
+    "id": "Bus86",
+    "x": 1614,
+    "y": 1956,
+    "width": 50,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus75",
+    "x": 1672,
+    "y": 1527,
+    "width": 134,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus77",
+    "x": 2021.5,
+    "y": 1524,
+    "width": 235,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus96",
+    "x": 2178.5,
+    "y": 1644,
+    "width": 177,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus97",
+    "x": 2164.5,
+    "y": 1548,
+    "width": 119,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus76",
+    "x": 1946,
+    "y": 1431,
+    "width": 108,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus118",
+    "x": 1802.5,
+    "y": 1431,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus74",
+    "x": 1603.5,
+    "y": 1468,
+    "width": 97,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus98",
+    "x": 2312.5,
+    "y": 1502,
+    "width": 119,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus80",
+    "x": 2219.5,
+    "y": 1431,
+    "width": 237,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus99",
+    "x": 2397.5,
+    "y": 1431,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus81",
+    "x": 2190,
+    "y": 1369,
+    "width": 84,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus78",
+    "x": 2085.5,
+    "y": 1371,
+    "width": 61,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus79",
+    "x": 2119.5,
+    "y": 1310,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus71",
+    "x": 1585.5,
+    "y": 1284,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus73",
+    "x": 1526.5,
+    "y": 1340,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus72",
+    "x": 1517,
+    "y": 1230,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus24",
+    "x": 1417.5,
+    "y": 1152,
+    "width": 163,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus70",
+    "x": 1661.5,
+    "y": 1153,
+    "width": 121,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus69",
+    "x": 2138.5,
+    "y": 1213,
+    "width": 175,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2051,
+    "rotateY": 1210
+  },
+  {
+    "id": "Bus38",
+    "x": 1747,
+    "y": 984,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus68",
+    "x": 2228.5,
+    "y": 1228,
+    "width": 169,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2144,
+    "rotateY": 1225
+  },
+  {
+    "id": "Bus116",
+    "x": 2255.5,
+    "y": 1197,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2216,
+    "rotateY": 1194
+  },
+  {
+    "id": "Bus65",
+    "x": 2401.5,
+    "y": 1206,
+    "width": 189,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus66",
+    "x": 2360.5,
+    "y": 1053,
+    "width": 177,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus62",
+    "x": 2604,
+    "y": 1053,
+    "width": 246,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus67",
+    "x": 2412.5,
+    "y": 975,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Gen49",
+    "x": 2336,
+    "y": 635,
+    "type": "generator"
+  },
+  {
+    "id": "Gen61",
+    "x": 2574,
+    "y": 538,
+    "type": "generator"
+  },
+  {
+    "id": "Gen42",
+    "x": 1945,
+    "y": 26,
+    "type": "generator"
+  },
+  {
+    "id": "Gen54",
+    "x": 2209,
+    "y": 51,
+    "type": "generator"
+  },
+  {
+    "id": "Gen40",
+    "x": 1729,
+    "y": 50,
+    "type": "generator"
+  },
+  {
+    "id": "Gen34",
+    "x": 1587,
+    "y": 376,
+    "type": "generator"
+  },
+  {
+    "id": "Gen36",
+    "x": 1658,
+    "y": 541,
+    "type": "generator"
+  },
+  {
+    "id": "Gen46",
+    "x": 1863,
+    "y": 584,
+    "type": "generator"
+  },
+  {
+    "id": "Gen56",
+    "x": 2387,
+    "y": 51,
+    "type": "generator"
+  },
+  {
+    "id": "Gen55",
+    "x": 2539,
+    "y": 50,
+    "type": "generator"
+  },
+  {
+    "id": "Gen59",
+    "x": 2711,
+    "y": 53,
+    "type": "generator"
+  },
+  {
+    "id": "Load39",
+    "x": 1606,
+    "y": 199,
+    "type": "load"
+  },
+  {
+    "id": "Load40",
+    "x": 1783,
+    "y": 39,
+    "type": "load"
+  },
+  {
+    "id": "Load41",
+    "x": 1889,
+    "y": 39,
+    "type": "load"
+  },
+  {
+    "id": "Load33",
+    "x": 1466,
+    "y": 181,
+    "type": "load"
+  },
+  {
+    "id": "Load35",
+    "x": 1317,
+    "y": 608,
+    "type": "load"
+  },
+  {
+    "id": "Load36",
+    "x": 1658,
+    "y": 655,
+    "type": "load"
+  },
+  {
+    "id": "Load46",
+    "x": 1851,
+    "y": 663,
+    "type": "load"
+  },
+  {
+    "id": "Load47",
+    "x": 1928,
+    "y": 693,
+    "type": "load"
+  },
+  {
+    "id": "Load43",
+    "x": 1854,
+    "y": 387,
+    "type": "load"
+  },
+  {
+    "id": "Load44",
+    "x": 1907,
+    "y": 294,
+    "type": "load"
+  },
+  {
+    "id": "Load52",
+    "x": 2111,
+    "y": 169,
+    "type": "load"
+  },
+  {
+    "id": "Load42",
+    "x": 2014,
+    "y": 39,
+    "type": "load"
+  },
+  {
+    "id": "Load53",
+    "x": 2121,
+    "y": 40,
+    "type": "load"
+  },
+  {
+    "id": "Load54",
+    "x": 2249,
+    "y": 39,
+    "type": "load"
+  },
+  {
+    "id": "Load56",
+    "x": 2326,
+    "y": 46,
+    "type": "load"
+  },
+  {
+    "id": "Load50",
+    "x": 2274,
+    "y": 379,
+    "type": "load"
+  },
+  {
+    "id": "Load57",
+    "x": 2274,
+    "y": 271,
+    "type": "load"
+  },
+  {
+    "id": "Load58",
+    "x": 2428,
+    "y": 264,
+    "type": "load"
+  },
+  {
+    "id": "Load51",
+    "x": 2428,
+    "y": 352,
+    "type": "load"
+  },
+  {
+    "id": "Load45",
+    "x": 1951,
+    "y": 513,
+    "type": "load"
+  },
+  {
+    "id": "Load49",
+    "x": 2121,
+    "y": 758,
+    "type": "load"
+  },
+  {
+    "id": "Load48",
+    "x": 2067,
+    "y": 483,
+    "type": "load"
+  },
+  {
+    "id": "Load55",
+    "x": 2521,
+    "y": 149,
+    "type": "load"
+  },
+  {
+    "id": "Load34",
+    "x": 1587,
+    "y": 484,
+    "type": "load"
+  },
+  {
+    "id": "Load60",
+    "x": 2583,
+    "y": 449,
+    "type": "load"
+  },
+  {
+    "id": "Load59",
+    "x": 2687,
+    "y": 112,
+    "type": "load"
+  },
+  {
+    "id": "Bus56",
+    "x": 2355,
+    "y": 101,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus55",
+    "x": 2520,
+    "y": 101,
+    "width": 90,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus54",
+    "x": 2232.5,
+    "y": 101,
+    "width": 107,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus53",
+    "x": 2111,
+    "y": 101,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus42",
+    "x": 1983,
+    "y": 101,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus41",
+    "x": 1881.5,
+    "y": 101,
+    "width": 79,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus40",
+    "x": 1730,
+    "y": 101,
+    "width": 184,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus44",
+    "x": 1914,
+    "y": 349,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus52",
+    "x": 2093.5,
+    "y": 229,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus43",
+    "x": 1867,
+    "y": 439,
+    "width": 84,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus45",
+    "x": 1936.5,
+    "y": 568,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus48",
+    "x": 2064.5,
+    "y": 529,
+    "width": 73,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus49",
+    "x": 2217,
+    "y": 699,
+    "width": 308,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus37",
+    "x": 1705,
+    "y": 359,
+    "width": 142,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus33",
+    "x": 1469,
+    "y": 241,
+    "width": 78,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus34",
+    "x": 1600,
+    "y": 427,
+    "width": 142,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus36",
+    "x": 1640.5,
+    "y": 594,
+    "width": 85,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus57",
+    "x": 2346,
+    "y": 306,
+    "width": 60,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2316,
+    "rotateY": 303
+  },
+  {
+    "id": "Bus50",
+    "x": 2350.5,
+    "y": 424,
+    "width": 69,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2316,
+    "rotateY": 421
+  },
+  {
+    "id": "Bus46",
+    "x": 1938,
+    "y": 691,
+    "width": 82,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 1897,
+    "rotateY": 688
+  },
+  {
+    "id": "Bus47",
+    "x": 2018.5,
+    "y": 717,
+    "width": 75,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 1981,
+    "rotateY": 714
+  },
+  {
+    "id": "Bus35",
+    "x": 1428.5,
+    "y": 665,
+    "width": 107,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 1375,
+    "rotateY": 662
+  },
+  {
+    "id": "Bus58",
+    "x": 2396.5,
+    "y": 287,
+    "width": 43,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2375,
+    "rotateY": 284
+  },
+  {
+    "id": "Bus51",
+    "x": 2408.5,
+    "y": 385,
+    "width": 69,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2374,
+    "rotateY": 382
+  },
+  {
+    "id": "Bus63",
+    "x": 2587,
+    "y": 273,
+    "width": 54,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2560,
+    "rotateY": 270
+  },
+  {
+    "id": "Bus59",
+    "x": 2757,
+    "y": 273,
+    "width": 250,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2632,
+    "rotateY": 270
+  },
+  {
+    "id": "Bus60",
+    "x": 2685.5,
+    "y": 508,
+    "width": 107,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2632,
+    "rotateY": 505
+  },
+  {
+    "id": "Bus64",
+    "x": 2585,
+    "y": 601,
+    "width": 96,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2537,
+    "rotateY": 598
+  },
+  {
+    "id": "Bus61",
+    "x": 2710.5,
+    "y": 678,
+    "width": 157,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 2632,
+    "rotateY": 675
+  },
+  {
+    "id": "Bus39",
+    "x": 1721.5,
+    "y": 260,
+    "width": 107,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 1668,
+    "rotateY": 257
+  },
+  {
+    "id": "Gen4",
+    "x": 135,
+    "y": 220,
+    "type": "generator"
+  },
+  {
+    "id": "Gen6",
+    "x": 320,
+    "y": 409,
+    "type": "generator"
+  },
+  {
+    "id": "Gen8",
+    "x": 130,
+    "y": 770,
+    "type": "generator"
+  },
+  {
+    "id": "Gen10",
+    "x": 174,
+    "y": 1172,
+    "type": "generator"
+  },
+  {
+    "id": "Gen12",
+    "x": 550,
+    "y": 153,
+    "type": "generator"
+  },
+  {
+    "id": "Gen27",
+    "x": 292,
+    "y": 1276,
+    "type": "generator"
+  },
+  {
+    "id": "Gen25",
+    "x": 948,
+    "y": 1317,
+    "type": "generator"
+  },
+  {
+    "id": "Gen26",
+    "x": 805,
+    "y": 1223,
+    "type": "generator"
+  },
+  {
+    "id": "Gen31",
+    "x": 405,
+    "y": 973,
+    "type": "generator"
+  },
+  {
+    "id": "Gen32",
+    "x": 608,
+    "y": 979,
+    "type": "generator"
+  },
+  {
+    "id": "Gen113",
+    "x": 662,
+    "y": 778,
+    "type": "generator"
+  },
+  {
+    "id": "Gen18",
+    "x": 920,
+    "y": 645,
+    "type": "generator"
+  },
+  {
+    "id": "Gen19",
+    "x": 993,
+    "y": 541,
+    "type": "generator"
+  },
+  {
+    "id": "Gen15",
+    "x": 832,
+    "y": 498,
+    "type": "generator"
+  },
+  {
+    "id": "Load21",
+    "x": 1060,
+    "y": 980,
+    "type": "load"
+  },
+  {
+    "id": "Load22",
+    "x": 1131,
+    "y": 1125,
+    "type": "load"
+  },
+  {
+    "id": "Load23",
+    "x": 1109,
+    "y": 1299,
+    "type": "load"
+  },
+  {
+    "id": "Load20",
+    "x": 939,
+    "y": 931,
+    "type": "load"
+  },
+  {
+    "id": "Load115",
+    "x": 708,
+    "y": 1177,
+    "type": "load"
+  },
+  {
+    "id": "Load32",
+    "x": 583,
+    "y": 1096,
+    "type": "load"
+  },
+  {
+    "id": "Load114",
+    "x": 512,
+    "y": 1177,
+    "type": "load"
+  },
+  {
+    "id": "Load13",
+    "x": 662,
+    "y": 488,
+    "type": "load"
+  },
+  {
+    "id": "Load18",
+    "x": 993,
+    "y": 753,
+    "type": "load"
+  },
+  {
+    "id": "Load19",
+    "x": 1116,
+    "y": 650,
+    "type": "load"
+  },
+  {
+    "id": "Load15",
+    "x": 883,
+    "y": 488,
+    "type": "load"
+  },
+  {
+    "id": "Load17",
+    "x": 719,
+    "y": 748,
+    "type": "load"
+  },
+  {
+    "id": "Load31",
+    "x": 527,
+    "y": 948,
+    "type": "load"
+  },
+  {
+    "id": "Load28",
+    "x": 326,
+    "y": 1144,
+    "type": "load"
+  },
+  {
+    "id": "Load29",
+    "x": 317,
+    "y": 1013,
+    "type": "load"
+  },
+  {
+    "id": "Load27",
+    "x": 352,
+    "y": 1276,
+    "type": "load"
+  },
+  {
+    "id": "Load16",
+    "x": 440,
+    "y": 591,
+    "type": "load"
+  },
+  {
+    "id": "Load2",
+    "x": 219,
+    "y": 0,
+    "type": "load"
+  },
+  {
+    "id": "Load1",
+    "x": 14,
+    "y": 96,
+    "type": "load"
+  },
+  {
+    "id": "Load3",
+    "x": 30,
+    "y": 235,
+    "type": "load"
+  },
+  {
+    "id": "Load4",
+    "x": 134,
+    "y": 325,
+    "type": "load"
+  },
+  {
+    "id": "Load11",
+    "x": 320,
+    "y": 214,
+    "type": "load"
+  },
+  {
+    "id": "Load12",
+    "x": 557,
+    "y": 256,
+    "type": "load"
+  },
+  {
+    "id": "Load6",
+    "x": 320,
+    "y": 516,
+    "type": "load"
+  },
+  {
+    "id": "Load7",
+    "x": 428,
+    "y": 514,
+    "type": "load"
+  },
+  {
+    "id": "Load117",
+    "x": 805,
+    "y": 265,
+    "type": "load"
+  },
+  {
+    "id": "Load14",
+    "x": 797,
+    "y": 387,
+    "type": "load"
+  },
+  {
+    "id": "Bus1",
+    "x": 48,
+    "y": 51,
+    "width": 88,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus2",
+    "x": 219.5,
+    "y": 51,
+    "width": 159,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus3",
+    "x": 119.5,
+    "y": 179,
+    "width": 203,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus5",
+    "x": 134.5,
+    "y": 462,
+    "width": 233,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus4",
+    "x": 142,
+    "y": 271,
+    "width": 102,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus11",
+    "x": 318.5,
+    "y": 268,
+    "width": 147,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus6",
+    "x": 320.5,
+    "y": 462,
+    "width": 89,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus7",
+    "x": 434.5,
+    "y": 462,
+    "width": 89,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus117",
+    "x": 775.5,
+    "y": 208,
+    "width": 117,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus14",
+    "x": 798,
+    "y": 332,
+    "width": 160,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus13",
+    "x": 662,
+    "y": 436,
+    "width": 118,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus30",
+    "x": 768,
+    "y": 824,
+    "width": 130,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus32",
+    "x": 565,
+    "y": 1033,
+    "width": 182,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus29",
+    "x": 305.5,
+    "y": 953,
+    "width": 89,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus8",
+    "x": 176.5,
+    "y": 824,
+    "width": 147,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus9",
+    "x": 175.5,
+    "y": 980,
+    "width": 89,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus114",
+    "x": 540,
+    "y": 1136,
+    "width": 104,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus28",
+    "x": 305,
+    "y": 1082,
+    "width": 88,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus10",
+    "x": 176.5,
+    "y": 1108,
+    "width": 87,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus27",
+    "x": 362.5,
+    "y": 1211,
+    "width": 231,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus115",
+    "x": 697.5,
+    "y": 1136,
+    "width": 159,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus26",
+    "x": 796.5,
+    "y": 1276,
+    "width": 159,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus25",
+    "x": 925.5,
+    "y": 1368,
+    "width": 389,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus23",
+    "x": 1075.5,
+    "y": 1239,
+    "width": 117,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus21",
+    "x": 1031.5,
+    "y": 1037,
+    "width": 103,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus15",
+    "x": 859,
+    "y": 432,
+    "width": 164,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus19",
+    "x": 1068.5,
+    "y": 593,
+    "width": 189,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus18",
+    "x": 947.5,
+    "y": 698,
+    "width": 159,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus17",
+    "x": 733,
+    "y": 698,
+    "width": 174,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  },
+  {
+    "id": "Bus16",
+    "x": 553,
+    "y": 648,
+    "width": 106,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 500,
+    "rotateY": 645
+  },
+  {
+    "id": "Bus113",
+    "x": 642,
+    "y": 829,
+    "width": 106,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 589,
+    "rotateY": 826
+  },
+  {
+    "id": "Bus31",
+    "x": 523,
+    "y": 1023,
+    "width": 132,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 457,
+    "rotateY": 1020
+  },
+  {
+    "id": "Bus20",
+    "x": 1069.5,
+    "y": 1013,
+    "width": 159,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 990,
+    "rotateY": 1010
+  },
+  {
+    "id": "Bus22",
+    "x": 1115.5,
+    "y": 1180,
+    "width": 107,
+    "height": 6,
+    "type": "bus",
+    "rotate": -90,
+    "rotateX": 1062,
+    "rotateY": 1177
+  },
+  {
+    "id": "Bus12",
+    "x": 540.5,
+    "y": 208,
+    "width": 217,
+    "height": 6,
+    "type": "bus",
+    "rotate": 0,
+    "rotateX": null,
+    "rotateY": null
+  }
+]
