@@ -9,15 +9,29 @@
 <body>
 
   
+  <div id="info-panel" style="position:absolute; top:80px; right:20px; width:200px; font-family:sans-serif;"></div>
+
+
   <div id="mode-controls" style="position: absolute; top: 10px; left: 10px;">
     <button id="change-mode">Change Mode</button>
     <div id="mode-indicator">Current Mode: Full Topology</div>
   </div>
 
-  <div id="tooltip" class="tooltip"></div>
+  <div id="tooltip" style="
+  position: absolute;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: sans-serif;
+  font-size: 14px;
+  pointer-events: none;
+  visibility: hidden;
+  z-index: 10;
+"></div>
   
   <svg id="topology"></svg>
-  <script src="week15/js/svg-map.js"></script> 
+  <script src="week15/js/svg-map2.js"></script> 
 
 </body>
 </html>
