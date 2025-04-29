@@ -4,7 +4,7 @@ body {
   }
 
   svg {
-    background: #403944;
+    background: #2b2b2b;
     width: 100vw;
     height: 100vh;
     display: block;
@@ -16,7 +16,38 @@ body {
     fill: none;
   }
 
+  #control-panel {
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    width: 250px;
+    background: #ffffff;
+    border: 2px solid #007acc;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    font-family: sans-serif;
+    z-index: 20;
+    cursor: move;
+    user-select: none;
+  }
   
+  #control-header {
+    background: #007acc;
+    color: white;
+    padding: 10px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  
+  #control-content {
+    padding: 10px;
+  }
+  
+  #control-content button {
+    margin-bottom: 10px;
+  }
 
   text {
     font-size: 10px;

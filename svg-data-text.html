@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Topology Switching (23/4)</title>
+  <title>dvproject</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="stylesheet" href="week15/css/styles.css" />
 </head>
@@ -12,10 +12,15 @@
   <div id="info-panel" style="position:absolute; top:80px; right:20px; width:200px; font-family:sans-serif;"></div>
 
 
-  <div id="mode-controls" style="position: absolute; top: 10px; left: 10px;">
-    <button id="change-mode">Change Mode</button>
-    <div id="mode-indicator">Current Mode: Full Topology</div>
+  <div id="control-panel">
+    <div id="control-header">Control Panel</div>
+  
+    <div id="control-content">
+      <button id="change-mode">Change Mode</button>
+      <div id="mode-indicator">Current Mode: Full Topology</div>
+    </div>
   </div>
+
 
   <div id="tooltip" style="
   position: absolute;

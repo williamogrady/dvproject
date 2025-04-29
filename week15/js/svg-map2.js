@@ -343,9 +343,40 @@ document.getElementById("change-mode").addEventListener("click", () => {
   updateVisualization(mode);
 });
 
+
+// Make the control panel draggable
+(function() {
+    const panel = document.getElementById("control-panel");
+    const header = document.getElementById("control-header");
+  
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+  
+    header.addEventListener("mousedown", function(e) {
+      isDragging = true;
+      offsetX = e.clientX - panel.offsetLeft;
+      offsetY = e.clientY - panel.offsetTop;
+      header.style.cursor = "grabbing";
+    });
+  
+    document.addEventListener("mousemove", function(e) {
+      if (isDragging) {
+        panel.style.left = (e.clientX - offsetX) + "px";
+        panel.style.top = (e.clientY - offsetY) + "px";
+      }
+    });
+  
+    document.addEventListener("mouseup", function() {
+      isDragging = false;
+      header.style.cursor = "move";
+    });
+  })();
+
 //----------------------------------//
-// 7. Zoom Behavior
+// 7. Zoom
 //----------------------------------//
+
 const zoom = d3.zoom()
   .scaleExtent([0.2, 4])
   .on("zoom", (event) => {
