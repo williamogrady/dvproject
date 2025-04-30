@@ -4,36 +4,31 @@ body {
 }
 
 svg {
-  background: #2b2b2b;
+  background: #f3f3f3;
   width: 100vw;
   height: 100vh;
   display: block;
 }
 
 path.link {
-  fill: none;
   stroke-width: 2px;
   stroke-linecap: round;
   pointer-events: stroke; /* important for hover on lines */
 }
 
-/* Control Panel */
-#control-panel {
+.control-panel {
   position: absolute;
-  top: 40px;
-  left: 40px;
-  width: 250px;
   background: #ffffff;
   border: 2px solid #007acc;
   border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   font-family: sans-serif;
   z-index: 20;
   cursor: move;
   user-select: none;
 }
 
-#control-header {
+.control-header {
   background: #007acc;
   color: white;
   padding: 10px;
@@ -43,11 +38,11 @@ path.link {
   font-size: 16px;
 }
 
-#control-content {
+.control-content {
   padding: 10px;
 }
 
-#control-content button {
+.control-content button {
   margin-bottom: 10px;
 }
 
@@ -72,14 +67,15 @@ text {
 
 /* Links - Manual mode */
 .link-manual {
+  fill: rgb(255, 255, 255);
   stroke: rgb(134, 130, 130);
-  stroke-width: 2px;
+  stroke-width: 1px;
   opacity: 1;
 }
 
 .link-manual-outline {
   stroke: black;
-  stroke-width: 1px;
+  stroke-width: 0.5px;
 }
 
 .link-manual-faded {
@@ -89,8 +85,8 @@ text {
 
 /* Links - Full Topology */
 .link-full {
-  stroke: white;
-  stroke-width: 2px;
+  stroke: #000000;
+  stroke-width: 1px;
   opacity: 0.3;
 }
 
@@ -102,7 +98,7 @@ text {
 }
 
 .node-bus-manual rect {
-  fill: #d3d3d3; /* light gray */
+  fill: #5c5b5b; /* light gray */
   stroke: none;
 }
 
@@ -116,7 +112,7 @@ text {
 .node-full circle,
 .node-full rect,
 .node-full path {
-  fill: white;
+  fill: rgb(0, 0, 0);
   stroke: none;
   opacity: 0.3;
 }
@@ -160,4 +156,33 @@ text {
   z-index: 1000;
   pointer-events: none;
   background: none;
+}
+
+/* Base styling for both panels */
+#control-panel, #system-panel {
+  position: absolute;
+  background: #ffffff;
+  border: 2px solid #007acc;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  font-family: sans-serif;
+  z-index: 100;
+  cursor: move;
+  width: 240px;
+}
+
+/* Header bar for dragging */
+#control-header, #system-header {
+  background: #007acc;
+  color: white;
+  padding: 10px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Panel content area */
+#control-content, #system-content {
+  padding: 10px;
 }

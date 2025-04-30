@@ -147,21 +147,21 @@ function getOpGeneratorData(genId) {
 function drawTopology(group, nodes, links, faded = false, mode = "full") {
     console.log("🚨 drawTopology() called with mode:", mode, "faded:", faded);
   
-    // Draw Links
-    group.selectAll("path.link")
-      .data(links)
-      .enter()
-      .append("path")
-      .attr("class", d => {
-        if (mode === "full") return "link link-full";
-        if (mode === "manual" && faded) return "link link-manual-faded";
-        return "link link-manual";
-      })
-      .attr("d", d => d.d)
-      .on("mouseover", showTooltip)
-      .on("mousemove", moveTooltip)
-      .on("mouseout", hideTooltip);
-  
+      // Draw Links
+  group.selectAll("path.link")
+  .data(links)
+  .enter()
+  .append("path")
+  .attr("class", d => {
+    if (mode === "full") return "link link-full";
+    if (mode === "manual" && faded) return "link link-manual-faded";
+    return "link link-manual";
+  })
+  .attr("d", d => d.d)
+  .on("mouseover", showTooltip)
+  .on("mousemove", moveTooltip)
+  .on("mouseout", hideTooltip);
+    
     // Draw Nodes
     const nodeGroups = group.selectAll(".node")
   .data(nodes)
@@ -353,6 +353,7 @@ Promise.all([
 //----------------------------------//
 // 6. Event Listeners
 //----------------------------------//
+// Toggle between full and manual topology
 document.getElementById("toggle-topology").addEventListener("click", () => {
   mode = (mode === "manual") ? "full" : "manual";
 
@@ -362,34 +363,76 @@ document.getElementById("toggle-topology").addEventListener("click", () => {
   updateVisualization(mode);
 });
 
-// Make the control panel draggable
+// Checkbox: Toggle visibility of generators
+document.getElementById("toggle-generators").addEventListener("change", function() {
+  const visible = this.checked;
+  d3.selectAll(".node-generator-manual").style("display", visible ? null : "none");
+});
+
+// Checkbox: Toggle visibility of transmission lines
+document.getElementById("toggle-lines").addEventListener("change", function() {
+  const visible = this.checked;
+  d3.selectAll(".link").style("display", visible ? null : "none");
+});
+
+// Make the MAP CONTROLS panel draggable
 (function() {
-    const panel = document.getElementById("control-panel");
-    const header = document.getElementById("control-header");
-  
-    let isDragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-  
-    header.addEventListener("mousedown", function(e) {
-      isDragging = true;
-      offsetX = e.clientX - panel.offsetLeft;
-      offsetY = e.clientY - panel.offsetTop;
-      header.style.cursor = "grabbing";
-    });
-  
-    document.addEventListener("mousemove", function(e) {
-      if (isDragging) {
-        panel.style.left = (e.clientX - offsetX) + "px";
-        panel.style.top = (e.clientY - offsetY) + "px";
-      }
-    });
-  
-    document.addEventListener("mouseup", function() {
-      isDragging = false;
-      header.style.cursor = "move";
-    });
-  })();
+  const panel = document.getElementById("control-panel");     // still using this ID
+  const header = document.getElementById("control-header");
+
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  header.addEventListener("mousedown", function(e) {
+    isDragging = true;
+    offsetX = e.clientX - panel.offsetLeft;
+    offsetY = e.clientY - panel.offsetTop;
+    header.style.cursor = "grabbing";
+  });
+
+  document.addEventListener("mousemove", function(e) {
+    if (isDragging) {
+      panel.style.left = (e.clientX - offsetX) + "px";
+      panel.style.top = (e.clientY - offsetY) + "px";
+    }
+  });
+
+  document.addEventListener("mouseup", function() {
+    isDragging = false;
+    header.style.cursor = "move";
+  });
+})();
+
+// Make the SYSTEM OVERVIEW panel draggable
+(function() {
+  const panel = document.getElementById("system-panel");
+  const header = document.getElementById("system-header");
+
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  header.addEventListener("mousedown", function(e) {
+    isDragging = true;
+    offsetX = e.clientX - panel.offsetLeft;
+    offsetY = e.clientY - panel.offsetTop;
+    header.style.cursor = "grabbing";
+  });
+
+  document.addEventListener("mousemove", function(e) {
+    if (isDragging) {
+      panel.style.left = (e.clientX - offsetX) + "px";
+      panel.style.top = (e.clientY - offsetY) + "px";
+    }
+  });
+
+  document.addEventListener("mouseup", function() {
+    isDragging = false;
+    header.style.cursor = "move";
+  });
+})();
+
 
 //----------------------------------//
 // 7. Zoom
