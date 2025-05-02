@@ -1,9 +1,11 @@
 import { updateSystemState, systemState } from './state.js';
-import { updateMapView } from '/prototype1/js/views/mapView.js';
+import { updateSystemStyle } from '/prototype1/js/views/mapView.js';
 
 export function loadScenario(scenario, generators, loads, lines) {
   // 1. Apply scenario generator start states
+  console.log("Loading scenario:", scenario);
   if (scenario.startState?.allGeneratorsOff) {
+    console.log("All generators turning off");
     generators.forEach(gen => {
       gen.currentOutput = 0;
     });
@@ -19,5 +21,5 @@ export function loadScenario(scenario, generators, loads, lines) {
   updateSystemState(generators, loads, lines);
 
   // 3. Update the map view
-  updateMapView(systemState);
+  updateSystemStyle(systemState);
 }

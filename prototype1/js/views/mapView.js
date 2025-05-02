@@ -8,7 +8,7 @@ import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 let allNodes = [], allLinks = [], nodeById = {};
 let opGenerators = [], opBuses = [], opLines = [];
 let selectedGeneratorId = null;
-let currentMode = "manual";
+let currentMode = "";
 
 const svg = d3.select("#map-canvas");
 const group = svg.append("g");
@@ -129,9 +129,9 @@ export function updateVisualization(mode) {
 //----------------------------------//
 // 5. Export to main.js
 //----------------------------------//
-export function initMapView(nodes, links, generators, buses, lines, mode = "full") {
+export function initMapView(nodes, links, generators, buses, lines, mode) {
 
-    console.log("Initializing map view with mode:", mode);
+  console.log("Initializing map view with mode:", mode);
   allNodes = nodes;
   allLinks = links;
   opGenerators = generators;
@@ -175,11 +175,14 @@ export function initMapView(nodes, links, generators, buses, lines, mode = "full
 
 }
 
-export function updateMapView(systemState) {
+export function updateSystemStyle(systemState) {
+  console.log("Updating generator visuals:", opGenerators.map(g => ({
+        id: g.id,
+        output: g.currentOutput
+      })));
   d3.selectAll(".node-generator-manual circle")
     .attr("fill", d => {
-      const busNumber = parseInt(d.id.replace("Gen", ""));
-      const gen = opGenerators.find(g => g.busNumber === busNumber);
+      const gen = opGenerators.find(g => "Gen" + g.busNumber === d.id);
       return gen?.currentOutput > 0 ? "#87e291" : "none";
     });
 }

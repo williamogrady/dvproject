@@ -1,9 +1,10 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { initMapView, updateVisualization } from './views/mapView.js';
+import { initMapView, updateVisualization, updateSystemStyle } from './views/mapView.js';
 import { updateSystemState, systemState } from '/prototype1/logic/state.js';
 import { loadScenario } from '/prototype1/logic/scenario.js';
 
-let currentMode = "full";
+let currentMode = "manual";
+let currentScenario = null;
 let scenarioActive = false;
 let savedGeneratorState = [];
 let generators = [], loads = [], lines = [], nodes = [], links = [];
@@ -12,12 +13,14 @@ let generators = [], loads = [], lines = [], nodes = [], links = [];
 //  Scenario loading
 //----------------------------------//
 function loadScenarioFromFile(url) {
-  fetch(url)
-    .then(res => res.json())
-    .then(scenario => {
-      loadScenario(scenario, generators, loads, lines);
-    });
-}
+    fetch(url)
+      .then(res => res.json())
+      .then(scenario => {
+        currentScenario = scenario;
+        loadScenario(scenario, generators, loads, lines);
+        renderSystemOverview(systemState); // refresh after loading
+      });
+  }
 
 document.getElementById("toggle-scenario").addEventListener("click", () => {
     if (!scenarioActive) {
@@ -32,6 +35,7 @@ document.getElementById("toggle-scenario").addEventListener("click", () => {
         document.getElementById("toggle-scenario").textContent = "Unload Scenario";
     } else {
             // Restore saved generator state
+            currentScenario = null;
             savedGeneratorState.forEach(saved => {
               const g = generators.find(gen => gen.id === saved.id);
               if (g) {
@@ -40,39 +44,14 @@ document.getElementById("toggle-scenario").addEventListener("click", () => {
             });
           
             updateSystemState(generators, loads, lines);
-            updateVisualization(systemState);
+            updateVisualization(currentMode);
             renderSystemOverview(systemState);
           
             scenarioActive = false;
             document.getElementById("toggle-scenario").textContent = "Load Scenario";
+            renderSystemOverview(systemState);
           }
   });
-
-
-Promise.all([
-  d3.json('/prototype1/data/topology/full_nodes.json'),
-  d3.json('/prototype1/data/topology/full_lines.json'),
-  d3.json('/prototype1/data/operation/buses.json'),
-  d3.json('/prototype1/data/operation/generators.json'),
-  d3.json('/prototype1/data/operation/lines.json')
-]).then(([loadedNodes, loadedLinks, buses, gens, loadedLines]) => {
-  nodes = loadedNodes;
-  links = loadedLinks;
-  loads = buses;
-  generators = gens;
-  lines = loadedLines;
-
-  initMapView(nodes, links, generators, loads, lines);
-  document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
-
-  // 🔁 Load initial scenario
-  loadScenarioFromFile('./data/scenarios/allGeneratorsOff.json');
-
-  updateSystemState(generators, loads, lines);
-   updateVisualization(systemState);
-  renderSystemOverview(systemState);
-
-});
 
 
 
@@ -87,13 +66,17 @@ showView('map'); // or 'list'
 */
 
 function toggleTopologyMode() {
-    currentMode = currentMode === "full" ? "manual" : "full";
+    // Flip the mode
+    currentMode = currentMode === "manual" ? "full" : "manual";
+  
+    // Redraw map in the new mode
     updateVisualization(currentMode);
   
+    // Update the button label to reflect the *next* available switch
     const button = document.getElementById("toggle-topology");
-    button.textContent = currentMode === "full"
-      ? "Show Manual Data"
-      : "Show Full Topology";
+    button.textContent = currentMode === "manual"
+      ? "Show Full Topology"
+      : "Show Manual Data";
   }
 
 function makeDraggable(panelId, headerId) {
@@ -129,16 +112,63 @@ function makeDraggable(panelId, headerId) {
   makeDraggable("system-panel", "system-header");
 
 
-  function renderSystemOverview(systemState) {
+  function renderSystemOverview(state) {
     const panel = document.getElementById("system-content");
+  
+    const name = currentScenario ? currentScenario.name || currentScenario.id : "---";
+    const goal = currentScenario?.targetLoad
+      ? `Goal: ${currentScenario.targetLoad} MW`
+      : "Goal: ---";
+  
     panel.innerHTML = `
-      <div><strong>Load:</strong> ${systemState.totalLoad.toFixed(1)} MW</div>
-      <div><strong>Generation:</strong> ${systemState.totalGeneration.toFixed(1)} MW</div>
-      <div><strong>Balance:</strong> ${systemState.powerBalance.toFixed(1)} MW</div>
-      <div><strong>Cost:</strong> $${systemState.totalCost.toFixed(0)}</div>
-      <div><strong>Emissions:</strong> ${systemState.totalEmissions.toFixed(1)}</div>
+      <div><strong>Scenario:</strong> ${name}</div>
+      <div><strong>${goal}</strong></div>
+      <div><strong>Load:</strong> ${state.totalLoad.toFixed(1)} MW</div>
+      <div><strong>Generation:</strong> ${state.totalGeneration.toFixed(1)} MW</div>
+      <div><strong>Balance:</strong> ${state.powerBalance.toFixed(1)} MW</div>
+      <div><strong>Cost:</strong> $${state.totalCost.toFixed(0)}</div>
+      <div><strong>Emissions:</strong> ${state.totalEmissions.toFixed(1)}</div>
     `;
   }
+
+
+ // --------------------------------------// 
+ // Load data and initialize map view
+ // --------------------------------------//
+
+Promise.all([
+  d3.json('/prototype1/data/topology/full_nodes.json'),
+  d3.json('/prototype1/data/topology/full_lines.json'),
+  d3.json('/prototype1/data/operation/buses.json'),
+  d3.json('/prototype1/data/operation/generators.json'),
+  d3.json('/prototype1/data/operation/lines.json')
+]).then(([loadedNodes, loadedLinks, buses, gens, loadedLines]) => {
+  nodes = loadedNodes;
+  links = loadedLinks;
+  loads = buses;
+  generators = gens;
+  lines = loadedLines;
+  console.log("Loaded data");
+
+  initMapView(nodes, links, generators, loads, lines, currentMode);
+  console.log("Map view initialized with mode,", currentMode);
+  document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
+
+  // 🔁 Start off with scenario active
+  //loadScenarioFromFile('./data/scenarios/allGeneratorsOff.json');
+
+  updateSystemState(generators, loads, lines);
+  updateVisualization(currentMode);
+  renderSystemOverview(systemState);
+
+  document.getElementById("toggle-topology").textContent = 
+  currentMode === "full" ? "Show Manual Data" : "Show Full Topology";
+
+});
+
+
+
+
 
 
   
