@@ -1,447 +1,186 @@
+// mapView.js
+
+import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+
 //----------------------------------//
 // 1. Global Variables
 //----------------------------------//
-let allNodes = [],
-    allLinks = [],
-    nodeById = {};
-
-let mode = "manual"; 
-
+let allNodes = [], allLinks = [], nodeById = {};
+let opGenerators = [], opBuses = [], opLines = [];
 let selectedGeneratorId = null;
+let currentMode = "manual";
 
-const svg = d3.select("#topology");
-const group = svg.append("g");  
-
-const infoBubbleGroup = group.append("g").attr("id", "info-bubble-layer");
-
-const tooltip = d3.select("#tooltip");
-
+const svg = d3.select("#map-canvas");
+const group = svg.append("g");
 const backgroundGroup = group.append("g").attr("id", "background-layer");
 const foregroundGroup = group.append("g").attr("id", "foreground-layer");
 
 //----------------------------------//
 // 2. Utility Functions
 //----------------------------------//
-function extractStartPoint(dString) {
-  const match = dString.match(/M\s*([\d.]+)[ ,]([\d.]+)/);
-  return match ? { x: +match[1], y: +match[2] } : null;
-}
-
-function extractEndPoint(dString) {
-  const commands = dString.trim().split(/[A-Za-z]/).filter(Boolean);
-  const last = commands.at(-1).trim().split(/[ ,]/).map(Number);
-  return { x: last[0], y: last[1] };
+function extractClosestPoint(dString, node) {
+  const matchStart = dString.match(/M\s*([\d.]+)[ ,]([\d.]+)/);
+  const endCoords = dString.trim().split(/[A-Za-z]/).filter(Boolean).at(-1)
+    .trim().split(/[ ,]/).map(Number);
+  const start = matchStart ? { x: +matchStart[1], y: +matchStart[2] } : null;
+  const end = { x: endCoords[0], y: endCoords[1] };
+  return (!start || distance(node, end) < distance(node, start)) ? end : start;
 }
 
 function distance(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-function showTooltip(event, d) {
-    // Check: only allow hover tooltip if d has valid coordinates (node), otherwise do nothing
-    if (d.x == null || d.y == null) {
-      return;
-    }
-  
-    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
-      // Show hover tooltip near mouse even when something is selected
-      tooltip
-        .style("visibility", "visible")
-        .html(d.id || d)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY + 10) + "px")
-        .style("font-size", "14px")
-        .style("width", "auto");
-      return;
-    }
-  
-    if (selectedGeneratorId === null) {
-      tooltip
-        .style("visibility", "visible")
-        .html(d.id || d)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY + 10) + "px")
-        .style("font-size", "14px")
-        .style("width", "auto");
-    }
-  }
-  
-  
-  
-
-function moveTooltip(event) {
-  tooltip.style("left", (event.pageX + 10) + "px")
-    .style("top", (event.pageY + 10) + "px");
-}
-
-function hideTooltip(event, d) {
-    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
-      d3.select("#hover-tooltip").remove(); // Only remove lightweight hover tooltip
-      return;
-    }
-    if (selectedGeneratorId === null) {
-      tooltip.style("visibility", "hidden");
-    }
-  }
-  
-  
-
-  function showPinnedTooltip(d) {
-    const opGen = getOpGeneratorData(d.id);
-    if (!opGen) return;
-  
-    tooltip
-      .style("visibility", "visible")
-      .style("left", `${d.x}px`)
-      .style("top", `${d.y - 30}px`)
-      .style("font-size", "20px")
-      .style("width", "260px")
-      .html(`
-        <div><strong>${d.id} (${opGen.station})</strong></div>
-        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
-        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
-        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
-      `);
-  }
-  
-
-  function showInfoBubble(d) {
-    const opGen = getOpGeneratorData(d.id);
-    if (!opGen) return;
-  
-    infoBubbleGroup.selectAll("*").remove(); // Only one bubble at a time
-  
-    infoBubbleGroup.append("foreignObject")
-      .attr("x", d.x + 10)
-      .attr("y", d.y - 50)
-      .attr("width", 220)
-      .attr("height", 120)
-      .append("xhtml:div")
-      .style("background", "white")
-      .style("border", "1px solid #ccc")
-      .style("border-radius", "8px")
-      .style("padding", "10px")
-      .style("font-family", "sans-serif")
-      .style("font-size", "14px")
-      .style("box-shadow", "0px 2px 10px rgba(0,0,0,0.2)")
-      .html(`
-        <div><strong>${d.id} (${opGen.station})</strong></div>
-        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
-        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
-        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
-      `);
-  }
-
-  
-  
-
-function getOpGeneratorData(genId) {
-    const busNum = parseInt(genId.replace("Gen", ""));
-    return opGenerators.find(d => d.busNumber === busNum);
-  }
-   
-  
 //----------------------------------//
 // 3. Drawing Functions
 //----------------------------------//
-function drawTopology(group, nodes, links, faded = false, mode = "full") {
-    console.log("🚨 drawTopology() called with mode:", mode, "faded:", faded);
+function drawTopology(group, nodes, links, faded = false, mode = "manual") {
+    console.log("Drawing topology with mode:", mode);
   
-      // Draw Links
-  group.selectAll("path.link")
-  .data(links)
-  .enter()
-  .append("path")
-  .attr("class", d => {
-    if (mode === "full") return "link link-full";
-    if (mode === "manual" && faded) return "link link-manual-faded";
-    return "link link-manual";
-  })
-  .attr("d", d => d.d)
-  .on("mouseover", showTooltip)
-  .on("mousemove", moveTooltip)
-  .on("mouseout", hideTooltip);
-    
-    // Draw Nodes
+    // Draw lines
+    group.selectAll("path.link")
+      .data(links)
+      .enter()
+      .append("path")
+      .attr("class", () => {
+        if (mode === "full" || faded) return "link link-full";
+        else return "link link-manual";
+      })
+      .attr("d", d => d.d);
+  
+    // Draw node groups
     const nodeGroups = group.selectAll(".node")
-  .data(nodes)
-  .enter()
-  .append("g")
-  .attr("class", d => {
-    let classes = ["node"];
-
-    if (mode === "full" || faded) {
-      classes.push("node-full", d.type);
-    } else if (mode === "manual" && !faded) {
-      if (d.type === "generator") classes.push("node-generator-manual");
-      if (d.type === "bus") classes.push("node-bus-manual");
-      if (d.type === "load") classes.push("node-load-manual");
-    }
-
-    if (selectedGeneratorId === d.id && mode === "manual" && !faded) {
-      classes.push("selected-generator");
-    }
-
-    return classes.join(" ");
-  })
-  .attr("transform", d => {
-    let base = `translate(${d.x}, ${d.y})`;
-    if (d.type === "bus" && d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
-      return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
-    }
-    return base;
-  })
-  .on("mouseover", showTooltip)
-  .on("mousemove", moveTooltip)
-  .on("mouseout", hideTooltip);
+      .data(nodes)
+      .enter()
+      .append("g")
+      .attr("class", d => {
+        let classes = ["node", d.type];
+        if (mode === "full" || faded) {
+          classes.push("node-full");
+        } else {
+          classes.push(`node-${d.type}-manual`);
+          if (faded) classes.push("faded");
+        }
+        return classes.join(" ");
+      })
+      .attr("transform", d => {
+        let base = `translate(${d.x}, ${d.y})`;
+        if (d.type === "bus" && d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
+          return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
+        }
+        return base;
+      })
   
+    // Draw shapes based on type
     nodeGroups.each(function(d) {
       const g = d3.select(this);
   
-      let fillColor = "#fff"; // Default
-  
-      if (mode === "manual" && !faded) {
-        fillColor = "steelblue"; // Force all manual nodes to steelblue
-      } else {
-        if (d.type === "generator") fillColor = "#87e291";
-        if (d.type === "bus") fillColor = "#999999";
-        if (d.type === "load") fillColor = "#54e2f7";
-      }
-  
       if (d.type === "generator") {
-        const circle = g.append("circle")
-          .attr("r", 12)
-          .attr("fill", (mode === "manual" && !faded && d.id === selectedGeneratorId) ? "orange" : fillColor)
-          .attr("opacity", faded ? 0.2 : 1);
-      
-        if (mode === "manual" && !faded) {
-            circle.on("click", function(event) {
-                event.stopPropagation();
-                d3.select("#hover-tooltip").remove(); // Remove any hover
-              
-                if (selectedGeneratorId === d.id) {
-                  selectedGeneratorId = null;
-                  infoBubbleGroup.selectAll("*").remove();
-                } else {
-                  selectedGeneratorId = d.id;
-                  showInfoBubble(d);
-                }
-                updateVisualization(mode);
-                infoBubbleGroup.raise();
-              });
-              
-              
-      }
+        g.append("circle").attr("r", 12);
       } else if (d.type === "bus") {
         g.append("rect")
           .attr("x", -d.width / 2)
           .attr("y", -d.height / 2)
           .attr("width", d.width)
-          .attr("height", d.height)
-          .attr("fill", fillColor)
-          .attr("opacity", faded ? 0.2 : 1);
+          .attr("height", d.height);
       } else if (d.type === "load") {
         g.append("path")
-          .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
-          .attr("fill", fillColor)
-          .attr("opacity", faded ? 0.2 : 1);
+          .attr("d", d3.symbol().type(d3.symbolTriangle).size(100));
       }
     });
   }
-  
   
 
 //----------------------------------//
 // 4. Visualization Logic
 //----------------------------------//
-async function updateVisualization(mode) {
-    console.log("🧭 updateVisualization() called with mode:", mode);
-  
-    backgroundGroup.selectAll("*").remove(); // Always clear background
-    foregroundGroup.selectAll("*").remove(); // Always clear foreground
-  
-    if (mode === "full") {
-      console.log("⬜ Drawing full topology...");
-      drawTopology(backgroundGroup, allNodes, allLinks, false, "full");
-    } else if (mode === "manual") {
-      console.log("🟦 Drawing manual filtered data...");
-  
-      const busIds = new Set(opBuses.map(d => d.id));
-      const genBusIds = new Set(opGenerators.map(d => d.busNumber));
-  
-      const matchedNodes = allNodes.filter(node => {
-        const idNum = parseInt(node.id.replace(/(Bus|Gen|Load)/, ""));
-        if (node.id.startsWith("Bus")) return busIds.has(idNum);
-        if (node.id.startsWith("Gen")) return genBusIds.has(idNum);
-        if (node.id.startsWith("Load")) return busIds.has(idNum);
-        return false;
-      });
-  
-      const matchedNodeIds = new Set(matchedNodes.map(n => n.id));
-  
-      const matchedLinks = allLinks.filter(link =>
-        matchedNodeIds.has(link.source) && matchedNodeIds.has(link.target)
-      );
-  
-      // Draw full background faded
-      drawTopology(backgroundGroup, allNodes, allLinks, true, "manual");
-  
-      // Draw manual data highlighted in foreground
-      drawTopology(foregroundGroup, matchedNodes, matchedLinks, false, "manual");
-    }
+export function updateVisualization(mode) {
+    console.log("Updating visualization with mode:", mode);
+  currentMode = mode;
+
+  backgroundGroup.selectAll("*").remove();
+  foregroundGroup.selectAll("*").remove();
+
+  let visibleNodes = [];
+
+  if (mode === "full") {
+    drawTopology(backgroundGroup, allNodes, allLinks, false, "full");
+  } else if (mode === "manual") {
+    visibleNodes = allNodes.filter(n => {
+      const idNum = parseInt(n.id.replace(/(Bus|Gen|Load)/, ""));
+      if (n.id.startsWith("Bus")) return opBuses.some(b => b.id === idNum);
+      if (n.id.startsWith("Gen")) return opGenerators.some(g => g.busNumber === idNum);
+      if (n.id.startsWith("Load")) return opBuses.some(b => b.id === idNum);
+      return false;
+    });
+  } else if (mode === "generators-only") {
+    visibleNodes = allNodes.filter(n => n.type === "generator");
   }
-  
-  
-  
+
+  const visibleIds = new Set(visibleNodes.map(n => n.id));
+  const visibleLinks = allLinks.filter(l =>
+    visibleIds.has(l.source) && visibleIds.has(l.target)
+  );
+
+  drawTopology(backgroundGroup, allNodes, allLinks, true, mode);
+  drawTopology(foregroundGroup, visibleNodes, visibleLinks, false, mode);
+}
 
 //----------------------------------//
-// 5. Data Loading
+// 5. Export to main.js
 //----------------------------------//
-Promise.all([
-    d3.json("/prototype1/data/topology/full_nodes.json"),
-    d3.json("/prototype1/data/topology/full_lines.json"),
-    d3.json("/prototype1/data/operation/buses.json"),
-    d3.json("/prototype1/data/operation/generators.json"),
-    d3.json("/prototype1/data/operation/lines.json")
-  ]).then(([nodes, fullLinks, buses, generators, lines]) => {
-    allNodes = nodes;
-    allLinks = fullLinks;
-    opBuses = buses;
-    opGenerators = generators;
-    opLines = lines;
-    nodeById = Object.fromEntries(nodes.map(d => [d.id, d]));
+export function initMapView(nodes, links, generators, buses, lines, mode = "full") {
+
+    console.log("Initializing map view with mode:", mode);
+  allNodes = nodes;
+  allLinks = links;
+  opGenerators = generators;
+  opBuses = buses;
+  opLines = lines;
+  nodeById = Object.fromEntries(nodes.map(d => [d.id, d]));
+
   
-    console.log("📦 Data loaded:");
-    console.log("   - Topology Nodes:", allNodes.length);
-    console.log("   - Topology Links:", allLinks.length);
-    console.log("   - Operation Buses:", opBuses.length);
-    console.log("   - Operation Generators:", opGenerators.length);
-    console.log("   - Operation Lines:", opLines.length);
-  
-    // Snap generators and loads to correct positions
-    fullLinks.forEach(link => {
-      const sourceNode = nodeById[link.source];
-      const targetNode = nodeById[link.target];
-  
-      [sourceNode, targetNode].forEach(node => {
-        if (node && (node.type === "generator" || node.type === "load")) {
-          const start = extractStartPoint(link.d);
-          const end = extractEndPoint(link.d);
-          if (start && end) {
-            const closer = distance(node, start) < distance(node, end) ? start : end;
-            if (!node.x || !node.y) {
-              node.x = closer.x;
-              node.y = closer.y;
-            }
-          }
-        }
-      });
-    });
-  
-    allNodes.forEach(n => {
-      if ((n.type === "generator" || n.type === "load")) {
-        if (typeof n.x !== 'number' || typeof n.y !== 'number' || isNaN(n.x) || isNaN(n.y)) {
-          n.x = -9999; // Move them way outside the screen
-          n.y = -9999;
+
+  allLinks.forEach(link => {
+    const source = nodeById[link.source];
+    const target = nodeById[link.target];
+    [source, target].forEach(node => {
+      if (node && (node.type === "generator" || node.type === "load")) {
+        const point = extractClosestPoint(link.d, node);
+        if (!node.x || !node.y) {
+          node.x = point.x;
+          node.y = point.y;
         }
       }
     });
-    updateVisualization(mode);
   });
-  
 
-//----------------------------------//
-// 6. Event Listeners
-//----------------------------------//
-// Toggle between full and manual topology
-document.getElementById("toggle-topology").addEventListener("click", () => {
-  mode = (mode === "manual") ? "full" : "manual";
+  allNodes.forEach(n => {
+    if ((n.type === "generator" || n.type === "load") && (isNaN(n.x) || isNaN(n.y))) {
+      n.x = -9999;
+      n.y = -9999;
+    }
+  });
 
-  const button = document.getElementById("toggle-topology");
-  button.textContent = (mode === "manual") ? "Show Full Topology" : "Show Manual Data";
+
+    const zoom = d3.zoom()
+    .scaleExtent([0.2, 4])
+    .on("zoom", (event) => {
+        group.attr("transform", event.transform);
+    });
+
+    svg.call(zoom);
 
   updateVisualization(mode);
-});
 
-// Checkbox: Toggle visibility of generators
-document.getElementById("toggle-generators").addEventListener("change", function() {
-  const visible = this.checked;
-  d3.selectAll(".node-generator-manual").style("display", visible ? null : "none");
-});
+}
 
-// Checkbox: Toggle visibility of transmission lines
-document.getElementById("toggle-lines").addEventListener("change", function() {
-  const visible = this.checked;
-  d3.selectAll(".link").style("display", visible ? null : "none");
-});
+export function updateMapView(systemState) {
+  d3.selectAll(".node-generator-manual circle")
+    .attr("fill", d => {
+      const busNumber = parseInt(d.id.replace("Gen", ""));
+      const gen = opGenerators.find(g => g.busNumber === busNumber);
+      return gen?.currentOutput > 0 ? "#87e291" : "none";
+    });
+}
 
-// Make the MAP CONTROLS panel draggable
-(function() {
-  const panel = document.getElementById("control-panel");     // still using this ID
-  const header = document.getElementById("control-header");
-
-  let isDragging = false;
-  let offsetX = 0;
-  let offsetY = 0;
-
-  header.addEventListener("mousedown", function(e) {
-    isDragging = true;
-    offsetX = e.clientX - panel.offsetLeft;
-    offsetY = e.clientY - panel.offsetTop;
-    header.style.cursor = "grabbing";
-  });
-
-  document.addEventListener("mousemove", function(e) {
-    if (isDragging) {
-      panel.style.left = (e.clientX - offsetX) + "px";
-      panel.style.top = (e.clientY - offsetY) + "px";
-    }
-  });
-
-  document.addEventListener("mouseup", function() {
-    isDragging = false;
-    header.style.cursor = "move";
-  });
-})();
-
-// Make the SYSTEM OVERVIEW panel draggable
-(function() {
-  const panel = document.getElementById("system-panel");
-  const header = document.getElementById("system-header");
-
-  let isDragging = false;
-  let offsetX = 0;
-  let offsetY = 0;
-
-  header.addEventListener("mousedown", function(e) {
-    isDragging = true;
-    offsetX = e.clientX - panel.offsetLeft;
-    offsetY = e.clientY - panel.offsetTop;
-    header.style.cursor = "grabbing";
-  });
-
-  document.addEventListener("mousemove", function(e) {
-    if (isDragging) {
-      panel.style.left = (e.clientX - offsetX) + "px";
-      panel.style.top = (e.clientY - offsetY) + "px";
-    }
-  });
-
-  document.addEventListener("mouseup", function() {
-    isDragging = false;
-    header.style.cursor = "move";
-  });
-})();
-
-
-//----------------------------------//
-// 7. Zoom
-//----------------------------------//
-
-const zoom = d3.zoom()
-  .scaleExtent([0.2, 4])
-  .on("zoom", (event) => {
-    group.attr("transform", event.transform);
-  });
-
-svg.call(zoom);

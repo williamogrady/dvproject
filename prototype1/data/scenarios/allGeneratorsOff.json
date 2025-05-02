@@ -1,0 +1,10 @@
+{
+    "id": "all-off",
+    "name": "All Generators Off",
+    "targetLoad": 2000,
+    "maxCost": null,
+    "maxEmissions": null,
+    "startState": {
+      "allGeneratorsOff": true
+    }
+  }
