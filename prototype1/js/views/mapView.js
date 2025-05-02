@@ -176,14 +176,12 @@ export function initMapView(nodes, links, generators, buses, lines, mode) {
 }
 
 export function updateSystemStyle(systemState) {
-  console.log("Updating generator visuals:", opGenerators.map(g => ({
-        id: g.id,
-        output: g.currentOutput
-      })));
-  d3.selectAll(".node-generator-manual circle")
-    .attr("fill", d => {
-      const gen = opGenerators.find(g => "Gen" + g.busNumber === d.id);
-      return gen?.currentOutput > 0 ? "#87e291" : "none";
-    });
-}
+    d3.selectAll(".node-generator-manual")
+      .each(function(d) {
+        const gen = opGenerators.find(g => "Gen" + g.busNumber === d.id);
+        d3.select(this).select("circle")
+          .attr("fill", gen?.currentOutput > 0 ? "#87e291" : "none");
+      });
+  }
+  
 

@@ -92,7 +92,7 @@ text {
 
 /* Nodes - Manual mode */
 .node-generator-manual circle {
-  fill: #a8e6a3; /* light green inside */
+  fill: none;
   stroke: #2b7a0b; /* dark green border */
   stroke-width: 3px;
 }
@@ -114,7 +114,7 @@ text {
 .node-full path {
   fill: rgb(0, 0, 0);
   stroke: none;
-  opacity: 0.3;
+  opacity: 0.1;
 }
 
 /* Faded background nodes */

@@ -150,6 +150,11 @@ Promise.all([
   lines = loadedLines;
   console.log("Loaded data");
 
+  // Set a baseline output level before first render
+    generators.forEach(g => {
+        g.currentOutput = g.ratedMaxMW / 2;
+    });
+
   initMapView(nodes, links, generators, loads, lines, currentMode);
   console.log("Map view initialized with mode,", currentMode);
   document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
