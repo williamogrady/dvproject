@@ -15,6 +15,10 @@ const group = svg.append("g");
 const backgroundGroup = group.append("g").attr("id", "background-layer");
 const foregroundGroup = group.append("g").attr("id", "foreground-layer");
 
+const infoBubbleGroup = group.append("g").attr("id", "info-bubble-layer");
+
+const tooltip = d3.select("#tooltip");
+
 //----------------------------------//
 // 2. Utility Functions
 //----------------------------------//
@@ -30,6 +34,109 @@ function extractClosestPoint(dString, node) {
 function distance(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
+
+function showTooltip(event, d) {
+    // Check: only allow hover tooltip if d has valid coordinates (node), otherwise do nothing
+    if (d.x == null || d.y == null) {
+      return;
+    }
+  
+    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
+      // Show hover tooltip near mouse even when something is selected
+      tooltip
+        .style("visibility", "visible")
+        .html(d.id || d)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY + 10) + "px")
+        .style("font-size", "14px")
+        .style("width", "auto");
+      return;
+    }
+  
+    if (selectedGeneratorId === null) {
+      tooltip
+        .style("visibility", "visible")
+        .html(d.id || d)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY + 10) + "px")
+        .style("font-size", "14px")
+        .style("width", "auto");
+    }
+  }
+  
+  
+  
+
+function moveTooltip(event) {
+  tooltip.style("left", (event.pageX + 10) + "px")
+    .style("top", (event.pageY + 10) + "px");
+}
+
+function hideTooltip(event, d) {
+    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
+      d3.select("#hover-tooltip").remove(); // Only remove lightweight hover tooltip
+      return;
+    }
+    if (selectedGeneratorId === null) {
+      tooltip.style("visibility", "hidden");
+    }
+  }
+  
+  
+
+  function showPinnedTooltip(d) {
+    const opGen = getOpGeneratorData(d.id);
+    if (!opGen) return;
+  
+    tooltip
+      .style("visibility", "visible")
+      .style("left", `${d.x}px`)
+      .style("top", `${d.y - 30}px`)
+      .style("font-size", "20px")
+      .style("width", "260px")
+      .html(`
+        <div><strong>${d.id} (${opGen.station})</strong></div>
+        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
+        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
+        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
+      `);
+  }
+  
+
+  function showInfoBubble(d) {
+    const opGen = getOpGeneratorData(d.id);
+    if (!opGen) return;
+  
+    infoBubbleGroup.selectAll("*").remove(); // Only one bubble at a time
+  
+    infoBubbleGroup.append("foreignObject")
+      .attr("x", d.x + 10)
+      .attr("y", d.y - 50)
+      .attr("width", 220)
+      .attr("height", 120)
+      .append("xhtml:div")
+      .style("background", "white")
+      .style("border", "1px solid #ccc")
+      .style("border-radius", "8px")
+      .style("padding", "10px")
+      .style("font-family", "sans-serif")
+      .style("font-size", "14px")
+      .style("box-shadow", "0px 2px 10px rgba(0,0,0,0.2)")
+      .html(`
+        <div><strong>${d.id} (${opGen.station})</strong></div>
+        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
+        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
+        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
+      `);
+  }
+
+  
+  
+
+function getOpGeneratorData(genId) {
+    const busNum = parseInt(genId.replace("Gen", ""));
+    return opGenerators.find(d => d.busNumber === busNum);
+  }
 
 //----------------------------------//
 // 3. Drawing Functions
@@ -69,14 +176,21 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual") {
           return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
         }
         return base;
-      })
+      });
   
     // Draw shapes based on type
     nodeGroups.each(function(d) {
       const g = d3.select(this);
   
       if (d.type === "generator") {
-        g.append("circle").attr("r", 12);
+        g.append("circle")
+          .attr("r", 12)
+          .on("mouseover", function(event) {
+            const status = d3.select(this).attr("fill") === "none" ? "off" : "on";
+            showTooltip(event, { id: `${d.id} (${status})` });
+          })
+          .on("mousemove", moveTooltip)
+          .on("mouseout", hideTooltip);
       } else if (d.type === "bus") {
         g.append("rect")
           .attr("x", -d.width / 2)
@@ -87,44 +201,50 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual") {
         g.append("path")
           .attr("d", d3.symbol().type(d3.symbolTriangle).size(100));
       }
+      
     });
   }
   
+
+
 
 //----------------------------------//
 // 4. Visualization Logic
 //----------------------------------//
 export function updateVisualization(mode) {
     console.log("Updating visualization with mode:", mode);
-  currentMode = mode;
-
-  backgroundGroup.selectAll("*").remove();
-  foregroundGroup.selectAll("*").remove();
-
-  let visibleNodes = [];
-
-  if (mode === "full") {
-    drawTopology(backgroundGroup, allNodes, allLinks, false, "full");
-  } else if (mode === "manual") {
-    visibleNodes = allNodes.filter(n => {
-      const idNum = parseInt(n.id.replace(/(Bus|Gen|Load)/, ""));
-      if (n.id.startsWith("Bus")) return opBuses.some(b => b.id === idNum);
-      if (n.id.startsWith("Gen")) return opGenerators.some(g => g.busNumber === idNum);
-      if (n.id.startsWith("Load")) return opBuses.some(b => b.id === idNum);
-      return false;
-    });
-  } else if (mode === "generators-only") {
-    visibleNodes = allNodes.filter(n => n.type === "generator");
+    currentMode = mode;
+  
+    backgroundGroup.selectAll("*").remove();
+    foregroundGroup.selectAll("*").remove();
+  
+    let visibleNodes = [], visibleLinks = [];
+  
+    if (mode === "full") {
+      drawTopology(backgroundGroup, allNodes, allLinks, false, "full");
+      return;
+    }
+  
+    // Manual/other mode
+    const manualNodeIds = new Set();
+    opBuses.forEach(b => manualNodeIds.add("Bus" + b.id));
+    opGenerators.forEach(g => manualNodeIds.add("Gen" + g.busNumber));
+    opLines.forEach(l => manualNodeIds.add(l.id));
+  
+    visibleNodes = allNodes.filter(n => manualNodeIds.has(n.id));
+    visibleLinks = allLinks.filter(l =>
+      manualNodeIds.has(l.source) && manualNodeIds.has(l.target)
+    );
+  
+    const backgroundNodes = allNodes.filter(n => !manualNodeIds.has(n.id));
+    const backgroundLinks = allLinks.filter(l =>
+      !(manualNodeIds.has(l.source) && manualNodeIds.has(l.target))
+    );
+  
+    drawTopology(backgroundGroup, backgroundNodes, backgroundLinks, true, mode);
+    drawTopology(foregroundGroup, visibleNodes, visibleLinks, false, mode);
   }
-
-  const visibleIds = new Set(visibleNodes.map(n => n.id));
-  const visibleLinks = allLinks.filter(l =>
-    visibleIds.has(l.source) && visibleIds.has(l.target)
-  );
-
-  drawTopology(backgroundGroup, allNodes, allLinks, true, mode);
-  drawTopology(foregroundGroup, visibleNodes, visibleLinks, false, mode);
-}
+  
 
 //----------------------------------//
 // 5. Export to main.js
@@ -175,13 +295,11 @@ export function initMapView(nodes, links, generators, buses, lines, mode) {
 
 }
 
-export function updateSystemStyle(systemState) {
+export function updateSystemStyle(systemState, generatorState) {
     d3.selectAll(".node-generator-manual")
       .each(function(d) {
-        const gen = opGenerators.find(g => "Gen" + g.busNumber === d.id);
+        const state = generatorState.get(d.id);
         d3.select(this).select("circle")
-          .attr("fill", gen?.currentOutput > 0 ? "#87e291" : "none");
+          .attr("fill", state?.status === "off" ? "none" : "#87e291");
       });
   }
-  
-

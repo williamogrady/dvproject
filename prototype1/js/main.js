@@ -6,6 +6,7 @@ import { loadScenario } from '/prototype1/logic/scenario.js';
 let currentMode = "manual";
 let currentScenario = null;
 let scenarioActive = false;
+let generatorState = new Map(); // Key: gen.id, Value: { status: 'on' | 'off' }
 let savedGeneratorState = [];
 let generators = [], loads = [], lines = [], nodes = [], links = [];
 
@@ -17,7 +18,7 @@ function loadScenarioFromFile(url) {
       .then(res => res.json())
       .then(scenario => {
         currentScenario = scenario;
-        loadScenario(scenario, generators, loads, lines);
+        loadScenario(scenario, generators, loads, lines, generatorState);
         renderSystemOverview(systemState); // refresh after loading
       });
   }
@@ -45,6 +46,7 @@ document.getElementById("toggle-scenario").addEventListener("click", () => {
           
             updateSystemState(generators, loads, lines);
             updateVisualization(currentMode);
+            updateSystemStyle(systemState, generatorState);
             renderSystemOverview(systemState);
           
             scenarioActive = false;
@@ -150,12 +152,18 @@ Promise.all([
   lines = loadedLines;
   console.log("Loaded data");
 
+  generators.forEach(g => {
+    const isOff = g.currentOutput <= 0;
+    generatorState.set(g.id, { status: isOff ? 'off' : 'on' });
+  });
+
   // Set a baseline output level before first render
     generators.forEach(g => {
         g.currentOutput = g.ratedMaxMW / 2;
     });
 
   initMapView(nodes, links, generators, loads, lines, currentMode);
+  updateSystemStyle(systemState, generatorState);
   console.log("Map view initialized with mode,", currentMode);
   document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
 
