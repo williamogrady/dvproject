@@ -1,0 +1,61 @@
+/* Styling for draggable control panels, headers, buttons. */
+
+.control-panel {
+    position: absolute;
+    background: #ffffff;
+    border: 2px solid #007acc;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: sans-serif;
+    z-index: 20;
+    cursor: move;
+    user-select: none;
+  }
+  
+  .control-header {
+    background: #007acc;
+    color: white;
+    padding: 10px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  
+  .control-content {
+    padding: 10px;
+  }
+  
+  .control-content button {
+    margin-bottom: 10px;
+  }
+
+/* Base styling for both panels */
+#control-panel, #system-panel {
+    position: absolute;
+    background: #ffffff;
+    border: 2px solid #007acc;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: sans-serif;
+    z-index: 100;
+    cursor: move;
+    width: 240px;
+  }
+  
+  /* Header bar for dragging */
+  #control-header, #system-header {
+    background: #007acc;
+    color: white;
+    padding: 10px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  
+  /* Panel content area */
+  #control-content, #system-content {
+    padding: 10px;
+  }
+  

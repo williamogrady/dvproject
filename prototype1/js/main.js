@@ -152,15 +152,21 @@ Promise.all([
   lines = loadedLines;
   console.log("Loaded data");
 
+    // 1. Give generators an ID (so they can be matched to node ids like "Gen4")
+  generators.forEach(g => {
+    g.id = `Gen${g.busNumber}`;
+  });
+
+  // 2. Set a baseline output level before first render
+  generators.forEach(g => {
+    g.currentOutput = g.ratedMaxMW / 2;
+  });
+
+  // 3. Determine status (on/off)
   generators.forEach(g => {
     const isOff = g.currentOutput <= 0;
     generatorState.set(g.id, { status: isOff ? 'off' : 'on' });
   });
-
-  // Set a baseline output level before first render
-    generators.forEach(g => {
-        g.currentOutput = g.ratedMaxMW / 2;
-    });
 
   initMapView(nodes, links, generators, loads, lines, currentMode);
   updateSystemStyle(systemState, generatorState);
@@ -171,7 +177,16 @@ Promise.all([
   //loadScenarioFromFile('./data/scenarios/allGeneratorsOff.json');
 
   updateSystemState(generators, loads, lines);
-  updateVisualization(currentMode);
+
+  d3.selectAll(".node-generator-manual circle")
+  .attr("fill", "#87e291");
+
+  updateSystemStyle(systemState, generatorState);
+  console.log("Generator visual states:");
+generators.forEach(g => {
+  const state = generatorState.get(g.id);
+  console.log(`${g.id}: ${state?.status}, output: ${g.currentOutput}`);
+});
   renderSystemOverview(systemState);
 
   document.getElementById("toggle-topology").textContent = 

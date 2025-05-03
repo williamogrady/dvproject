@@ -1,0 +1,9 @@
+/* Overrides or reduced-interaction styles for list view. */
+
+.node-full circle,
+.node-full rect,
+.node-full path {
+  fill: black;
+  stroke: none;
+  opacity: 0.1;
+}

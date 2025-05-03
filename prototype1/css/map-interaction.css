@@ -1,0 +1,15 @@
+/* Feedback effects and hover/select states for the interactive view. */
+
+/* Selected generator highlight */
+.selected-generator circle {
+  fill: orange !important;
+  stroke: orange !important;
+}
+
+.generator-on circle {
+    fill: #90ee90; /* light green */
+  }
+  
+  .generator-off circle {
+    fill: none;
+  }

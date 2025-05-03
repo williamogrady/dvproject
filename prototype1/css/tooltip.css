@@ -1,0 +1,12 @@
+/* Tooltip positioning and visibility. */
+
+.tooltip {
+    position: absolute;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid black;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 12px;
+    visibility: hidden;
+  }

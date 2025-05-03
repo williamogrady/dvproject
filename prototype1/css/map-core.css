@@ -1,0 +1,48 @@
+/* Handles map layout, node/link drawing, and neutral styles (not view-specific). */
+
+path.link {
+    stroke-width: 2px;
+    stroke-linecap: round;
+    pointer-events: stroke;
+  }
+  
+  .link-manual {
+    fill: #fff;
+    stroke: #868282;
+    stroke-width: 1px;
+    opacity: 1;
+  }
+  
+  .link-manual-outline {
+    stroke: black;
+    stroke-width: 0.5px;
+  }
+  
+  .link-manual-faded {
+    stroke: #999;
+    opacity: 0.1;
+  }
+  
+  .link-full {
+    stroke: #000;
+    stroke-width: 1px;
+    opacity: 0.3;
+  }
+  
+  .node-generator-manual circle {
+    fill: none;
+    stroke: #2b7a0b;
+    stroke-width: 3px;
+  }
+  
+  .node-bus-manual rect {
+    fill: #5c5b5b;
+    stroke: none;
+  }
+  
+  .node-load-manual path {
+    fill: #add8e6;
+    stroke: black;
+    stroke-width: 2px;
+  }
+  
