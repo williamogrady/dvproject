@@ -1,0 +1,10 @@
+{
+    "id": "north-off",
+    "name": "North Generators Off",
+    "targetLoad": 2000,
+    "maxCost": null,
+    "maxEmissions": null,
+    "startState": {
+      "generators": {}
+    }
+  }

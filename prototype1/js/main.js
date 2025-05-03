@@ -6,7 +6,7 @@ import { loadScenario } from '/prototype1/logic/scenario.js';
 let currentMode = "manual";
 let currentScenario = null;
 let scenarioActive = false;
-let generatorState = new Map(); // Key: gen.id, Value: { status: 'on' | 'off' }
+let generatorState = new Map(); // holds current generator status info
 let savedGeneratorState = [];
 let generators = [], loads = [], lines = [], nodes = [], links = [];
 
@@ -35,13 +35,22 @@ document.getElementById("toggle-scenario").addEventListener("click", () => {
         scenarioActive = true;
         document.getElementById("toggle-scenario").textContent = "Unload Scenario";
     } else {
-            // Restore saved generator state
-            currentScenario = null;
+            
+      // Unload scenario: Restore "manual" state
+          
+        currentScenario = null;
+            
             savedGeneratorState.forEach(saved => {
               const g = generators.find(gen => gen.id === saved.id);
               if (g) {
                 g.currentOutput = saved.currentOutput;
               }
+            });
+            
+            // Reset generator state based on current outputs
+            generatorState.clear();
+            generators.forEach(g => {
+              generatorState.set(g.id, { status: g.currentOutput <= 0 ? "off" : "on" });
             });
           
             updateSystemState(generators, loads, lines);
@@ -68,18 +77,16 @@ showView('map'); // or 'list'
 */
 
 function toggleTopologyMode() {
-    // Flip the mode
-    currentMode = currentMode === "manual" ? "full" : "manual";
-  
-    // Redraw map in the new mode
-    updateVisualization(currentMode);
-  
-    // Update the button label to reflect the *next* available switch
-    const button = document.getElementById("toggle-topology");
-    button.textContent = currentMode === "manual"
-      ? "Show Full Topology"
-      : "Show Manual Data";
-  }
+  currentMode = currentMode === "manual" ? "full" : "manual";
+
+  updateVisualization(currentMode);
+  updateSystemStyle(systemState, generatorState); // <- ADD THIS
+
+  const button = document.getElementById("toggle-topology");
+  button.textContent = currentMode === "manual"
+    ? "Show Full Topology"
+    : "Show Manual Data";
+}
 
 function makeDraggable(panelId, headerId) {
     const panel = document.getElementById(panelId);
@@ -167,6 +174,8 @@ Promise.all([
     const isOff = g.currentOutput <= 0;
     generatorState.set(g.id, { status: isOff ? 'off' : 'on' });
   });
+  
+  setGeneratorState(generatorState); // Set it for mapView.js
 
   initMapView(nodes, links, generators, loads, lines, currentMode);
   updateSystemStyle(systemState, generatorState);
@@ -193,6 +202,11 @@ generators.forEach(g => {
   currentMode === "full" ? "Show Manual Data" : "Show Full Topology";
 
 });
+
+export function setGeneratorState(state) {
+  console.log("Setting generator state:", state);
+  generatorState = state;
+}
 
 
 

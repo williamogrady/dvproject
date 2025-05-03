@@ -2,25 +2,39 @@ import { updateSystemState, systemState } from './state.js';
 import { updateSystemStyle } from '/prototype1/js/views/mapView.js';
 
 export function loadScenario(scenario, generators, loads, lines, generatorState) {
-  // 1. Apply scenario generator start states
   console.log("Loading scenario:", scenario);
+
   if (scenario.startState?.allGeneratorsOff) {
     console.log("All generators turning off");
     generators.forEach(gen => {
       gen.currentOutput = 0;
+      generatorState.set(gen.id, { status: "off" });
     });
+
   } else if (scenario.startState?.generators) {
+    console.log("Applying partial generator startState");
+
     generators.forEach(gen => {
-      if (scenario.startState.generators.hasOwnProperty(gen.id)) {
-        gen.currentOutput = scenario.startState.generators[gen.id];
-        generatorState.set(gen.id, { status: gen.currentOutput <= 0 ? "off" : "on" });
+      const override = scenario.startState.generators[gen.id];
+      if (override !== undefined) {
+        gen.currentOutput = override;
+      } else {
+        gen.currentOutput = gen.ratedMaxMW / 2;
       }
+
+      generatorState.set(gen.id, {
+        status: gen.currentOutput <= 0 ? "off" : "on"
+      });
+    });
+
+  } else {
+    // No explicit generator state given — use default behavior
+    generators.forEach(gen => {
+      gen.currentOutput = gen.ratedMaxMW / 2;
+      generatorState.set(gen.id, { status: "on" });
     });
   }
 
-  // 2. Update system state
   updateSystemState(generators, loads, lines);
-
-  // 3. Update the map view
   updateSystemStyle(systemState, generatorState);
 }

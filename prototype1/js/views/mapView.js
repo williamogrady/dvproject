@@ -9,6 +9,8 @@ let allNodes = [], allLinks = [], nodeById = {};
 let opGenerators = [], opBuses = [], opLines = [];
 let selectedGeneratorId = null;
 let currentMode = "";
+let generatorState = new Map(); // Add this at global scope
+
 
 const svg = d3.select("#map-canvas");
 const group = svg.append("g");
@@ -130,12 +132,14 @@ function hideTooltip(event, d) {
       `);
   }
 
-  
-  
-
 function getOpGeneratorData(genId) {
     const busNum = parseInt(genId.replace("Gen", ""));
     return opGenerators.find(d => d.busNumber === busNum);
+  }
+
+
+export function setGeneratorState(state) {
+    generatorState = state;
   }
 
 //----------------------------------//
@@ -184,13 +188,20 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual") {
   
       if (d.type === "generator") {
         g.append("circle")
-          .attr("r", 12)
-          .on("mouseover", function(event) {
-            const status = d3.select(this).attr("fill") === "none" ? "off" : "on";
-            showTooltip(event, { id: `${d.id} (${status})` });
-          })
-          .on("mousemove", moveTooltip)
-          .on("mouseout", hideTooltip);
+  .attr("r", 12)
+  .attr("class", () => {
+    // We'll rely on class-based styling instead of inline fill
+    return "generator-circle";
+  })
+  .on("mouseover", function(event) {
+    const d = g.datum();
+    const state = generatorState.get(d.id)?.status || "unknown";
+    showTooltip(event, { id: `${d.id} (${state})` });
+  })
+  .on("mousemove", moveTooltip)
+  .on("mouseout", hideTooltip)
+  .on("mousemove", moveTooltip)
+   .on("mouseout", hideTooltip);
       } else if (d.type === "bus") {
         g.append("rect")
           .attr("x", -d.width / 2)
@@ -296,10 +307,11 @@ export function initMapView(nodes, links, generators, buses, lines, mode) {
 }
 
 export function updateSystemStyle(systemState, generatorState) {
-    d3.selectAll(".node-generator-manual")
-      .each(function(d) {
-        const state = generatorState.get(d.id);
-        d3.select(this).select("circle")
-          .attr("fill", state?.status === "off" ? "none" : "#87e291");
-      });
+  d3.selectAll(".node-generator-manual")
+  .each(function(d) {
+    const state = generatorState.get(d.id);
+    d3.select(this)
+      .classed("generator-on", state?.status === "on")
+      .classed("generator-off", state?.status === "off");
+  });
   }
