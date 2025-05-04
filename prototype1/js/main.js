@@ -145,68 +145,72 @@ function makeDraggable(panelId, headerId) {
  // Load data and initialize map view
  // --------------------------------------//
 
-Promise.all([
+ Promise.all([
   d3.json('/prototype1/data/topology/full_nodes.json'),
   d3.json('/prototype1/data/topology/full_lines.json'),
   d3.json('/prototype1/data/operation/buses.json'),
   d3.json('/prototype1/data/operation/generators.json'),
   d3.json('/prototype1/data/operation/lines.json')
 ]).then(([loadedNodes, loadedLinks, buses, gens, loadedLines]) => {
+  const opBuses = buses;
+  const opGenerators = gens;
+  const opLoads = loadedNodes
+    .filter(n => n.type === "load")
+    .map(loadNode => ({
+      id: loadNode.id,
+      busNumber: parseInt(loadNode.id.replace("Load", "")),
+      Pload: 50 // ← adjust as needed or make scenario-specific later
+    }));
+
   nodes = loadedNodes;
   links = loadedLinks;
-  loads = buses;
-  generators = gens;
+  generators = opGenerators;
+  loads = opLoads;
   lines = loadedLines;
+
   console.log("Loaded data");
 
-    // 1. Give generators an ID (so they can be matched to node ids like "Gen4")
+  // 1. Assign IDs to generators
   generators.forEach(g => {
     g.id = `Gen${g.busNumber}`;
   });
 
-  // 2. Set a baseline output level before first render
+  // 2. Set initial output levels
   generators.forEach(g => {
     g.currentOutput = g.ratedMaxMW / 2;
   });
 
-  // 3. Determine status (on/off)
+  // 3. Determine on/off status
   generators.forEach(g => {
     const isOff = g.currentOutput <= 0;
     generatorState.set(g.id, { status: isOff ? 'off' : 'on' });
   });
-  
-  setGeneratorState(generatorState); // Set it for mapView.js
 
-  initMapView(nodes, links, generators, loads, lines, currentMode);
+  setGeneratorState(generatorState); // Pass to mapView module
+
+  initMapView(nodes, links, generators, opBuses, lines, currentMode);
   updateSystemStyle(systemState, generatorState);
   console.log("Map view initialized with mode,", currentMode);
+
   document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
 
-  // 🔁 Start off with scenario active
-  //loadScenarioFromFile('./data/scenarios/allGeneratorsOff.json');
-
-  updateSystemState(generators, loads, lines);
-
-  d3.selectAll(".node-generator-manual circle")
-  .attr("fill", "#87e291");
-
+  updateSystemState(generators, loads, lines); // ✅ loads now contain Pload
   updateSystemStyle(systemState, generatorState);
-  console.log("Generator visual states:");
-generators.forEach(g => {
-  const state = generatorState.get(g.id);
-  console.log(`${g.id}: ${state?.status}, output: ${g.currentOutput}`);
-});
   renderSystemOverview(systemState);
 
-  document.getElementById("toggle-topology").textContent = 
-  currentMode === "full" ? "Show Manual Data" : "Show Full Topology";
+  d3.selectAll(".node-generator-manual circle")
+    .attr("fill", "#87e291");
 
+  console.log("Generator visual states:");
+  generators.forEach(g => {
+    const state = generatorState.get(g.id);
+    console.log(`${g.id}: ${state?.status}, output: ${g.currentOutput}`);
+  });
+
+  document.getElementById("toggle-topology").textContent =
+    currentMode === "full" ? "Show Manual Data" : "Show Full Topology";
 });
 
-export function setGeneratorState(state) {
-  console.log("Setting generator state:", state);
-  generatorState = state;
-}
 
 
 

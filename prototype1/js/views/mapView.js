@@ -242,10 +242,20 @@ export function updateVisualization(mode) {
     opGenerators.forEach(g => manualNodeIds.add("Gen" + g.busNumber));
     opLines.forEach(l => manualNodeIds.add(l.id));
   
-    visibleNodes = allNodes.filter(n => manualNodeIds.has(n.id));
-    visibleLinks = allLinks.filter(l =>
-      manualNodeIds.has(l.source) && manualNodeIds.has(l.target)
+    visibleNodes = allNodes.filter(n =>
+      manualNodeIds.has(n.id) || n.type === "load"
     );
+    visibleLinks = allLinks.filter(l =>
+      manualNodeIds.has(l.source) && manualNodeIds.has(l.target) ||
+      isLoadLink(l)
+    );
+    
+    function isLoadLink(link) {
+      const source = nodeById[link.source];
+      const target = nodeById[link.target];
+      return (source?.type === "bus" && target?.type === "load") ||
+             (source?.type === "load" && target?.type === "bus");
+    }
   
     const backgroundNodes = allNodes.filter(n => !manualNodeIds.has(n.id));
     const backgroundLinks = allLinks.filter(l =>
