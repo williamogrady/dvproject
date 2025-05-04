@@ -1,6 +1,7 @@
 // mapView.js
 
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { systemState } from '/prototype1/logic/state.js';
 
 //----------------------------------//
 // 1. Global Variables
@@ -12,14 +13,15 @@ let currentMode = "";
 let generatorState = new Map(); // Add this at global scope
 
 
+
 const svg = d3.select("#map-canvas");
 const group = svg.append("g");
 const backgroundGroup = group.append("g").attr("id", "background-layer");
 const foregroundGroup = group.append("g").attr("id", "foreground-layer");
 
-const infoBubbleGroup = group.append("g").attr("id", "info-bubble-layer");
-
+// Tooltip and selection window
 const tooltip = d3.select("#tooltip");
+const selectionWindow = d3.select("#selection-window");
 
 //----------------------------------//
 // 2. Utility Functions
@@ -38,104 +40,63 @@ function distance(a, b) {
 }
 
 function showTooltip(event, d) {
-    // Check: only allow hover tooltip if d has valid coordinates (node), otherwise do nothing
-    if (d.x == null || d.y == null) {
-      return;
-    }
-  
-    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
-      // Show hover tooltip near mouse even when something is selected
-      tooltip
-        .style("visibility", "visible")
-        .html(d.id || d)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY + 10) + "px")
-        .style("font-size", "14px")
-        .style("width", "auto");
-      return;
-    }
-  
-    if (selectedGeneratorId === null) {
-      tooltip
-        .style("visibility", "visible")
-        .html(d.id || d)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY + 10) + "px")
-        .style("font-size", "14px")
-        .style("width", "auto");
-    }
+  console.log("🔍 Tooltip triggered for:", d.id); // TEMP log
+  if (d.x == null || d.y == null) return;
+
+  if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
+    tooltip
+      .style("visibility", "visible")
+      .html(d.id || d)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY + 10) + "px");
+    return;
   }
-  
-  
-  
+
+  if (selectedGeneratorId === null) {
+    tooltip
+      .style("visibility", "visible")
+      .html(d.id || d)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY + 10) + "px");
+  }
+}
 
 function moveTooltip(event) {
   tooltip.style("left", (event.pageX + 10) + "px")
-    .style("top", (event.pageY + 10) + "px");
+         .style("top", (event.pageY + 10) + "px");
 }
 
 function hideTooltip(event, d) {
-    if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) {
-      d3.select("#hover-tooltip").remove(); // Only remove lightweight hover tooltip
-      return;
-    }
-    if (selectedGeneratorId === null) {
-      tooltip.style("visibility", "hidden");
-    }
-  }
-  
-  
+  if (selectedGeneratorId !== null && d.id !== selectedGeneratorId) return;
+  tooltip.style("visibility", "hidden");
+}
 
-  function showPinnedTooltip(d) {
-    const opGen = getOpGeneratorData(d.id);
-    if (!opGen) return;
-  
-    tooltip
-      .style("visibility", "visible")
-      .style("left", `${d.x}px`)
-      .style("top", `${d.y - 30}px`)
-      .style("font-size", "20px")
-      .style("width", "260px")
-      .html(`
-        <div><strong>${d.id} (${opGen.station})</strong></div>
-        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
-        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
-        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
-      `);
-  }
-  
-
-  function showInfoBubble(d) {
-    const opGen = getOpGeneratorData(d.id);
-    if (!opGen) return;
-  
-    infoBubbleGroup.selectAll("*").remove(); // Only one bubble at a time
-  
-    infoBubbleGroup.append("foreignObject")
-      .attr("x", d.x + 10)
-      .attr("y", d.y - 50)
-      .attr("width", 220)
-      .attr("height", 120)
-      .append("xhtml:div")
-      .style("background", "white")
-      .style("border", "1px solid #ccc")
-      .style("border-radius", "8px")
-      .style("padding", "10px")
-      .style("font-family", "sans-serif")
-      .style("font-size", "14px")
-      .style("box-shadow", "0px 2px 10px rgba(0,0,0,0.2)")
-      .html(`
-        <div><strong>${d.id} (${opGen.station})</strong></div>
-        <div>ratedMinMW: ${opGen.ratedMinMW}</div>
-        <div>ratedMaxMW: ${opGen.ratedMaxMW}</div>
-        <div style="margin-top:8px; color: steelblue;"><strong>Selected</strong></div>
-      `);
-  }
-
+/*
 function getOpGeneratorData(genId) {
-    const busNum = parseInt(genId.replace("Gen", ""));
-    return opGenerators.find(d => d.busNumber === busNum);
-  }
+  const busNum = parseInt(genId.replace("Gen", ""));
+  return generators.find(d => d.busNumber === busNum);
+}
+*/
+
+function showInfoPanel(d) {
+  const gen = opGenerators.find(g => g.id === d.id);
+  if (!gen) return;
+
+  selectionWindow
+    .style("visibility", "visible")
+    .style("left", `${d.x}px`)
+    .style("top", `${d.y - 40}px`)
+    .html(`
+      <div><strong>${d.id}</strong></div>
+      <div>Min: ${gen.ratedMinMW} MW</div>
+      <div>Max: ${gen.ratedMaxMW} MW</div>
+      <div style="color: steelblue; margin-top: 6px;">Selected</div>
+    `);
+}
+
+function hideInfoPanel() {
+  selectionWindow.style("visibility", "hidden");
+}
 
 
 export function setGeneratorState(state) {
@@ -172,6 +133,7 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual") {
           classes.push(`node-${d.type}-manual`);
           if (faded) classes.push("faded");
         }
+        console.log("Assigning classes:", classes.join(" "));
         return classes.join(" ");
       })
       .attr("transform", d => {
@@ -187,21 +149,39 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual") {
       const g = d3.select(this);
   
       if (d.type === "generator") {
-        g.append("circle")
-  .attr("r", 12)
-  .attr("class", () => {
-    // We'll rely on class-based styling instead of inline fill
-    return "generator-circle";
-  })
-  .on("mouseover", function(event) {
-    const d = g.datum();
-    const state = generatorState.get(d.id)?.status || "unknown";
-    showTooltip(event, { id: `${d.id} (${state})` });
-  })
-  .on("mousemove", moveTooltip)
-  .on("mouseout", hideTooltip)
-  .on("mousemove", moveTooltip)
-   .on("mouseout", hideTooltip);
+        const circle = g.append("circle")
+          .attr("r", 20)
+          .attr("class", () => {
+            const base = "generator-circle";
+            const state = generatorState.get(d.id);
+            return state?.status === "off"
+              ? `${base} generator-off`
+              : `${base} generator-on`;
+          })
+          .on("mouseover", event => showTooltip(event, d))
+          .on("mousemove", moveTooltip)
+          .on("mouseout", hideTooltip)
+          .on("click", event => {
+            event.stopPropagation();
+          
+            if (selectedGeneratorId === d.id) {
+              console.log("Unselecting generator", d.id);
+              selectedGeneratorId = null;
+              hideInfoPanel();
+            } else {
+              console.log("Selecting generator", d.id);
+              selectedGeneratorId = d.id;
+              showInfoPanel(d);
+            }
+          
+            updateVisualization(mode);
+            console.log("Calling updateSystemStyle");
+            updateSystemStyle(systemState, generatorState);
+          });
+      
+        if (selectedGeneratorId === d.id && mode === "manual" && !faded) {
+          g.classed("selected-generator", true);
+        }
       } else if (d.type === "bus") {
         g.append("rect")
           .attr("x", -d.width / 2)

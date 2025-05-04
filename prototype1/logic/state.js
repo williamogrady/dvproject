@@ -32,6 +32,7 @@ export const systemState = {
       totalCost += output * (gen.costPerMW || 0);
       totalEmissions += output * (gen.emissionIntensity || 0);
     });
+    
   
     // Overloaded lines
     const overloadedLines = lines.filter(

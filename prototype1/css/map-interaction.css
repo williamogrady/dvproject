@@ -2,14 +2,15 @@
 
 /* Selected generator highlight */
 .selected-generator circle {
-  fill: orange !important;
-  stroke: orange !important;
+  stroke: orange;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px orange);
 }
 
-.generator-on circle {
-    fill: #90ee90; /* light green */
-  }
-  
-  .generator-off circle {
-    fill: red;
-  }
+.generator-on circle{
+  fill: #90ee90;
+}
+
+.generator-off circle{
+  fill: red;
+}

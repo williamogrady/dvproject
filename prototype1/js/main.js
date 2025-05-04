@@ -212,6 +212,11 @@ function makeDraggable(panelId, headerId) {
 });
 
 
+export function setGeneratorState(state) {
+  console.log("Setting generator state:", state);
+  generatorState = state;
+}
+
 
 
 

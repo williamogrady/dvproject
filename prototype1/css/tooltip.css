@@ -1,4 +1,4 @@
-/* Tooltip positioning and visibility. */
+/* Tooltip and selection window styles */
 
 .tooltip {
     position: absolute;
@@ -10,3 +10,18 @@
     font-size: 12px;
     visibility: hidden;
   }
+
+  #selection-window {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 14px;
+    width: 260px;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+  }
+  
