@@ -12,7 +12,11 @@ let selectedGeneratorId = null;
 let currentMode = "";
 let generatorState = new Map(); // Add this at global scope
 
-
+const uiState = {
+  selectedGeneratorId: null,
+  panelOpen: false,
+  hoveredNodeId: null
+};
 
 const svg = d3.select("#map-canvas");
 const group = svg.append("g");
@@ -106,7 +110,7 @@ export function setGeneratorState(state) {
 //----------------------------------//
 // 3. Drawing Functions
 //----------------------------------//
-function drawTopology(group, nodes, links, faded = false, mode = "manual") {
+function drawTopology(group, nodes, links, faded = false, mode = "manual", uiState) {
     console.log("Drawing topology with mode:", mode);
   
     // Draw lines
@@ -164,24 +168,24 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual") {
           .on("click", event => {
             event.stopPropagation();
           
-            if (selectedGeneratorId === d.id) {
+            if (uiState.selectedGeneratorId === d.id) {
               console.log("Unselecting generator", d.id);
-              selectedGeneratorId = null;
+              uiState.generatorselectedId = null;
               hideInfoPanel();
             } else {
               console.log("Selecting generator", d.id);
-              selectedGeneratorId = d.id;
+              uiState.selectedGeneratorId = d.id;
               showInfoPanel(d);
             }
           
             updateVisualization(mode);
+            d3.selectAll(".node-generator-manual")
+            .classed("selected-generator", d => d.id === uiState.selectedGeneratorId);
             console.log("Calling updateSystemStyle");
             updateSystemStyle(systemState, generatorState);
           });
       
-        if (selectedGeneratorId === d.id && mode === "manual" && !faded) {
-          g.classed("selected-generator", true);
-        }
+        g.classed("selected-generator", d.id === uiState.selectedGeneratorId && !faded && mode === "manual");
       } else if (d.type === "bus") {
         g.append("rect")
           .attr("x", -d.width / 2)
@@ -212,7 +216,7 @@ export function updateVisualization(mode) {
     let visibleNodes = [], visibleLinks = [];
   
     if (mode === "full") {
-      drawTopology(backgroundGroup, allNodes, allLinks, false, "full");
+      drawTopology(backgroundGroup, allNodes, allLinks, false, "full", uiState);
       return;
     }
   
@@ -242,8 +246,8 @@ export function updateVisualization(mode) {
       !(manualNodeIds.has(l.source) && manualNodeIds.has(l.target))
     );
   
-    drawTopology(backgroundGroup, backgroundNodes, backgroundLinks, true, mode);
-    drawTopology(foregroundGroup, visibleNodes, visibleLinks, false, mode);
+    drawTopology(backgroundGroup, backgroundNodes, backgroundLinks, true, mode, uiState);
+    drawTopology(foregroundGroup, visibleNodes, visibleLinks, false, mode, uiState);
   }
   
 
@@ -303,5 +307,6 @@ export function updateSystemStyle(systemState, generatorState) {
     d3.select(this)
       .classed("generator-on", state?.status === "on")
       .classed("generator-off", state?.status === "off");
+      console.log("Current UI State:", uiState);
   });
   }
