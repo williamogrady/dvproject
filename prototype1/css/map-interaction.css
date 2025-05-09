@@ -1,0 +1,24 @@
+/* Feedback effects and hover/select states for the interactive view. */
+
+/* Selected generator highlight */
+.selected-generator circle {
+  stroke: orange;
+  stroke-width: 3px;
+  /* explicitly preserve fill! */
+  fill: inherit;
+}
+
+.generator-on {
+  fill: #87e291;
+}
+.generator-off {
+  fill: #e29191;
+  stroke: #ccc;
+}
+
+
+.generator-label {
+  font-size: 12px;
+  fill: black;
+  font-weight: bold;
+}
