@@ -200,9 +200,6 @@ function drawTopology(group, nodes, links, faded = false, mode = "manual", uiSta
     });
   }
   
-
-
-
 //----------------------------------//
 // 4. Visualization Logic
 //----------------------------------//
@@ -250,6 +247,51 @@ export function updateVisualization(mode) {
     drawTopology(foregroundGroup, visibleNodes, visibleLinks, false, mode, uiState);
   }
   
+
+
+
+function attachGeneratorLogic(selection, generatorState, uiState) {
+  selection.each(function(d) {
+    const group = d3.select(this);
+    const state = generatorState.get(d.id);
+    const isSelected = d.id === uiState.selectedGeneratorId;
+
+    // Status classes
+    group
+      .classed("generator-on", state?.status === "on")
+      .classed("generator-off", state?.status === "off")
+      .classed("selected-generator", isSelected);
+
+    // Event handlers
+    group.select("circle")
+      .on("mouseover", event => showTooltip(event, d))
+      .on("mousemove", moveTooltip)
+      .on("mouseout", hideTooltip)
+      .on("click", event => {
+        event.stopPropagation();
+        uiState.selectedGeneratorId = isSelected ? null : d.id;
+        d3.selectAll(".node-generator-manual").call(attachGeneratorLogic, generatorState, uiState);
+        if (uiState.selectedGeneratorId) {
+          showInfoPanel(d);
+        } else {
+          hideInfoPanel();
+        }
+      });
+
+    // Status text
+    const label = group.select("text.generator-label");
+    if (label.empty()) {
+      group.append("text")
+        .attr("class", "generator-label")
+        .attr("text-anchor", "middle")
+        .attr("dy", "0.35em")
+        .text(state?.status === "on" ? "on" : "off");
+    } else {
+      label.text(state?.status === "on" ? "on" : "off");
+    }
+  });
+}
+
 
 //----------------------------------//
 // 5. Export to main.js

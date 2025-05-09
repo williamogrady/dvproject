@@ -145,71 +145,72 @@ function makeDraggable(panelId, headerId) {
  // Load data and initialize map view
  // --------------------------------------//
 
- Promise.all([
+Promise.all([
   d3.json('/prototype1/data/topology/full_nodes.json'),
   d3.json('/prototype1/data/topology/full_lines.json'),
   d3.json('/prototype1/data/operation/buses.json'),
   d3.json('/prototype1/data/operation/generators.json'),
   d3.json('/prototype1/data/operation/lines.json')
-]).then(([loadedNodes, loadedLinks, buses, gens, loadedLines]) => {
-  const opBuses = buses;
-  const opGenerators = gens;
-  const opLoads = loadedNodes
+]).then(([fullNodes, fullLinks, opBuses, opGenerators, opLines]) => {
+  // Build full dataset of nodes/links
+  nodes = fullNodes;
+  links = fullLinks;
+  lines = opLines;
+
+  // Extract loads
+  loads = fullNodes
     .filter(n => n.type === "load")
     .map(loadNode => ({
       id: loadNode.id,
       busNumber: parseInt(loadNode.id.replace("Load", "")),
-      Pload: 50 // ← adjust as needed or make scenario-specific later
+      Pload: 50  // default value, adjust per scenario later
     }));
 
-  nodes = loadedNodes;
-  links = loadedLinks;
-  generators = opGenerators;
-  loads = opLoads;
-  lines = loadedLines;
+  // Match and enrich generators
+  generators = fullNodes
+    .filter(n => n.type === "generator")
+    .map(node => {
+      const opGen = opGenerators.find(g => `Gen${g.busNumber}` === node.id);
+      return {
+        ...node, // includes x, y, id
+        ratedMaxMW: opGen?.ratedMaxMW || 0,
+        ratedMinMW: opGen?.ratedMinMW || 0,
+        costPerMW: opGen?.costPerMW || 0,
+        emissionIntensity: opGen?.emissionIntensity || 0,
+        currentOutput: opGen ? opGen.ratedMaxMW / 2 : 0,
+        available: !!opGen,
+        visible: false,         // will be set on mode switch
+        inScenario: false
+      };
+    });
 
-  console.log("Loaded data");
-
-  // 1. Assign IDs to generators
+  // Build generator state from currentOutput
+  generatorState = new Map();
   generators.forEach(g => {
-    g.id = `Gen${g.busNumber}`;
+    generatorState.set(g.id, {
+      status: g.currentOutput > 0 ? "on" : "off"
+    });
   });
 
-  // 2. Set initial output levels
+  console.log("Loaded data and enriched generators:");
   generators.forEach(g => {
-    g.currentOutput = g.ratedMaxMW / 2;
+    console.log(`${g.id}: available=${g.available}, output=${g.currentOutput}`);
   });
 
-  // 3. Determine on/off status
-  generators.forEach(g => {
-    const isOff = g.currentOutput <= 0;
-    generatorState.set(g.id, { status: isOff ? 'off' : 'on' });
-  });
+  setGeneratorState(generatorState); // shared with mapView.js
 
-  setGeneratorState(generatorState); // Pass to mapView module
-
+  // Init view
   initMapView(nodes, links, generators, opBuses, lines, currentMode);
-  updateSystemStyle(systemState, generatorState);
-  console.log("Map view initialized with mode,", currentMode);
-
-  document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
-
-  updateSystemState(generators, loads, lines); // ✅ loads now contain Pload
+  updateSystemState(generators, loads, lines);
   updateSystemStyle(systemState, generatorState);
   renderSystemOverview(systemState);
 
-  d3.selectAll(".node-generator-manual circle")
-    .attr("fill", "#87e291");
-
-  console.log("Generator visual states:");
-  generators.forEach(g => {
-    const state = generatorState.get(g.id);
-    console.log(`${g.id}: ${state?.status}, output: ${g.currentOutput}`);
-  });
-
+  // Toggle button UI
+  document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
   document.getElementById("toggle-topology").textContent =
     currentMode === "full" ? "Show Manual Data" : "Show Full Topology";
 });
+
 
 
 export function setGeneratorState(state) {
