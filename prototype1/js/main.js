@@ -18,7 +18,6 @@ let currentMode = "full";
 let currentScenario = null;
 let scenarioActive = false;
 let savedGeneratorOutputs = [];
-
 Promise.all([
   d3.json('/prototype1/data/topology/full_nodes.json'),
   d3.json('/prototype1/data/topology/full_lines.json'),
@@ -29,7 +28,19 @@ Promise.all([
   fullNodes = nodeData;
   fullLines = lineLayoutData;
 
-  // 1. Create Buses
+  // 🔧 Enrich fullNodes for visual drawing (full topology mode)
+  fullNodes.forEach(n => {
+    if (n.type === "bus") {
+      n.width = 12;
+      n.height = 12;
+    } else if (n.type === "generator") {
+      n.radius = 10;
+    } else if (n.type === "load") {
+      n.size = 100;
+    }
+  });
+
+  // 1. Create Buses (inject position from fullNodes)
   opBuses = busData.map(d => {
     const bus = new Bus(d);
     const node = fullNodes.find(n => n.id === `Bus${bus.busNumber}`);
@@ -37,7 +48,7 @@ Promise.all([
     return bus;
   });
 
-  // 2. Create Generators
+  // 2. Create Generators (attach to corresponding bus position)
   opGenerators = genData.map(d => {
     const gen = new Generator(d);
     const bus = opBuses.find(b => b.busNumber === gen.busNumber);
@@ -49,7 +60,7 @@ Promise.all([
     return gen;
   });
 
-  // 3. Create Lines
+  // 3. Create Lines (use bus coordinates for endpoints)
   opLines = lineData.map(d => {
     const line = new Line(d);
     const fromBus = opBuses.find(b => b.busNumber === line.from);
@@ -60,7 +71,7 @@ Promise.all([
     return line;
   });
 
-  // 4. Create Loads (from full topology view)
+  // 4. Create Loads (for simulation logic only)
   loads = fullNodes
     .filter(n => n.type === "load")
     .map(loadNode => ({
@@ -74,9 +85,6 @@ Promise.all([
   updateSystemState(opGenerators, loads, opLines);
   updateSystemStyle(systemState, opGenerators);
   renderSystemOverview(systemState);
-  console.log("🔌 Buses:", opBuses.map(b => ({ id: b.id, x: b.x, y: b.y })));
-console.log("⚡ Generators:", opGenerators.map(g => ({ id: g.id, x: g.x, y: g.y, output: g.currentOutput, region: g.region })));
-console.log("🔗 Lines:", opLines.map(l => ({ id: l.id, from: l.from, to: l.to, flow: l.currentFlow })));
 
   // 6. Hook Up UI Buttons
   document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
@@ -85,6 +93,7 @@ console.log("🔗 Lines:", opLines.map(l => ({ id: l.id, from: l.from, to: l.to,
 
   document.getElementById("toggle-scenario").addEventListener("click", handleScenarioToggle);
 });
+
 
 // ----------------------------------------
 // Scenario Handling

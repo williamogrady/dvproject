@@ -59,91 +59,56 @@ function hideInfoPanel() {
 // drawing functions
 
 function drawFullTopology(nodes, links) {
-  // Draw lines
-      group.selectAll("path.link")
-        .data(links)
-        .enter()
-        .append("path")
-        .attr("class", () => {
-          if (currentMode === "full" || faded) return "link link-full";
-          else return "link link-manual";
-        })
-        .attr("d", d => d.d);
-    
-      // Draw node groups
-      const nodeGroups = group.selectAll(".node")
-        .data(nodes)
-        .enter()
-        .append("g")
-        .attr("class", d => {
-          let classes = ["node", d.type];
-          if (currentMode === "full" || faded) {
-            classes.push("node-full");
-          } else {
-            classes.push(`node-${d.type}-manual`);
-            if (faded) classes.push("faded");
-          }
-          console.log("Assigning classes:", classes.join(" "));
-          return classes.join(" ");
-        })
-        .attr("transform", d => {
-          let base = `translate(${d.x}, ${d.y})`;
-          if (d.type === "bus" && d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
-            return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
-          }
-          return base;
-        });
-    
-      // Draw shapes based on type
-      nodeGroups.each(function(d) {
-        const g = d3.select(this);
-    
-        if (d.type === "generator") {
-          const circle = g.append("circle")
-            .attr("r", 20)
-            .attr("class", () => {
-              const base = "generator-circle";
-              const state = generatorState.get(d.id);
-              return state?.status === "off"
-                ? `${base} generator-off`
-                : `${base} generator-on`;
-            })
-            .on("mouseover", event => showTooltip(event, d))
-            .on("mousemove", moveTooltip)
-            .on("mouseout", hideTooltip)
-            .on("click", event => {
-              event.stopPropagation();
-            
-              if (uiState.selectedGeneratorId === d.id) {
-                console.log("Unselecting generator", d.id);
-                uiState.generatorselectedId = null;
-                hideInfoPanel();
-              } else {
-                console.log("Selecting generator", d.id);
-                uiState.selectedGeneratorId = d.id;
-                showInfoPanel(d);
-              }
-            
-              updateVisualization(mode);
-              d3.selectAll(".node-generator-manual")
-              .classed("selected-generator", d => d.id === uiState.selectedGeneratorId);
-              console.log("Calling updateSystemStyle");
-              updateSystemStyle(systemState, generatorState);
-            });
-        
-          g.classed("selected-generator", d.id === uiState.selectedGeneratorId && !faded && mode === "manual");
-        } else if (d.type === "bus") {
-          g.append("rect")
-            .attr("x", -d.width / 2)
-            .attr("y", -d.height / 2)
-            .attr("width", d.width)
-            .attr("height", d.height);
-        } else if (d.type === "load") {
-          g.append("path")
-            .attr("d", d3.symbol().type(d3.symbolTriangle).size(100));
-        }
+  console.log("🎯 Drawing full topology with", nodes.length, "nodes and", links.length, "links");
+
+  // Draw all lines
+  backgroundGroup.selectAll("path.link-full")
+    .data(links)
+    .enter()
+    .append("path")
+    .attr("class", "link link-full")
+    .attr("d", d => d.d);
+
+  // Draw all nodes
+  const nodeGroups = backgroundGroup.selectAll(".full-node")
+    .data(nodes)
+    .enter()
+    .append("g")
+    .attr("class", d => `full-node ${d.type}`)
+    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+  nodeGroups.each(function(d) {
+    const g = d3.select(this);
+
+    if (d.type === "bus") {
+      g.append("rect")
+        .attr("x", -d.width / 2)
+        .attr("y", -d.height / 2)
+        .attr("width", d.width)
+        .attr("height", d.height)
+        .attr("fill", "#ccc"); // Optional: fallback fill
+    }
+
+    else if (d.type === "generator") {
+      g.append("circle")
+        .attr("r", d.radius)
+        .attr("fill", "#aaa");
+    }
+
+    else if (d.type === "load") {
+      g.append("path")
+        .attr("d", d3.symbol().type(d3.symbolTriangle).size(d.size))
+        .attr("fill", "steelblue");
+    }
+
+    else {
+      g.append("circle")
+        .attr("r", 8)
+        .attr("fill", "red");
+    }
   });
 }
+
 
 
 function drawOperationalTopology(gens, buses, lines) {
