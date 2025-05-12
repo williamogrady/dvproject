@@ -45,4 +45,28 @@ path.link {
     stroke: black;
     stroke-width: 2px;
   }
+
+  .full-node.generator circle {
+  fill: #888;
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.full-node.bus rect {
+  fill: #ccc;
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.full-node.load path {
+  fill: #e0e0e0;
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.full-generator {
+  fill: #aaa;
+  stroke: black;
+  stroke-width: 1px;
+}
   
