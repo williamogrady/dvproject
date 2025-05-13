@@ -5,23 +5,21 @@ import { renderStatusPanel } from '/prototype1/statusPanel.js';
 const svg = d3.select("#topology");
 const zoomGroup = svg.append("g").attr("id", "zoom-group");
 
-// Enable zoom
-svg.call(
-  d3.zoom()
-    .scaleExtent([0.2, 4])
-    .on("zoom", (event) => {
-      zoomGroup.attr("transform", event.transform);
-    })
-);
-
 let generators = [];
+let buses = [];
+let lines = [];
 let selectedGenerator = null;
 
 export function initListView(opGenerators, opBuses, opLines) {
   generators = opGenerators;
+  buses = opBuses;
+  lines = opLines;
+
   renderUI();
-  updateSystemState(generators, [], []);
+  setupZoom();
+  drawBackground(buses, lines);
   drawGenerators();
+  updateSystemState(generators, [], []);
   renderStatusPanel(generators, systemState);
   enableDrag();
   attachRegionFilterHandlers();
@@ -52,6 +50,45 @@ function renderUI() {
     `;
     document.body.appendChild(filterPanel);
   }
+}
+
+function setupZoom() {
+  svg.call(
+    d3.zoom()
+      .scaleExtent([0.2, 4])
+      .on("zoom", (event) => {
+        zoomGroup.attr("transform", event.transform);
+      })
+  );
+}
+
+function drawBackground(buses, lines) {
+  zoomGroup.selectAll("path.line")
+    .data(lines)
+    .join("path")
+    .attr("class", "line")
+    .attr("d", d => d.d)
+    .attr("stroke", "#888")
+    .attr("stroke-width", 1.5)
+    .attr("fill", "none");
+
+  zoomGroup.selectAll("rect.bus-node")
+    .data(buses)
+    .join("rect")
+    .attr("class", "bus-node")
+    .attr("x", d => d.x - 6)
+    .attr("y", d => d.y - 6)
+    .attr("width", 12)
+    .attr("height", 12)
+    .attr("fill", "#999");
+
+  // Optional: Draw loads here
+  // zoomGroup.selectAll("path.load-node")
+  //   .data(loads)
+  //   .join("path")
+  //   .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
+  //   .attr("transform", d => `translate(${d.x},${d.y})`)
+  //   .attr("fill", "#54e2f7");
 }
 
 function drawGenerators() {
