@@ -6,19 +6,24 @@ const svg = d3.select("#topology");
 const zoomGroup = svg.append("g").attr("id", "zoom-group");
 
 let generators = [];
-let buses = [];
-let lines = [];
+let fullNodes = [];
+let fullLines = [];
 let selectedGenerator = null;
 
-export function initListView(opGenerators, opBuses, opLines) {
-  generators = opGenerators;
-  buses = opBuses;
-  lines = opLines;
+export function initListView(interactiveGenerators, allNodes, lines) {
+  generators = interactiveGenerators;
+  fullNodes = allNodes;
+  fullLines = lines;
 
   renderUI();
   setupZoom();
-  drawBackground(buses, lines);
+
+  drawLines(fullLines);
+  drawBuses(fullNodes);
+  drawLoads(fullNodes);
+  drawStaticGenerators(fullNodes);
   drawGenerators();
+
   updateSystemState(generators, [], []);
   renderStatusPanel(generators, systemState);
   enableDrag();
@@ -62,7 +67,11 @@ function setupZoom() {
   );
 }
 
-function drawBackground(buses, lines) {
+//---------------------------//
+// Drawing Functions
+//---------------------------//
+
+function drawLines(lines) {
   zoomGroup.selectAll("path.line")
     .data(lines)
     .join("path")
@@ -71,24 +80,56 @@ function drawBackground(buses, lines) {
     .attr("stroke", "#888")
     .attr("stroke-width", 1.5)
     .attr("fill", "none");
+}
 
-  zoomGroup.selectAll("rect.bus-node")
-    .data(buses)
-    .join("rect")
-    .attr("class", "bus-node")
-    .attr("x", d => d.x - 6)
-    .attr("y", d => d.y - 6)
-    .attr("width", 12)
-    .attr("height", 12)
-    .attr("fill", "#999");
+function drawBuses(nodes) {
+  zoomGroup.selectAll("g.bus")
+    .data(nodes.filter(d => d.type === "bus"))
+    .join("g")
+    .attr("class", "bus")
+    .attr("transform", d => {
+      const base = `translate(${d.x}, ${d.y})`;
+      if (d.rotate !== undefined && d.rotateX != null && d.rotateY != null) {
+        return `${base} rotate(${d.rotate}, ${d.rotateX - d.x}, ${d.rotateY - d.y})`;
+      }
+      return base;
+    })
+    .each(function (d) {
+      d3.select(this).append("rect")
+        .attr("x", -d.width / 2)
+        .attr("y", -d.height / 2)
+        .attr("width", d.width)
+        .attr("height", d.height)
+        .attr("fill", "#999");
+    });
+}
 
-  // Optional: Draw loads here
-  // zoomGroup.selectAll("path.load-node")
-  //   .data(loads)
-  //   .join("path")
-  //   .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
-  //   .attr("transform", d => `translate(${d.x},${d.y})`)
-  //   .attr("fill", "#54e2f7");
+function drawLoads(nodes) {
+  zoomGroup.selectAll("g.load")
+    .data(nodes.filter(d => d.type === "load"))
+    .join("g")
+    .attr("class", "load")
+    .attr("transform", d => `translate(${d.x}, ${d.y})`)
+    .each(function (d) {
+      d3.select(this).append("path")
+        .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
+        .attr("fill", "#54e2f7");
+    });
+}
+
+function drawStaticGenerators(nodes) {
+  zoomGroup.selectAll("g.static-gen")
+    .data(nodes.filter(d => d.type === "generator" && !d.ratedMaxMW))
+    .join("g")
+    .attr("class", "static-gen")
+    .attr("transform", d => `translate(${d.x}, ${d.y})`)
+    .each(function (d) {
+      d3.select(this).append("circle")
+        .attr("r", 30)
+        .attr("fill", "#bbbbbb")
+        .attr("stroke", "#444")
+        .attr("stroke-dasharray", "4,2")
+    });
 }
 
 function drawGenerators() {
@@ -96,7 +137,7 @@ function drawGenerators() {
     .data(generators, d => d.id)
     .join("g")
     .attr("class", "gen-node")
-    .attr("transform", d => `translate(${d.x}, ${d.y})`)
+    .attr("transform", d => `translate(${d.x}, ${d.y}) rotate(${d.rotation || 0})`)
     .each(function (d) {
       const g = d3.select(this);
       g.selectAll("*").remove();
@@ -127,6 +168,10 @@ function drawGenerators() {
         .text(d.id);
     });
 }
+
+//---------------------------//
+// UI Logic
+//---------------------------//
 
 function updateInfoPanel(gen) {
   const panel = d3.select("#details");

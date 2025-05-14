@@ -10,52 +10,58 @@ Promise.all([
   d3.json('/prototype1/data/operation/buses.json'),
   d3.json('/prototype1/data/operation/generators.json'),
   d3.json('/prototype1/data/operation/lines.json')
-]).then(([nodeData, lineData, busData, genData, lineProps]) => {
+]).then(([fullNodeData, fullLineData, busData, generatorData, lineProps]) => {
+  const fullNodes = [];
+  const interactiveGenerators = [];
 
-  // Create bus objects from operation data + assign positions from topology
-  const opBuses = busData.map(bus => {
-    const b = new Bus(bus);
-    const node = nodeData.find(n => n.id === `Bus${b.busNumber}`);
-    if (node) b.setPosition(node.x, node.y);
-    return b;
-  });
+  // Create lookup from busNumber → generatorData
+const genByBusNumber = Object.fromEntries(generatorData.map(d => [d.busNumber, d]));
 
-  // Create generator objects and attach to bus positions
-  const opGenerators = genData
-    .sort((a, b) => {
-      const numA = parseInt((a.id || "").replace(/\D/g, ""), 10) || 0;
-      const numB = parseInt((b.id || "").replace(/\D/g, ""), 10) || 0;
-      return numA - numB;
-    })
-    .map(genData => {
-      const gen = new Generator(genData);
-      const bus = opBuses.find(b => b.busNumber === gen.busNumber);
-      if (bus) {
-        const { x, y } = bus.getCoords();
-        gen.x = x;
-        gen.y = y;
-      } else {
-        gen.x = 0;
-        gen.y = 0;
-      }
-      gen.currentOutput = 0;
-      gen.selected = false;
-      gen.region = gen.region || ["North", "South", "East", "West"][Math.floor(Math.random() * 4)];
-      gen.northGroup = false;
-      return gen;
-    });
-
-  // Create line objects
-  const opLines = lineProps.map(props => {
-    const line = new Line(props);
-    const fromBus = opBuses.find(b => b.busNumber === line.from);
-    const toBus = opBuses.find(b => b.busNumber === line.to);
-    if (fromBus && toBus) {
-      line.setCoordinates(fromBus.getCoords(), toBus.getCoords());
+for (const node of fullNodeData) {
+  if (node.type === "generator") {
+    // Extract bus number from ID like "Gen4"
+    const busNumber = parseInt(node.id.replace(/\D/g, ""), 10);
+    const opGen = genByBusNumber[busNumber];
+    if (opGen) {
+      const enriched = new Generator(opGen);
+      enriched.x = node.x;
+      enriched.y = node.y;
+      enriched.width = node.width;
+      enriched.height = node.height;
+      enriched.rotation = node.rotation ?? 0;
+      enriched.rotate = node.rotate;
+      enriched.rotateX = node.rotateX;
+      enriched.rotateY = node.rotateY;
+      enriched.selected = false;
+      enriched.northGroup = false;
+      enriched.currentOutput = 0;
+      fullNodes.push(enriched);
+      interactiveGenerators.push(enriched);
+      continue; // don't fall through
     }
-    return line;
+  }
+
+   // For all non-interactive generators, buses, loads, etc.
+  fullNodes.push({ ...node });
+}
+
+  // Step 2: enrich lines with SVG path coordinates
+  const fullLines = fullLineData.map(line => {
+    const enriched = new Line({
+      id: line.id,
+      from: line.source,
+      to: line.target
+    });
+    enriched.d = line.d;
+    return enriched;
   });
 
-  // Initialize listView with all enriched objects
-  initListView(opGenerators, opBuses, opLines);
+  console.log("✅ Interactive generator objects created:", interactiveGenerators.length);
+  console.log("🔍 Sample generator:", interactiveGenerators[0]);
+
+  console.log("✅ Buses enriched from full_nodes:", busData.length);
+  console.log("🔍 Sample bus:", busData[0]);
+
+  // Step 3: pass everything to listView
+  initListView(interactiveGenerators, fullNodes, fullLines);
 });
