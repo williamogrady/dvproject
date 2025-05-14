@@ -1,93 +1,38 @@
-/* Handles map layout, node/link drawing, and neutral styles (not view-specific). */
-
-path.link {
-    stroke-width: 2px;
-    stroke-linecap: round;
-    pointer-events: stroke;
-  }
-  
-  .link-manual {
-    fill: #fff;
-    stroke: #868282;
-    stroke-width: 1px;
-    opacity: 1;
-  }
-  
-  .link-manual-outline {
-    stroke: black;
-    stroke-width: 0.5px;
-  }
-  
-  .link-manual-faded {
-    stroke: #999;
-    opacity: 0.1;
-  }
-  
-  .link-full {
-    stroke: #000;
-    stroke-width: 1px;
-    opacity: 0.3;
-  }
-  
-  .node-generator-manual circle {
-    fill: none;
-    stroke: #2b7a0b;
-    stroke-width: 3px;
-  }
-  
-  .node-bus-manual rect {
-    fill: #5c5b5b;
-    stroke: none;
-  }
-  
-  .node-load-manual path {
-    fill: #add8e6;
-    stroke: black;
-    stroke-width: 2px;
-  }
-
-  .full-node.generator circle {
-  fill: #888;
-  stroke: black;
-  stroke-width: 1px;
+/* General node group marker */
+.full-node {
+  pointer-events: visibleStroke;
 }
 
-.full-node.bus rect {
-  fill: #ccc;
-  stroke: black;
-  stroke-width: 1px;
-}
-
-.full-generator {
-  fill: #aaa;
-  stroke: black;
-  stroke-width: 1px;
-}
-
-.generator-shape {
-  stroke: black;
-  stroke-width: 1px;
+/* Buses */
+.full-node.bus {
+  pointer-events: all;
 }
 
 .bus-rect {
-  fill: #ccc;
+  fill: #cccccc;
   stroke: black;
   stroke-width: 1px;
 }
 
-/* triangle shape representing a load */
+/* Loads */
+.full-node.load {
+  pointer-events: none;
+}
+
 .load-shape {
   fill: #0f8496;
   stroke: #333;
   stroke-width: 1px;
 }
 
-.load {
-  pointer-events: none; /* if loads aren't interactive */
+/* Generators (non-interactive) */
+.full-node.generator {
+  fill: #dddddd;
 }
 
-.load:hover .load-shape {
-  stroke: #007acc;
-  stroke-width: 2px;
+/* Transmission lines */
+.link-full {
+  stroke: black;
+  fill: white;
+  stroke-width: 1.5px;
 }
-  

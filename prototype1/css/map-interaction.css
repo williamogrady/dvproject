@@ -21,10 +21,11 @@
 
 .gen-node.generator:hover .generator-shape {
   stroke: #007acc;
-  stroke-width: 2px;
+  stroke-width: 10px;
 }
 
 .selected-generator .generator-shape {
-  fill: orange !important;
-  stroke: orange !important;
+  fill: #007acc !important;
+  stroke: #a2d5f7 !important;
+  stroke-width: 10px;
 }

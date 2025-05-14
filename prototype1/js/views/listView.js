@@ -45,7 +45,11 @@ function drawLines(lines) {
     .data(lines)
     .join("path")
     .attr("class", "link link-full")
-    .attr("d", d => d.d);
+    .attr("d", d => d.d)
+    .on("mouseover", (event, d) => {
+  console.log("Hovered over line:", d);
+  showTooltip(d, event.pageX, event.pageY);
+});
 }
 
 function drawBuses(nodes) {
@@ -65,7 +69,15 @@ function drawBuses(nodes) {
     .attr("x", d => -d.width / 2)
     .attr("y", d => -d.height / 2)
     .attr("width", d => d.width)
-    .attr("height", d => d.height);
+    .attr("height", d => d.height)
+    .on("mouseover", (event, d) => {
+      showTooltip(d, event.pageX, event.pageY);
+    })
+    .on("mouseout", hideTooltip)
+    .on("mouseover", (event, d) => {
+  console.log("Hovered over bus:", d);
+  showTooltip(d, event.pageX, event.pageY);
+});
 }
 
 function drawLoads(nodes) {
@@ -76,7 +88,11 @@ function drawLoads(nodes) {
     .attr("transform", d => `translate(${d.x}, ${d.y})`)
     .append("path")
     .attr("class", "load-shape")
-    .attr("d", d3.symbol().type(d3.symbolTriangle).size(100));
+    .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
+    .on("mouseover", (event, d) => {
+  console.log("Hovered over load:", d);
+  showTooltip(d, event.pageX, event.pageY);
+});
 }
 
 function drawStaticGenerators(nodes) {
@@ -189,3 +205,22 @@ function enableDrag() {
     document.body.style.userSelect = "auto";
   });
 }
+
+function showTooltip(data, x, y) {
+  console.log("Tooltip position:", x, y);
+  console.log("Tooltip data:", data);
+  const tooltip = d3.select("#tooltip");
+  tooltip.style("left", `${x + 10}px`)
+    .style("top", `${y + 10}px`)
+    .style("display", "block")
+    .html(formatAttributes(data));
+}
+
+function hideTooltip() {
+  d3.select("#tooltip").style("display", "none");
+}
+
+function formatAttributes(obj) {
+  return Object.entries(obj).map(([key, val]) => `<div><strong>${key}:</strong> ${val}</div>`).join("");
+}
+
