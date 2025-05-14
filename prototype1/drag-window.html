@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Draggable Filter Panel</title>
+  <style>
+    #filter-panel {
+      position: absolute;
+      top: 100px;
+      left: 100px;
+      width: 180px;
+      background: #f0f0f0;
+      border: 2px solid #888;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      padding: 8px;
+      z-index: 1000;
+    }
+
+    #filter-header {
+      font-weight: bold;
+      background: #ccc;
+      padding: 6px;
+      cursor: move;
+      user-select: none;
+      margin: -8px -8px 8px -8px;
+      border-radius: 6px 6px 0 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="filter-panel">
+  <div id="filter-header">Filters</div>
+  <label><input type="checkbox" value="north"> North</label><br>
+  <label><input type="checkbox" value="west"> West</label><br>
+  <label><input type="checkbox" value="south"> South</label>
+</div>
+
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    const panel = document.getElementById("filter-panel");
+    const header = document.getElementById("filter-header");
+
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    header.addEventListener("mousedown", function (e) {
+      isDragging = true;
+      offsetX = e.clientX - panel.offsetLeft;
+      offsetY = e.clientY - panel.offsetTop;
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", function (e) {
+      if (!isDragging) return;
+      panel.style.left = (e.clientX - offsetX) + "px";
+      panel.style.top = (e.clientY - offsetY) + "px";
+    });
+
+    document.addEventListener("mouseup", function () {
+      isDragging = false;
+      document.body.style.userSelect = "auto";
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,86 +1,153 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { initMapView, updateVisualization, updateSystemStyle } from './views/mapView.js';
-import { updateSystemState, systemState } from '/prototype1/logic/state.js';
-import { loadScenario } from '/prototype1/logic/scenario.js';
+import { Generator } from '../classes/Generator.js';
+import { Bus } from '../classes/Bus.js';
+import { Line } from '../classes/Line.js';
 
-let currentMode = "manual";
+import { initMapView, updateVisualization, updateSystemStyle } from './views/mapView.js';
+import { updateSystemState, systemState } from '../logic/state.js';
+import { loadScenario } from '../logic/scenario.js';
+
+export let opGenerators = [];
+export let opBuses = [];
+export let opLines = [];
+export let loads = [];
+
+let fullNodes = [], fullLines = [];
+
+let currentMode = "full";
 let currentScenario = null;
 let scenarioActive = false;
-let generatorState = new Map(); // holds current generator status info
-let savedGeneratorState = [];
-let generators = [], loads = [], lines = [], nodes = [], links = [];
+let savedGeneratorOutputs = [];
+Promise.all([
+  d3.json('/prototype1/data/topology/full_nodes.json'),
+  d3.json('/prototype1/data/topology/full_lines.json'),
+  d3.json('/prototype1/data/operation/buses.json'),
+  d3.json('/prototype1/data/operation/generators.json'),
+  d3.json('/prototype1/data/operation/lines.json')
+]).then(([nodeData, lineLayoutData, busData, genData, lineData]) => {
+  fullNodes = nodeData;
+  fullLines = lineLayoutData;
 
-//----------------------------------//
-//  Scenario loading
-//----------------------------------//
-function loadScenarioFromFile(url) {
-    fetch(url)
+  // 🔧 Enrich fullNodes for visual drawing (full topology mode)
+  fullNodes.forEach(n => {
+    if (n.type === "bus") {
+      n.width = 12;
+      n.height = 12;
+    } else if (n.type === "generator") {
+      n.radius = 10;
+    } else if (n.type === "load") {
+      n.size = 100;
+    }
+  });
+
+  // 1. Create Buses (inject position from fullNodes)
+  opBuses = busData.map(d => {
+    const bus = new Bus(d);
+    const node = fullNodes.find(n => n.id === `Bus${bus.busNumber}`);
+    if (node) bus.setPosition(node.x, node.y);
+    return bus;
+  });
+
+  // 2. Create Generators (attach to corresponding bus position)
+  opGenerators = genData.map(d => {
+    const gen = new Generator(d);
+    const bus = opBuses.find(b => b.busNumber === gen.busNumber);
+    if (bus) {
+      const { x, y } = bus.getCoords();
+      gen.x = x;
+      gen.y = y;
+    }
+    return gen;
+  });
+
+  // 3. Create Lines (use bus coordinates for endpoints)
+  opLines = lineData.map(d => {
+    const line = new Line(d);
+    const fromBus = opBuses.find(b => b.busNumber === line.from);
+    const toBus = opBuses.find(b => b.busNumber === line.to);
+    if (fromBus && toBus) {
+      line.setCoordinates(fromBus.getCoords(), toBus.getCoords());
+    }
+    return line;
+  });
+
+  // 4. Create Loads (for simulation logic only)
+  loads = fullNodes
+    .filter(n => n.type === "load")
+    .map(loadNode => ({
+      id: loadNode.id,
+      busNumber: parseInt(loadNode.id.replace("Load", "")),
+      Pload: 50
+    }));
+
+  // 5. Initialize View
+  initMapView(opGenerators, opBuses, opLines, fullNodes, fullLines, currentMode);
+  updateSystemState(opGenerators, loads, opLines);
+  updateSystemStyle(systemState, opGenerators);
+  renderSystemOverview(systemState);
+
+  // 6. Hook Up UI Buttons
+  document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
+  document.getElementById("toggle-topology").textContent =
+    currentMode === "manual" ? "Show Full Topology" : "Show Manual Data";
+
+  document.getElementById("toggle-scenario").addEventListener("click", handleScenarioToggle);
+});
+
+
+// ----------------------------------------
+// Scenario Handling
+// ----------------------------------------
+
+function handleScenarioToggle() {
+  const button = document.getElementById("toggle-scenario");
+
+  if (!scenarioActive) {
+    savedGeneratorOutputs = opGenerators.map(g => ({
+      id: g.id,
+      currentOutput: g.currentOutput
+    }));
+
+    fetch('./data/scenarios/allGeneratorsOff.json')
       .then(res => res.json())
       .then(scenario => {
         currentScenario = scenario;
-        loadScenario(scenario, generators, loads, lines, generatorState);
-        renderSystemOverview(systemState); // refresh after loading
-      });
-  }
+        loadScenario(scenario, opGenerators, loads, opLines);
+        updateSystemState(opGenerators, loads, opLines);
+        updateSystemStyle(systemState, opGenerators);
+        renderSystemOverview(systemState);
 
-document.getElementById("toggle-scenario").addEventListener("click", () => {
-    if (!scenarioActive) {
-        // Save current generator outputs
-        savedGeneratorState = generators.map(g => ({
-          id: g.id,
-          currentOutput: g.currentOutput
-        }));
-      
-        loadScenarioFromFile('./data/scenarios/allGeneratorsOff.json');
         scenarioActive = true;
-        document.getElementById("toggle-scenario").textContent = "Unload Scenario";
-    } else {
-            
-      // Unload scenario: Restore "manual" state
-          
-        currentScenario = null;
-            
-            savedGeneratorState.forEach(saved => {
-              const g = generators.find(gen => gen.id === saved.id);
-              if (g) {
-                g.currentOutput = saved.currentOutput;
-              }
-            });
-            
-            // Reset generator state based on current outputs
-            generatorState.clear();
-            generators.forEach(g => {
-              generatorState.set(g.id, { status: g.currentOutput <= 0 ? "off" : "on" });
-            });
-          
-            updateSystemState(generators, loads, lines);
-            updateVisualization(currentMode);
-            updateSystemStyle(systemState, generatorState);
-            renderSystemOverview(systemState);
-          
-            scenarioActive = false;
-            document.getElementById("toggle-scenario").textContent = "Load Scenario";
-            renderSystemOverview(systemState);
-          }
-  });
+        button.textContent = "Unload Scenario";
+      });
 
+  } else {
+    // Restore saved generator state
+    savedGeneratorOutputs.forEach(saved => {
+      const gen = opGenerators.find(g => g.id === saved.id);
+      if (gen) gen.setOutput(saved.currentOutput);
+    });
 
+    currentScenario = null;
+    scenarioActive = false;
 
-/*
-function showView(viewName) {
-    document.getElementById('map-view-ui').style.display = viewName === 'map' ? 'block' : 'none';
-    document.getElementById('list-view-ui').style.display = viewName === 'list' ? 'block' : 'none';
+    updateSystemState(opGenerators, loads, opLines);
+    updateSystemStyle(systemState, opGenerators);
+    renderSystemOverview(systemState);
+    updateVisualization(currentMode);
+
+    button.textContent = "Load Scenario";
   }
+}
 
-
-showView('map'); // or 'list'
-*/
+// ----------------------------------------
+// Topology Mode Toggle
+// ----------------------------------------
 
 function toggleTopologyMode() {
   currentMode = currentMode === "manual" ? "full" : "manual";
-
   updateVisualization(currentMode);
-  updateSystemStyle(systemState, generatorState); // <- ADD THIS
+  updateSystemStyle(systemState, opGenerators);
 
   const button = document.getElementById("toggle-topology");
   button.textContent = currentMode === "manual"
@@ -88,139 +155,32 @@ function toggleTopologyMode() {
     : "Show Manual Data";
 }
 
-function makeDraggable(panelId, headerId) {
-    const panel = document.getElementById(panelId);
-    const header = document.getElementById(headerId);
-  
-    let isDragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-  
-    header.addEventListener("mousedown", function(e) {
-      isDragging = true;
-      offsetX = e.clientX - panel.offsetLeft;
-      offsetY = e.clientY - panel.offsetTop;
-      header.style.cursor = "grabbing";
-    });
-  
-    document.addEventListener("mousemove", function(e) {
-      if (isDragging) {
-        panel.style.left = (e.clientX - offsetX) + "px";
-        panel.style.top = (e.clientY - offsetY) + "px";
-      }
-    });
-  
-    document.addEventListener("mouseup", function() {
-      isDragging = false;
-      header.style.cursor = "move";
-    });
-  }
-  
-  // Activate draggable behavior for both panels
-  makeDraggable("control-panel", "control-header");
-  makeDraggable("system-panel", "system-header");
+// ----------------------------------------
+// Utility UI Functions
+// ----------------------------------------
 
+function renderSystemOverview(state) {
+  const panel = document.getElementById("system-content");
+  const name = currentScenario?.name || "---";
+  const goal = currentScenario?.targetLoad
+    ? `Goal: ${currentScenario.targetLoad} MW`
+    : "Goal: ---";
 
-  function renderSystemOverview(state) {
-    const panel = document.getElementById("system-content");
-  
-    const name = currentScenario ? currentScenario.name || currentScenario.id : "---";
-    const goal = currentScenario?.targetLoad
-      ? `Goal: ${currentScenario.targetLoad} MW`
-      : "Goal: ---";
-  
-    panel.innerHTML = `
-      <div><strong>Scenario:</strong> ${name}</div>
-      <div><strong>${goal}</strong></div>
-      <div><strong>Load:</strong> ${state.totalLoad.toFixed(1)} MW</div>
-      <div><strong>Generation:</strong> ${state.totalGeneration.toFixed(1)} MW</div>
-      <div><strong>Balance:</strong> ${state.powerBalance.toFixed(1)} MW</div>
-      <div><strong>Cost:</strong> $${state.totalCost.toFixed(0)}</div>
-      <div><strong>Emissions:</strong> ${state.totalEmissions.toFixed(1)}</div>
-    `;
-  }
-
-
- // --------------------------------------// 
- // Load data and initialize map view
- // --------------------------------------//
-
-Promise.all([
-  d3.json('/prototype1/data/topology/full_nodes.json'),
-  d3.json('/prototype1/data/topology/full_lines.json'),
-  d3.json('/prototype1/data/operation/buses.json'),
-  d3.json('/prototype1/data/operation/generators.json'),
-  d3.json('/prototype1/data/operation/lines.json')
-]).then(([fullNodes, fullLinks, opBuses, opGenerators, opLines]) => {
-  // Build full dataset of nodes/links
-  nodes = fullNodes;
-  links = fullLinks;
-  lines = opLines;
-
-  // Extract loads
-  loads = fullNodes
-    .filter(n => n.type === "load")
-    .map(loadNode => ({
-      id: loadNode.id,
-      busNumber: parseInt(loadNode.id.replace("Load", "")),
-      Pload: 50  // default value, adjust per scenario later
-    }));
-
-  // Match and enrich generators
-  generators = fullNodes
-    .filter(n => n.type === "generator")
-    .map(node => {
-      const opGen = opGenerators.find(g => `Gen${g.busNumber}` === node.id);
-      return {
-        ...node, // includes x, y, id
-        ratedMaxMW: opGen?.ratedMaxMW || 0,
-        ratedMinMW: opGen?.ratedMinMW || 0,
-        costPerMW: opGen?.costPerMW || 0,
-        emissionIntensity: opGen?.emissionIntensity || 0,
-        currentOutput: opGen ? opGen.ratedMaxMW / 2 : 0,
-        available: !!opGen,
-        visible: false,         // will be set on mode switch
-        inScenario: false
-      };
-    });
-
-  // Build generator state from currentOutput
-  generatorState = new Map();
-  generators.forEach(g => {
-    generatorState.set(g.id, {
-      status: g.currentOutput > 0 ? "on" : "off"
-    });
-  });
-
-  console.log("Loaded data and enriched generators:");
-  generators.forEach(g => {
-    console.log(`${g.id}: available=${g.available}, output=${g.currentOutput}`);
-  });
-
-  setGeneratorState(generatorState); // shared with mapView.js
-
-  // Init view
-  initMapView(nodes, links, generators, opBuses, lines, currentMode);
-  updateSystemState(generators, loads, lines);
-  updateSystemStyle(systemState, generatorState);
-  renderSystemOverview(systemState);
-
-  // Toggle button UI
-  document.getElementById("toggle-topology").addEventListener("click", toggleTopologyMode);
-  document.getElementById("toggle-topology").textContent =
-    currentMode === "full" ? "Show Manual Data" : "Show Full Topology";
-});
-
-
-
-export function setGeneratorState(state) {
-  console.log("Setting generator state:", state);
-  generatorState = state;
+  panel.innerHTML = `
+    <div><strong>Scenario:</strong> ${name}</div>
+    <div><strong>${goal}</strong></div>
+    <div><strong>Load:</strong> ${state.totalLoad.toFixed(1)} MW</div>
+    <div><strong>Generation:</strong> ${state.totalGeneration.toFixed(1)} MW</div>
+    <div><strong>Balance:</strong> ${state.powerBalance.toFixed(1)} MW</div>
+    <div><strong>Cost:</strong> $${state.totalCost.toFixed(0)}</div>
+    <div><strong>Emissions:</strong> ${state.totalEmissions.toFixed(1)}</div>
+  `;
 }
 
+// ----------------------------------------
+// Optional Global Hook for External Access
+// ----------------------------------------
 
-
-
-
-
-  
+export function getSystemObjects() {
+  return { opGenerators, opBuses, opLines, loads, fullNodes, fullLines };
+}

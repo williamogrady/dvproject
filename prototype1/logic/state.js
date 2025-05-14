@@ -1,5 +1,6 @@
 // System State Object is the "brain" of the grid simulation logic.
 
+
 export const systemState = {
     totalLoad: 0,             // MW
     totalGeneration: 0,       // MW

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>DV Project</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="stylesheet" href="/prototype1/css/base.css" />
   <link rel="stylesheet" href="/prototype1/css/map-core.css" />
@@ -16,53 +17,43 @@
 <body>
 
 <!-- Map View UI -->
-  <div id="map-view-ui">
-  <div id="map-view-title">Map-Situated View</div>
-
-
- <!-- Map Controls Panel (was control-panel) -->
-<div id="control-panel">
-  <div id="control-header">Map Controls</div>
-  <div id="control-content">
-    <button id="toggle-topology">Show Manual Data</button><br><br>
-    <button id="toggle-scenario">Load Scenario</button><br><br>
-    <label><input type="checkbox" id="toggle-generators" checked> Show Generators</label><br>
-    <label><input type="checkbox" id="toggle-lines" checked> Show Transmission Lines</label>
-  </div>
-</div>
-
-<!-- System Overview Panel -->
-<div id="system-panel" style="position: absolute; top: 40px; left: 320px;">
-  <div id="system-header">System Overview</div>
-  <div id="system-content">
-    <p style="color: #888;">(System data coming soon)</p>
-  </div>
-</div>
-
-  <div id="legend-box">
-    Legend
+<div id="map-view-ui">
+  <!-- Map Controls Panel -->
+  <div id="control-panel">
+    <div id="control-header">Map Controls</div>
+    <div id="control-content">
+      <button id="toggle-topology">Show Manual Data</button><br><br>
+      <button id="toggle-scenario">Load Scenario</button><br><br>
+      <label><input type="checkbox" id="toggle-generators" checked> Show Generators</label><br>
+      <label><input type="checkbox" id="toggle-lines" checked> Show Transmission Lines</label>
+    </div>
   </div>
 
+  <!-- System Overview Panel -->
+  <div id="system-panel" style="position: absolute; top: 40px; left: 320px;">
+    <div id="system-header">System Overview</div>
+    <div id="system-content">
+      <p style="color: #888;">(System data coming soon)</p>
+    </div>
+  </div>
 
+  <!-- Tooltip -->
   <div id="tooltip" class="tooltip"></div>
-  <div id="selection-window" class="selection-window"></div>
+
+  <!-- Generator Info Panel (used in mapView.js) -->
+  <div id="generator-menu" class="menu-panel hidden"></div>
 </div>
-
-
-
-
 
 <!-- List View UI -->
 <div id="list-view-ui" style="display:none;">
   <!-- future list view elements -->
 </div>
 
-  
+<!-- Main SVG for map layout -->
+<svg id="topology"></svg>
 
+<script type="module" src="./js/main.js"></script>
 
-<!-- Map Container -->
-  <svg id="map-canvas"></svg>
-  <script type="module" src="./js/main.js"></script>
 
 </body>
 </html>
