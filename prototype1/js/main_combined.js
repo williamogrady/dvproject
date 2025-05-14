@@ -46,21 +46,42 @@ for (const node of fullNodeData) {
 }
 
   // Step 2: enrich lines with SVG path coordinates
-  const fullLines = fullLineData.map(line => {
-    const enriched = new Line({
-      id: line.id,
-      from: line.source,
-      to: line.target
-    });
-    enriched.d = line.d;
-    return enriched;
+ const fullLines = fullLineData.map(topLine => {
+  const fromId = topLine.source; // e.g., "Bus77"
+  const toId = topLine.target;
+
+  const fromNumber = parseInt(fromId.replace(/\D/g, ""), 10);
+  const toNumber = parseInt(toId.replace(/\D/g, ""), 10);
+
+  const opLine = lineProps.find(line =>
+    (line.from_number === fromNumber && line.to_number === toNumber) ||
+    (line.from_number === toNumber && line.to_number === fromNumber)
+  );
+
+  const enriched = new Line({
+    ...(opLine || {}),
+    id: topLine.id,
+    from: fromId,
+    to: toId
   });
+
+  enriched.d = topLine.d;
+  return enriched;
+});
 
   console.log("✅ Interactive generator objects created:", interactiveGenerators.length);
   console.log("🔍 Sample generator:", interactiveGenerators[0]);
 
   console.log("✅ Buses enriched from full_nodes:", busData.length);
   console.log("🔍 Sample bus:", busData[0]);
+
+  console.log("✅ Enriched lines count:", fullLines.length);
+console.log("🔍 Sample enriched line:", fullLines.find(l => l.normalLimit || l.currentFlow));
+
+  console.log("Lines loaded:", fullLines.length);
+  console.log("Sample line:", fullLines[0]);
+
+
 
   // Step 3: pass everything to listView
   initListView(interactiveGenerators, fullNodes, fullLines);

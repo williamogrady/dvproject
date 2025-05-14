@@ -3,7 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <title>Power Grid List View</title>
-  <style>
+  <link rel="stylesheet" href="/prototype1/css/base.css">
+  <link rel="stylesheet" href="/prototype1/css/map-core.css">
+  <link rel="stylesheet" href="/prototype1/css/map-listview.css">
+  <link rel="stylesheet" href="/prototype1/css/map-interaction.css">
+  <link rel="stylesheet" href="/prototype1/css/styles.css">
+  <link rel="stylesheet" href="/prototype1/css/ui-panels.css">
+  <link rel="stylesheet" href="/prototype1/css/tooltip.css">
+  <link rel="stylesheet" href="/prototype1/css/legend.css">
+  <!-- <style>
     body {
       margin: 0;
       font-family: sans-serif;
@@ -82,9 +90,28 @@
     }
   </style>
 </head>
-<body>
+<body> -->
 
 <svg id="topology"></svg>
+
+<!-- Info Panel -->
+<div id="info-panel" class="panel panel-info">
+  <h2>Generator Info</h2>
+  <div id="details">Select a generator</div>
+</div>
+
+<!-- Status Panel -->
+<div id="status-panel" class="panel panel-status">
+  <!-- Will be populated by renderStatusPanel() -->
+</div>
+
+<!-- Filter Panel -->
+<div id="filter-panel" class="panel panel-filter">
+  <div id="filter-header">Filters</div>
+  <label><input type="checkbox" class="region-filter" value="north"> North</label><br>
+  <label><input type="checkbox" class="region-filter" value="west"> West</label><br>
+  <label><input type="checkbox" class="region-filter" value="south"> South</label><br>
+</div>
 
 <!-- Script load order matters -->
 <script type="module" src="./js/main_combined.js"></script>

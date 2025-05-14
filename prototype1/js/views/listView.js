@@ -1,6 +1,5 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 import { updateSystemState, systemState } from '/prototype1/logic/state.js';
-import { renderStatusPanel } from '/prototype1/statusPanel.js';
 
 const svg = d3.select("#topology");
 const zoomGroup = svg.append("g").attr("id", "zoom-group");
@@ -15,9 +14,7 @@ export function initListView(interactiveGenerators, allNodes, lines) {
   fullNodes = allNodes;
   fullLines = lines;
 
-  renderUI();
   setupZoom();
-
   drawLines(fullLines);
   drawBuses(fullNodes);
   drawLoads(fullNodes);
@@ -25,36 +22,8 @@ export function initListView(interactiveGenerators, allNodes, lines) {
   drawGenerators();
 
   updateSystemState(generators, [], []);
-  renderStatusPanel(generators, systemState);
-  enableDrag();
   attachRegionFilterHandlers();
-}
-
-function renderUI() {
-  if (!document.getElementById("info-panel")) {
-    const infoPanel = document.createElement("div");
-    infoPanel.id = "info-panel";
-    infoPanel.innerHTML = `<h2>Generator Info</h2><div id="details">Select a generator</div>`;
-    document.body.appendChild(infoPanel);
-  }
-
-  if (!document.getElementById("status-panel")) {
-    const statusPanel = document.createElement("div");
-    statusPanel.id = "status-panel";
-    document.body.appendChild(statusPanel);
-  }
-
-  if (!document.getElementById("filter-panel")) {
-    const filterPanel = document.createElement("div");
-    filterPanel.id = "filter-panel";
-    filterPanel.innerHTML = `
-      <div id="filter-header">Filters</div>
-      <label><input type="checkbox" class="region-filter" value="north"> North</label><br>
-      <label><input type="checkbox" class="region-filter" value="west"> West</label><br>
-      <label><input type="checkbox" class="region-filter" value="south"> South</label><br>
-    `;
-    document.body.appendChild(filterPanel);
-  }
+  enableDrag(); // Assumes the filter panel is already in HTML
 }
 
 function setupZoom() {
@@ -72,21 +41,22 @@ function setupZoom() {
 //---------------------------//
 
 function drawLines(lines) {
-  zoomGroup.selectAll("path.line")
+  zoomGroup.selectAll("path.link")
     .data(lines)
     .join("path")
-    .attr("class", "line")
+    .attr("class", "link link-full")
     .attr("d", d => d.d)
-    .attr("stroke", "#888")
-    .attr("stroke-width", 1.5)
-    .attr("fill", "none");
+    .on("mouseover", (event, d) => {
+  console.log("Hovered over line:", d);
+  showTooltip(d, event.pageX, event.pageY);
+});
 }
 
 function drawBuses(nodes) {
   zoomGroup.selectAll("g.bus")
     .data(nodes.filter(d => d.type === "bus"))
     .join("g")
-    .attr("class", "bus")
+    .attr("class", "bus full-node")
     .attr("transform", d => {
       const base = `translate(${d.x}, ${d.y})`;
       if (d.rotate !== undefined && d.rotateX != null && d.rotateY != null) {
@@ -94,72 +64,74 @@ function drawBuses(nodes) {
       }
       return base;
     })
-    .each(function (d) {
-      d3.select(this).append("rect")
-        .attr("x", -d.width / 2)
-        .attr("y", -d.height / 2)
-        .attr("width", d.width)
-        .attr("height", d.height)
-        .attr("fill", "#999");
-    });
+    .append("rect")
+    .attr("class", "bus-rect")
+    .attr("x", d => -d.width / 2)
+    .attr("y", d => -d.height / 2)
+    .attr("width", d => d.width)
+    .attr("height", d => d.height)
+    .on("mouseover", (event, d) => {
+      showTooltip(d, event.pageX, event.pageY);
+    })
+    .on("mouseout", hideTooltip)
+    .on("mouseover", (event, d) => {
+  console.log("Hovered over bus:", d);
+  showTooltip(d, event.pageX, event.pageY);
+});
 }
 
 function drawLoads(nodes) {
   zoomGroup.selectAll("g.load")
     .data(nodes.filter(d => d.type === "load"))
     .join("g")
-    .attr("class", "load")
+    .attr("class", "load full-node")
     .attr("transform", d => `translate(${d.x}, ${d.y})`)
-    .each(function (d) {
-      d3.select(this).append("path")
-        .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
-        .attr("fill", "#54e2f7");
-    });
+    .append("path")
+    .attr("class", "load-shape")
+    .attr("d", d3.symbol().type(d3.symbolTriangle).size(100))
+    .on("mouseover", (event, d) => {
+  console.log("Hovered over load:", d);
+  showTooltip(d, event.pageX, event.pageY);
+});
 }
 
 function drawStaticGenerators(nodes) {
   zoomGroup.selectAll("g.static-gen")
     .data(nodes.filter(d => d.type === "generator" && !d.ratedMaxMW))
     .join("g")
-    .attr("class", "static-gen")
+    .attr("class", "static-gen generator full-node")
     .attr("transform", d => `translate(${d.x}, ${d.y})`)
-    .each(function (d) {
-      d3.select(this).append("circle")
-        .attr("r", 30)
-        .attr("fill", "#bbbbbb")
-        .attr("stroke", "#444")
-        .attr("stroke-dasharray", "4,2")
-    });
+    .append("circle")
+    .attr("class", "generator-shape")
+    .attr("r", 20);
 }
 
 function drawGenerators() {
   zoomGroup.selectAll("g.gen-node")
     .data(generators, d => d.id)
     .join("g")
-    .attr("class", "gen-node")
+    .attr("class", d => {
+      const base = "gen-node generator";
+      const status = d.currentOutput > 0 ? "generator-on" : "generator-off";
+      const selected = d.selected ? "selected-generator" : "";
+      const highlight = d.northGroup ? "highlight-group" : "";
+      return `${base} ${status} ${selected} ${highlight}`.trim();
+    })
     .attr("transform", d => `translate(${d.x}, ${d.y}) rotate(${d.rotation || 0})`)
     .each(function (d) {
       const g = d3.select(this);
       g.selectAll("*").remove();
 
       g.append("circle")
-        .attr("r", 30)
-        .attr("class", () => {
-          const base = "generator-circle";
-          const status = d.currentOutput > 0 ? "generator-on" : "generator-off";
-          const selected = d.selected ? "selected-single" : "";
-          const highlight = d.northGroup ? "highlight-group" : "";
-          return `${base} ${status} ${selected} ${highlight}`;
-        })
-        .attr("stroke", d.currentOutput > 0 ? "green" : "#333")
-        .attr("stroke-width", d.currentOutput > 0 ? 4 : 1.5)
+        .attr("r", 25)
+        .attr("class", "generator-shape")
         .on("click", () => {
           generators.forEach(g => g.selected = false);
           d.selected = true;
           selectedGenerator = d;
           drawGenerators();
           updateInfoPanel(d);
-          renderStatusPanel(generators, systemState);
+  
         });
 
       g.append("text")
@@ -189,7 +161,6 @@ function updateInfoPanel(gen) {
       updateSystemState(generators, [], []);
       drawGenerators();
       updateInfoPanel(gen);
-      renderStatusPanel(generators, systemState);
     });
 }
 
@@ -211,6 +182,7 @@ function attachRegionFilterHandlers() {
 function enableDrag() {
   const panel = document.getElementById("filter-panel");
   const header = document.getElementById("filter-header");
+  if (!panel || !header) return;
 
   let isDragging = false;
   let offsetX = 0, offsetY = 0;
@@ -233,3 +205,22 @@ function enableDrag() {
     document.body.style.userSelect = "auto";
   });
 }
+
+function showTooltip(data, x, y) {
+  console.log("Tooltip position:", x, y);
+  console.log("Tooltip data:", data);
+  const tooltip = d3.select("#tooltip");
+  tooltip.style("left", `${x + 10}px`)
+    .style("top", `${y + 10}px`)
+    .style("display", "block")
+    .html(formatAttributes(data));
+}
+
+function hideTooltip() {
+  d3.select("#tooltip").style("display", "none");
+}
+
+function formatAttributes(obj) {
+  return Object.entries(obj).map(([key, val]) => `<div><strong>${key}:</strong> ${val}</div>`).join("");
+}
+
