@@ -2,31 +2,29 @@
 
 /* Selected generator highlight */
 
-/* Selected generator highlight */
-.selected-generator circle {
-  stroke: orange;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 6px orange);
+.generator-on {
+      fill: #90ee90;
+    }
+
+.generator-off {
+      fill: #f08080;
+    }
+
+.selected-single {
+      fill: orange;
+    }
+
+.highlight-group {
+      stroke: dodgerblue;
+      stroke-width: 4px;
+    }
+
+.gen-node.generator:hover .generator-shape {
+  stroke: #007acc;
+  stroke-width: 2px;
 }
 
-.selected-generator.generator-on circle {
-  stroke: orange;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 6px orange);
-  fill: #90ee90; /* reinforce fill */
-}
-
-.selected-generator.generator-off circle {
-  stroke: orange;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 6px orange);
-  fill: red;
-}
-
-.generator-on circle{
-  fill: #90ee90;
-}
-
-.generator-off circle{
-  fill: red;
+.selected-generator .generator-shape {
+  fill: orange !important;
+  stroke: orange !important;
 }

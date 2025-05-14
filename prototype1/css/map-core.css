@@ -58,15 +58,36 @@ path.link {
   stroke-width: 1px;
 }
 
-.full-node.load path {
-  fill: #e0e0e0;
-  stroke: black;
-  stroke-width: 1px;
-}
-
 .full-generator {
   fill: #aaa;
   stroke: black;
   stroke-width: 1px;
+}
+
+.generator-shape {
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.bus-rect {
+  fill: #ccc;
+  stroke: black;
+  stroke-width: 1px;
+}
+
+/* triangle shape representing a load */
+.load-shape {
+  fill: #0f8496;
+  stroke: #333;
+  stroke-width: 1px;
+}
+
+.load {
+  pointer-events: none; /* if loads aren't interactive */
+}
+
+.load:hover .load-shape {
+  stroke: #007acc;
+  stroke-width: 2px;
 }
   
