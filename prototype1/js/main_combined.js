@@ -45,8 +45,8 @@ for (const node of fullNodeData) {
   fullNodes.push({ ...node });
 }
 
-  // Step 2: enrich lines with SVG path coordinates
- const fullLines = fullLineData.map(topLine => {
+// Step 2: Create Lines and filter offline lines
+const fullLines = fullLineData.map(topLine => {
   const fromId = topLine.source; // e.g., "Bus77"
   const toId = topLine.target;
 
@@ -54,20 +54,22 @@ for (const node of fullNodeData) {
   const toNumber = parseInt(toId.replace(/\D/g, ""), 10);
 
   const opLine = lineProps.find(line =>
-    (line.from_number === fromNumber && line.to_number === toNumber) ||
-    (line.from_number === toNumber && line.to_number === fromNumber)
+    (Number(line.from_number) === fromNumber && Number(line.to_number) === toNumber) ||
+    (Number(line.from_number) === toNumber && Number(line.to_number) === fromNumber)
   );
 
   const enriched = new Line({
     ...(opLine || {}),
     id: topLine.id,
     from: fromId,
-    to: toId
+    to: toId,
+    offline: !opLine // ✅ Mark as offline if no opLine match
   });
 
   enriched.d = topLine.d;
   return enriched;
 });
+
 
   console.log("✅ Interactive generator objects created:", interactiveGenerators.length);
   console.log("🔍 Sample generator:", interactiveGenerators[0]);
@@ -80,6 +82,8 @@ console.log("🔍 Sample enriched line:", fullLines.find(l => l.normalLimit || l
 
   console.log("Lines loaded:", fullLines.length);
   console.log("Sample line:", fullLines[0]);
+
+  console.log("Offline lines:", fullLines.filter(d => d.offline));
 
 
 

@@ -9,6 +9,7 @@ let fullNodes = [];
 let fullLines = [];
 let selectedGenerator = null;
 
+
 export function initListView(interactiveGenerators, allNodes, lines) {
   generators = interactiveGenerators;
   fullNodes = allNodes;
@@ -44,7 +45,7 @@ function drawLines(lines) {
   zoomGroup.selectAll("path.link")
     .data(lines)
     .join("path")
-    .attr("class", "link link-full")
+    .attr("class", d => `link link-full${d.offline ? " link-offline" : ""}`)
     .attr("d", d => d.d)
     .on("mouseover", (event, d) => {
   console.log("Hovered over line:", d);
@@ -99,7 +100,7 @@ function drawStaticGenerators(nodes) {
   zoomGroup.selectAll("g.static-gen")
     .data(nodes.filter(d => d.type === "generator" && !d.ratedMaxMW))
     .join("g")
-    .attr("class", "static-gen generator full-node")
+    .attr("class", "generator-shape generator-static")
     .attr("transform", d => `translate(${d.x}, ${d.y})`)
     .append("circle")
     .attr("class", "generator-shape")

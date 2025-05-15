@@ -36,3 +36,15 @@
   fill: white;
   stroke-width: 1.5px;
 }
+
+.link-offline {
+  stroke-dasharray: 6;
+  stroke: black;
+  stroke-width: 2;
+}
+
+.generator-static circle {
+  stroke: black;
+  stroke-dasharray: 4;
+  fill: lightgray;
+}
