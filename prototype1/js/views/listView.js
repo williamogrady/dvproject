@@ -10,13 +10,14 @@ let fullLines = [];
 let selectedGenerator = null;
 
 
-export function initListView(interactiveGenerators, allNodes, lines) {
+export function initListView(interactiveGenerators, allNodes, lines, staticLines) {
   generators = interactiveGenerators;
   fullNodes = allNodes;
   fullLines = lines;
 
   setupZoom();
   drawLines(fullLines);
+  drawStaticLines(staticLines); // ← add this
   drawBuses(fullNodes);
   drawLoads(fullNodes);
   drawStaticGenerators(fullNodes);
@@ -24,8 +25,9 @@ export function initListView(interactiveGenerators, allNodes, lines) {
 
   updateSystemState(generators, [], []);
   attachRegionFilterHandlers();
-  enableDrag(); // Assumes the filter panel is already in HTML
+  enableDrag();
 }
+
 
 function setupZoom() {
   svg.call(
@@ -45,12 +47,24 @@ function drawLines(lines) {
   zoomGroup.selectAll("path.link")
     .data(lines)
     .join("path")
-    .attr("class", d => `link link-full${d.offline ? " link-offline" : ""}`)
+    .attr("class", "link full-link")
     .attr("d", d => d.d)
     .on("mouseover", (event, d) => {
   console.log("Hovered over line:", d);
   showTooltip(d, event.pageX, event.pageY);
 });
+}
+
+function drawStaticLines(lines) {
+  zoomGroup.selectAll("path.static-link")
+    .data(lines)
+    .join("path")
+    .attr("class", "link static-link")
+    .attr("d", d => d.d)
+    .on("mouseover", (event, d) => {
+      console.log("Hovered over static line:", d);
+      showTooltip(d, event.pageX, event.pageY);
+    });
 }
 
 function drawBuses(nodes) {

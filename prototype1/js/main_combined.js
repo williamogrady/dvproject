@@ -45,9 +45,11 @@ for (const node of fullNodeData) {
   fullNodes.push({ ...node });
 }
 
-// Step 2: Create Lines and filter offline lines
+const onlineLines = [];
+const offlineLines = [];
+
 const fullLines = fullLineData.map(topLine => {
-  const fromId = topLine.source; // e.g., "Bus77"
+  const fromId = topLine.source;
   const toId = topLine.target;
 
   const fromNumber = parseInt(fromId.replace(/\D/g, ""), 10);
@@ -62,11 +64,17 @@ const fullLines = fullLineData.map(topLine => {
     ...(opLine || {}),
     id: topLine.id,
     from: fromId,
-    to: toId,
-    offline: !opLine // ✅ Mark as offline if no opLine match
+    to: toId
   });
 
   enriched.d = topLine.d;
+
+  if (opLine) {
+    onlineLines.push(enriched);
+  } else {
+    offlineLines.push(enriched);
+  }
+
   return enriched;
 });
 
@@ -88,5 +96,6 @@ console.log("🔍 Sample enriched line:", fullLines.find(l => l.normalLimit || l
 
 
   // Step 3: pass everything to listView
-  initListView(interactiveGenerators, fullNodes, fullLines);
+  initListView(interactiveGenerators, fullNodes, onlineLines, offlineLines);
+
 });

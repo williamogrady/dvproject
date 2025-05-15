@@ -37,10 +37,11 @@
   stroke-width: 1.5px;
 }
 
-.link-offline {
+.static-link {
   stroke-dasharray: 6;
-  stroke: black;
+  stroke: #666;
   stroke-width: 2;
+  opacity: 0.7;
 }
 
 .generator-static circle {
