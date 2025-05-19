@@ -12,90 +12,132 @@ Promise.all([
   d3.json('/prototype1/data/operation/lines.json')
 ]).then(([fullNodeData, fullLineData, busData, generatorData, lineProps]) => {
   const fullNodes = [];
+  const fullLines = [];
   const interactiveGenerators = [];
 
   // Create lookup from busNumber → generatorData
 const genByBusNumber = Object.fromEntries(generatorData.map(d => [d.busNumber, d]));
 
+//Debugging
+let totalGenerators = 0;
+let matchedGenerators = 0;
+let unmatchedGenerators = 0;
+
 for (const node of fullNodeData) {
   if (node.type === "generator") {
-    // Extract bus number from ID like "Gen4"
+    totalGenerators++;
+
     const busNumber = parseInt(node.id.replace(/\D/g, ""), 10);
     const opGen = genByBusNumber[busNumber];
-    if (opGen) {
-      const enriched = new Generator(opGen);
-      enriched.x = node.x;
-      enriched.y = node.y;
-      enriched.width = node.width;
-      enriched.height = node.height;
-      enriched.rotation = node.rotation ?? 0;
-      enriched.rotate = node.rotate;
-      enriched.rotateX = node.rotateX;
-      enriched.rotateY = node.rotateY;
-      enriched.selected = false;
-      enriched.northGroup = false;
-      enriched.currentOutput = 0;
-      fullNodes.push(enriched);
-      interactiveGenerators.push(enriched);
-      continue; // don't fall through
-    }
-  }
+    let enriched;
 
-   // For all non-interactive generators, buses, loads, etc.
-  fullNodes.push({ ...node });
+    if (opGen) {
+      matchedGenerators++;
+      enriched = new Generator(opGen);
+      enriched.status = opGen.status || "off";
+    } else {
+      unmatchedGenerators++;
+      console.log("🚫 Unmatched generator:", node.id, "→ busNumber:", busNumber);
+      enriched = new Generator({
+        busNumber,
+        region: "South",
+        ratedMaxMW: 0,
+        currentOutput: 0,
+        status: "unavailable",
+        id: node.id
+      });
+    }
+
+    enriched.type = "generator";
+    enriched.x = node.x;
+    enriched.y = node.y;  
+    enriched.width = node.width;
+    enriched.height = node.height;
+    enriched.rotation = node.rotation ?? 0;
+    enriched.rotate = node.rotate;
+    enriched.rotateX = node.rotateX;
+    enriched.rotateY = node.rotateY;
+    enriched.selected = false;
+    enriched.filteredRegion = false;
+
+    fullNodes.push(enriched);
+    if (opGen) interactiveGenerators.push(enriched);
+  } else {
+    fullNodes.push({ ...node });
+  }
 }
 
-const onlineLines = [];
-const offlineLines = [];
+console.log("📊 Total generators in full_nodes:", totalGenerators);
+console.log("✅ Matched (interactive) generators:", matchedGenerators);
+console.log("🟡 Unmatched (unavailable) generators:", unmatchedGenerators);
 
-const fullLines = fullLineData.map(topLine => {
+// Build generator lookup only once (move this outside the map loop)
+const genById = {};
+for (const node of fullNodes) {
+  if (node.type === "generator") {
+    genById[node.id] = node;
+  }
+}
+
+fullLineData.forEach(topLine => {
   const fromId = topLine.source;
   const toId = topLine.target;
 
-  const fromNumber = parseInt(fromId.replace(/\D/g, ""), 10);
-  const toNumber = parseInt(toId.replace(/\D/g, ""), 10);
+  const isBusToBus = fromId.startsWith("Bus") && toId.startsWith("Bus");
+  const isBusToLoad = (fromId.startsWith("Bus") && toId.startsWith("Load")) || (fromId.startsWith("Load") && toId.startsWith("Bus"));
+  const isBusToGen  = (fromId.startsWith("Bus") && toId.startsWith("Gen"))  || (fromId.startsWith("Gen")  && toId.startsWith("Bus"));
 
-  const opLine = lineProps.find(line =>
-    (Number(line.from_number) === fromNumber && Number(line.to_number) === toNumber) ||
-    (Number(line.from_number) === toNumber && Number(line.to_number) === fromNumber)
-  );
+  // Match only for Bus–Bus
+  let opLine = null;
+  if (isBusToBus) {
+    const fromNumber = parseInt(fromId.replace("Bus", ""), 10);
+    const toNumber = parseInt(toId.replace("Bus", ""), 10);
 
-  const enriched = new Line({
-    ...(opLine || {}),
-    id: topLine.id,
-    from: fromId,
-    to: toId
-  });
-
-  enriched.d = topLine.d;
-
-  if (opLine) {
-    onlineLines.push(enriched);
-  } else {
-    offlineLines.push(enriched);
+    opLine = lineProps.find(line =>
+      (line.from_number === fromNumber && line.to_number === toNumber) ||
+      (line.from_number === toNumber && line.to_number === fromNumber)
+    );
   }
 
-  return enriched;
+  const enriched = new Line({
+    id: topLine.id,
+    type: "line",
+    from: fromId,
+    to: toId,
+    d: topLine.d || topLine.path || "",
+
+    ...(opLine ? {
+      fromName: opLine.from_name,
+      toName: opLine.to_name,
+      voltage: opLine.nominal_voltage,
+      normalLimit: opLine.normal_MVA_limit,
+      emergencyLimit: opLine.emergency_MVA_limit
+    } : {})
+  });
+
+  // Assign availability per your rules
+  if (opLine) {
+    enriched.available = true; // ✅ matched Bus–Bus
+  } else if (isBusToLoad || isBusToGen) {
+    enriched.available = true; // ✅ Gen/Load lines always available
+  } else {
+    enriched.available = false; // ❌ unmatched Bus–Bus
+  }
+
+  fullLines.push(enriched);
 });
 
-
-  console.log("✅ Interactive generator objects created:", interactiveGenerators.length);
-  console.log("🔍 Sample generator:", interactiveGenerators[0]);
-
-  console.log("✅ Buses enriched from full_nodes:", busData.length);
-  console.log("🔍 Sample bus:", busData[0]);
-
-  console.log("✅ Enriched lines count:", fullLines.length);
+// ✅ These now run AFTER all lines are pushed
+console.log("✅ Interactive generator objects created:", interactiveGenerators.length);
+console.log("🔍 Sample generator:", interactiveGenerators[0]);
+console.log("✅ Buses enriched from full_nodes:", busData.length);
+console.log("🔍 Sample bus:", busData[0]);
+console.log("✅ Enriched lines count:", fullLines.length);
 console.log("🔍 Sample enriched line:", fullLines.find(l => l.normalLimit || l.currentFlow));
+console.log("Lines loaded:", fullLines.length);
+console.log("Sample line:", fullLines[0]);
+console.log("Offline lines:", fullLines.filter(d => d.offline));
 
-  console.log("Lines loaded:", fullLines.length);
-  console.log("Sample line:", fullLines[0]);
-
-  console.log("Offline lines:", fullLines.filter(d => d.offline));
-
-
-
-  // Step 3: pass everything to listView
-  initListView(interactiveGenerators, fullNodes, onlineLines, offlineLines);
-
+// Pass everything to the view
+initListView(interactiveGenerators, fullNodes, fullLines)
 });

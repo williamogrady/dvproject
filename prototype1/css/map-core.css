@@ -31,21 +31,21 @@
 }
 
 /* Transmission lines */
-.link-full {
-  stroke: black;
-  fill: white;
-  stroke-width: 1.5px;
+.line-available {
+  stroke: #333;
+  stroke-width: 2.5px;
+  fill: none;
 }
 
-.static-link {
-  stroke-dasharray: 6;
-  stroke: #666;
-  stroke-width: 2;
-  opacity: 0.7;
+.line-unavailable {
+  stroke: #aaa;
+  stroke-width: 2.5px;
+  stroke-dasharray: 6 3;
+  fill: none;
 }
 
-.generator-static circle {
-  stroke: black;
-  stroke-dasharray: 4;
+.generator-unavailable circle {
   fill: lightgray;
+  stroke: black;
+  stroke-dasharray: 4 2;
 }

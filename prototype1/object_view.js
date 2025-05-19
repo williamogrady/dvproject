@@ -32,7 +32,7 @@ fetch('/prototype1/data/operation/generators.json')
         g.y = row * spacing + 80;
         g.region = g.region || ["North", "South", "East", "West"][i % 4];
         g.selected = false;
-        g.northGroup = false;
+        g.filteredRegion = false;
         g.currentOutput = 0;
         return g;
       });
@@ -68,7 +68,7 @@ function drawGrid() {
     .attr("class", d => {
       const status = d.currentOutput > 0 ? "generator-on" : "generator-off";
       const selected = d.selected ? "selected-single" : "";
-      const highlight = d.northGroup ? "highlight-group" : "";
+      const highlight = d.filteredRegion ? "highlight-group" : "";
       return `generator-circle ${status} ${selected} ${highlight}`;
     })
     .attr("stroke", d => d.currentOutput > 0 ? "green" : "#333")
@@ -132,7 +132,7 @@ window.addEventListener("DOMContentLoaded", () => {
         .map(cb => cb.value.toLowerCase());
 
       opGenerators.forEach(g => {
-        g.northGroup = activeRegions.includes(g.region.toLowerCase());
+        g.filteredRegion = activeRegions.includes(g.region.toLowerCase());
       });
 
       drawGrid();

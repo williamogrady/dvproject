@@ -8,7 +8,9 @@
     "rampRate": 20,
     "region": "West",
     "costPerMW": 50,
-    "emissionIntensity": 0.9
+    "emissionIntensity": 0.9,
+    "status": "off",
+    "currentOutput": 0
   },
   {
     "station": "DEERC",
@@ -20,7 +22,7 @@
     "region": "West",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "DEERCR",
     "busNumber": 31,
@@ -31,7 +33,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "DELAWA",
     "busNumber": 32,
@@ -42,7 +44,7 @@
     "region": "West",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "FTWAYN",
     "busNumber": 15,
@@ -53,7 +55,7 @@
     "region": "West",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "KANKAK",
     "busNumber": 6,
@@ -64,7 +66,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "LINCOL",
     "busNumber": 19,
@@ -75,7 +77,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "MADISO",
     "busNumber": 27,
@@ -86,7 +88,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "MCKINL",
     "busNumber": 18,
@@ -97,7 +99,7 @@
     "region": "West",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "NWCARL",
     "busNumber": 4,
@@ -108,7 +110,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "OLIVE",
     "busNumber": 8,
@@ -119,7 +121,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "RIVERS",
     "busNumber": 1,
@@ -130,7 +132,7 @@
     "region": "West",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "TANNERS-1",
     "busNumber": 26,
@@ -141,7 +143,7 @@
     "region": "West",
     "costPerMW": 50,
     "emissionIntensity": 0.9
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "TANNERS-2",
     "busNumber": 25,
@@ -152,7 +154,7 @@
     "region": "West",
     "costPerMW": 50,
     "emissionIntensity": 0.9
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "TWINBROOK",
     "busNumber": 12,
@@ -163,7 +165,7 @@
     "region": "West",
     "costPerMW": 40,
     "emissionIntensity": 0.4
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "HOWARD",
     "busNumber": 42,
@@ -174,7 +176,7 @@
     "region": "North",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "MUSKNG-1",
     "busNumber": 65,
@@ -185,7 +187,7 @@
     "region": "North",
     "costPerMW": 50,
     "emissionIntensity": 0.9
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "MUSKNG-2",
     "busNumber": 66,
@@ -196,7 +198,7 @@
     "region": "North",
     "costPerMW": 50,
     "emissionIntensity": 0.9
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "NATRIU",
     "busNumber": 62,
@@ -207,7 +209,7 @@
     "region": "North",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "PHILO",
     "busNumber": 49,
@@ -218,7 +220,7 @@
     "region": "North",
     "costPerMW": 40,
     "emissionIntensity": 0.4
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "ROCKHI",
     "busNumber": 34,
@@ -229,7 +231,7 @@
     "region": "North",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "STERLI",
     "busNumber": 36,
@@ -240,7 +242,7 @@
     "region": "North",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "SUNNYS",
     "busNumber": 56,
@@ -251,7 +253,7 @@
     "region": "North",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "TIDD",
     "busNumber": 59,
@@ -262,7 +264,7 @@
     "region": "North",
     "costPerMW": 40,
     "emissionIntensity": 0.4
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "TORREY",
     "busNumber": 54,
@@ -273,7 +275,7 @@
     "region": "North",
     "costPerMW": 40,
     "emissionIntensity": 0.4
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "W.KAMM",
     "busNumber": 61,
@@ -284,7 +286,7 @@
     "region": "North",
     "costPerMW": 40,
     "emissionIntensity": 0.4
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "W.LANC",
     "busNumber": 46,
@@ -295,7 +297,7 @@
     "region": "North",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "WAGENH",
     "busNumber": 55,
@@ -306,7 +308,7 @@
     "region": "North",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "WEST E",
     "busNumber": 40,
@@ -317,7 +319,7 @@
     "region": "North",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "BELLEF",
     "busNumber": 74,
@@ -328,7 +330,7 @@
     "region": "South",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "CABINC",
     "busNumber": 80,
@@ -339,7 +341,7 @@
     "region": "South",
     "costPerMW": 50,
     "emissionIntensity": 0.9
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "CLAYTO",
     "busNumber": 103,
@@ -350,7 +352,7 @@
     "region": "South",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "DANRIV",
     "busNumber": 111,
@@ -361,7 +363,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "DANVIL",
     "busNumber": 112,
@@ -372,7 +374,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "DARRAH",
     "busNumber": 76,
@@ -383,7 +385,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "FIELDA",
     "busNumber": 110,
@@ -394,7 +396,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "GLEN L",
     "busNumber": 100,
@@ -405,7 +407,7 @@
     "region": "South",
     "costPerMW": 40,
     "emissionIntensity": 0.4
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "HANCOC",
     "busNumber": 104,
@@ -416,7 +418,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "HILLSB",
     "busNumber": 72,
@@ -427,7 +429,7 @@
     "region": "South",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "HINTON",
     "busNumber": 99,
@@ -438,7 +440,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "KYGERC",
     "busNumber": 116,
@@ -449,7 +451,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "PORTSM",
     "busNumber": 70,
@@ -460,7 +462,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "REUSEN",
     "busNumber": 107,
@@ -471,7 +473,7 @@
     "region": "South",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "ROANOK",
     "busNumber": 105,
@@ -482,7 +484,7 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "SARGEN",
     "busNumber": 73,
@@ -493,7 +495,7 @@
     "region": "South",
     "costPerMW": 5,
     "emissionIntensity": 0
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "SPORN-2",
     "busNumber": 69,
@@ -504,7 +506,7 @@
     "region": "South",
     "costPerMW": 50,
     "emissionIntensity": 0.9
-  },
+  , "status": "off", "currentOutput": 0 },
   {
     "station": "TURNER",
     "busNumber": 77,
@@ -515,5 +517,5 @@
     "region": "South",
     "costPerMW": 75,
     "emissionIntensity": 0.6
-  }
+  , "status": "off", "currentOutput": 0 }
 ]

@@ -21,6 +21,8 @@ export class Line {
     // Positional data (set later based on from/to Bus objects)
     this.start = { x: null, y: null };
     this.end = { x: null, y: null };
+
+    this.available = false; // Indicates if the line is operational
   }
 
   // Used in drawing logic

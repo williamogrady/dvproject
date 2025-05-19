@@ -13,8 +13,8 @@ export class Generator {
     this.region = data.region;
 
     // Dynamic state
-    this.status = 'on';                       // 'on' or 'off'
-    this.currentOutput = this.ratedMinMW;
+    this.status = data.status;                       // 'on' or 'off'
+    this.currentOutput = data.currentOutput;
     this.isSelected = false;
   }
 
