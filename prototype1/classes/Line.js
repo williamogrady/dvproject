@@ -15,14 +15,14 @@ export class Line {
 
     // Dynamic state
     this.currentFlow = 0;       // in MVA
-    this.status = 'normal';     // 'normal', 'warning', 'overloaded'
+    this.loadStatus = 'normal';     // 'normal', 'warning', 'overloaded'
     this.direction = null;      // 'forward', 'reverse' or null
 
     // Positional data (set later based on from/to Bus objects)
     this.start = { x: null, y: null };
     this.end = { x: null, y: null };
 
-    this.available = false; // Indicates if the line is operational
+    this.available = false;       // 'true' or 'false'
   }
 
   // Used in drawing logic

@@ -14,6 +14,7 @@ export class Generator {
 
     // Dynamic state
     this.status = data.status;                       // 'on' or 'off'
+    this.available = false;                          // 'true' or 'false'
     this.currentOutput = data.currentOutput;
     this.isSelected = false;
   }

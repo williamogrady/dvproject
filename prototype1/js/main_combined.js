@@ -10,10 +10,10 @@ Promise.all([
   d3.json('/prototype1/data/operation/buses.json'),
   d3.json('/prototype1/data/operation/generators.json'),
   d3.json('/prototype1/data/operation/lines.json')
-]).then(([fullNodeData, fullLineData, busData, generatorData, lineProps]) => {
+]).then(([fullNodeData, fullLineData, busData, generatorData, lineProps]) => { //fullNodes, fullLines, opBuses, opGenerators, opLines
   const fullNodes = [];
   const fullLines = [];
-  const interactiveGenerators = [];
+  const interactiveGenerators = []; // opGenerators
 
   // Create lookup from busNumber → generatorData
 const genByBusNumber = Object.fromEntries(generatorData.map(d => [d.busNumber, d]));
