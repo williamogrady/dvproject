@@ -19,7 +19,8 @@ class Generator:
         self.index = index
         self.bus = int(row[0])
         self.pmax = float(row[8])
-        self.status = int(row[7])  # 1 = on, 0 = off
+        self.pg = 0  # initial output in MW
+        self.status = 0  # 1 = on, 0 = off
 
     def toggle(self):
         self.status = 0 if self.status == 1 else 1
@@ -29,8 +30,14 @@ class Generator:
             'index': int(self.index),
             'bus': int(self.bus),
             'pmax': float(self.pmax),
+            'pg': float(self.pg),         # ✅ ADD THIS LINE
             'status': int(self.status)
         }
+    
+    def set_percent(self, percent):
+        percent = max(0, min(100, percent))
+        self.pg = (percent / 100.0) * self.pmax
+        self.status = 1 if percent > 0 else 0
 
 class Branch:
     def __init__(self, index, row):
@@ -71,7 +78,8 @@ class Grid:
 
     def update_case_from_objects(self):
         for gen in self.generators:
-            self.case['gen'][gen.index][7] = gen.status  # update status
+            self.case['gen'][gen.index][7] = 1 if gen.pg > 0 else 0
+            self.case['gen'][gen.index][1] = gen.pg       # Pg (real power output)
 
     def compute_total_cost(self, results):
         total_cost = 0
@@ -94,16 +102,20 @@ class Grid:
 
 
     def run_power_flow(self):
-        self.case = case118.case118()
+        # Reset the base case from the template
+        self.case = copy.deepcopy(self.original_case)
+
+        # Inject pg and status values into case
         self.update_case_from_objects()
 
         try:
             options = ppoption(VERBOSE=0, OUT_ALL=0)
+            print("🚧 CASE GEN BEFORE RUNPF:\n", self.case['gen'])  # ✅ Add this!
             results, success = runpf.runpf(self.case, options)
             print("✅ runpf executed, success =", success)
         except Exception as e:
             print("❌ runpf exception:", e)
-            return False  # ❗️ must return explicitly here
+            return False
 
         if success:
             self.update_branch_flows(results['branch'])
@@ -111,10 +123,7 @@ class Grid:
         else:
             self.last_total_cost = None
 
-        return success  # ✅ return True or False, always
-
-
-
+        return success
 
 
     def update_branch_flows(self, new_branch_data):

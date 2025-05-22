@@ -42,6 +42,26 @@ def toggle_generator(gen_id):
             'error': str(e)
         })
 
+@app.route('/api/set_generation/<int:gen_id>', methods=['POST'])
+def set_generation(gen_id):
+    try:
+        data = request.get_json()
+        percent = data.get('percent', 0)
+
+        grid.generators[gen_id].set_percent(percent)
+        success = grid.run_power_flow()
+
+        return jsonify({
+            'generators': grid.get_generators(),
+            'lines': grid.get_branches(),
+            'total_cost': grid.last_total_cost,
+            'solved': success
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 

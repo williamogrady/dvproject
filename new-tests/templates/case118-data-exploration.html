@@ -111,9 +111,9 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
   // Reapply sorting if it’s defined
   if (genSortCol !== null) {
     gens.sort((a, b) => {
-      const values = [a.bus, a.pmax, a.status];
+      const values = [a.bus, a.pmax, a.pg ?? 0];
       const va = values[genSortCol];
-      const vb = [b.bus, b.pmax, b.status][genSortCol];
+      const vb = [b.bus, b.pmax, b.pg ?? 0][genSortCol];
       return genSortDir === 'asc' ? va - vb : vb - va;
     });
   }
@@ -124,7 +124,7 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
 
-  const headers = ['Bus', 'Pmax', 'Status'];
+  const headers = ['Bus', 'Pmax', 'Output'];
   headers.forEach((label, i) => {
     const th = document.createElement('th');
     th.textContent = label;
@@ -148,37 +148,47 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
   gens.forEach(gen => {
     const row = document.createElement('tr');
 
-    const cells = [
-      document.createTextNode(gen.bus),
-      document.createTextNode(gen.pmax)
-    ];
+    const busCell = document.createElement('td');
+    busCell.textContent = gen.bus;
+    row.appendChild(busCell);
 
-    const statusCell = document.createElement('td');
-    statusCell.className = `status-cell ${gen.status ? 'on' : 'off'}`;
-    statusCell.textContent = gen.status ? 'ON' : 'OFF';
-    statusCell.onclick = async () => {
-      try {
-        const res = await fetch(`/api/toggle/${gen.index}`, { method: 'POST' });
-        const data = await res.json();
+    const pmaxCell = document.createElement('td');
+    pmaxCell.textContent = gen.pmax;
+    row.appendChild(pmaxCell);
 
-        renderGenerators(data.generators);
-        renderLines(data.lines);
-        renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+    const outputCell = document.createElement('td');
 
-      } catch (err) {
-        console.error("Unexpected error:", err);
-        renderOverview([], [], null, false);  // fallback if even fetch fails
-      }
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 0;
+    slider.max = 100;
+    slider.step = 25;
+    slider.value = Math.round((gen.pg / gen.pmax) * 100);
+
+    const label = document.createElement('span');
+    label.textContent = ` ${slider.value}%`;
+
+    slider.oninput = () => {
+      label.textContent = ` ${slider.value}%`;
     };
 
+    slider.onchange = async () => {
+      const percent = parseInt(slider.value);
+      const res = await fetch(`/api/set_generation/${gen.index}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ percent })
+      });
 
-    cells.forEach(cell => {
-      const td = document.createElement('td');
-      td.appendChild(cell);
-      row.appendChild(td);
-    });
+      const data = await res.json();
+      renderGenerators(data.generators);
+      renderLines(data.lines);
+      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+    };
 
-    row.appendChild(statusCell);
+    outputCell.appendChild(slider);
+    outputCell.appendChild(label);
+    row.appendChild(outputCell);
     tbody.appendChild(row);
   });
 
@@ -186,8 +196,7 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
   container.appendChild(table);
 }
 
-
-  function renderLines(lines) {
+function renderLines(lines) {
     const container = document.getElementById('lineTable');
     container.innerHTML = '';
     const table = document.createElement('table');
