@@ -80,80 +80,75 @@
   }
 
   function renderGenerators(gens) {
-    const container = document.getElementById('genTable');
-    container.innerHTML = '';
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-
-    const headers = ['Bus', 'Pmax', 'Status'];
-    headers.forEach((label, i) => {
-      const th = document.createElement('th');
-      th.textContent = label;
-      th.style.cursor = 'pointer';
-      th.onclick = () => {
-        if (genSortCol === i) {
-          genSortDir = genSortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          genSortCol = i;
-          genSortDir = 'desc';
-        }
-        gens.sort((a, b) => {
-          const values = [a.bus, a.pmax, a.status];
-          const va = values[genSortCol];
-          const vb = [b.bus, b.pmax, b.status][genSortCol];
-          return genSortDir === 'asc' ? va - vb : vb - va;
-        });
-        renderGenerators(gens); // re-render sorted
-      };
-      headRow.appendChild(th);
+  // Reapply sorting if it’s defined
+  if (genSortCol !== null) {
+    gens.sort((a, b) => {
+      const values = [a.bus, a.pmax, a.status];
+      const va = values[genSortCol];
+      const vb = [b.bus, b.pmax, b.status][genSortCol];
+      return genSortDir === 'asc' ? va - vb : vb - va;
     });
-
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    const tbody = document.createElement('tbody');
-    gens.forEach(gen => {
-      const row = document.createElement('tr');
-      const cells = [
-        document.createTextNode(gen.bus),
-        document.createTextNode(gen.pmax),
-      ];
-
-      const statusCell = document.createElement('td');
-      statusCell.className = `status-cell ${gen.status ? 'on' : 'off'}`;
-      statusCell.textContent = gen.status ? 'ON' : 'OFF';
-      statusCell.onclick = async () => {
-      try {
-          const res = await fetch(`/api/toggle/${gen.index}`, { method: 'POST' });
-
-          if (!res.ok) {
-            const error = await res.json();
-            alert("Error: " + (error.error || "unknown server error"));
-            return;
-          }
-
-          const data = await res.json();
-          renderGenerators(data.generators);
-          renderLines(data.lines);
-
-        } catch (err) {
-          console.error("Toggle failed", err);
-          alert("Toggle failed: " + err.message);
-        }
-    };
-      cells.forEach(cell => {
-        const td = document.createElement('td');
-        td.appendChild(cell);
-        row.appendChild(td);
-      });
-      row.appendChild(statusCell);
-      tbody.appendChild(row);
-    });
-
-    table.appendChild(tbody);
-    container.appendChild(table);
   }
+
+  const container = document.getElementById('genTable');
+  container.innerHTML = '';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+
+  const headers = ['Bus', 'Pmax', 'Status'];
+  headers.forEach((label, i) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    th.style.cursor = 'pointer';
+    th.onclick = () => {
+      if (genSortCol === i) {
+        genSortDir = genSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        genSortCol = i;
+        genSortDir = 'desc';
+      }
+      renderGenerators(gens); // apply new sort
+    };
+    headRow.appendChild(th);
+  });
+
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  gens.forEach(gen => {
+    const row = document.createElement('tr');
+
+    const cells = [
+      document.createTextNode(gen.bus),
+      document.createTextNode(gen.pmax)
+    ];
+
+    const statusCell = document.createElement('td');
+    statusCell.className = `status-cell ${gen.status ? 'on' : 'off'}`;
+    statusCell.textContent = gen.status ? 'ON' : 'OFF';
+    statusCell.onclick = async () => {
+      const res = await fetch(`/api/toggle/${gen.index}`, { method: 'POST' });
+      const data = await res.json();
+      renderGenerators(data.generators); // ← will reapply sort
+      renderLines(data.lines);
+    };
+
+    cells.forEach(cell => {
+      const td = document.createElement('td');
+      td.appendChild(cell);
+      row.appendChild(td);
+    });
+
+    row.appendChild(statusCell);
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
 
   function renderLines(lines) {
     const container = document.getElementById('lineTable');
