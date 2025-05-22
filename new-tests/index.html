@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PyPower IEEE 118 Data Viewer</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    pre { background: #f0f0f0; padding: 1em; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>IEEE 118 Data (PyPower)</h1>
+  <select id="datasetSelect">
+    <option value="buses">Buses</option>
+    <option value="generators">Generators</option>
+    <option value="branches">Branches</option>
+    <option value="gencosts">GenCosts</option>
+  </select>
+
+  <pre id="output">Loading...</pre>
+
+  <script>
+    async function loadData() {
+      const response = await fetch('case118_data.json');
+      const data = await response.json();
+      window.caseData = data;
+      updateOutput('buses');
+    }
+
+    function updateOutput(type) {
+      const section = caseData[type];
+      document.getElementById('output').textContent = JSON.stringify(section, null, 2);
+    }
+
+    document.getElementById('datasetSelect').addEventListener('change', e => {
+      updateOutput(e.target.value);
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
