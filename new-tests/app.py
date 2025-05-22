@@ -8,7 +8,7 @@ grid = Grid()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('case118-data-exploration.html')
 
 @app.route('/api/generators')
 def get_generators():
@@ -20,14 +20,29 @@ def get_lines():
 
 @app.route('/api/toggle/<int:gen_id>', methods=['POST'])
 def toggle_generator(gen_id):
-    success = grid.toggle_generator(gen_id)
-    if not success:
-        return jsonify({'error': 'Power flow failed'}), 500
+    try:
+        success = grid.toggle_generator(gen_id)
+        if not success:
+            return jsonify({'error': 'Power flow failed'}), 500
 
-    return jsonify({
-        'generators': grid.get_generators(),
-        'lines': grid.get_branches()
-    })
+        generators = grid.get_generators()
+        lines = grid.get_branches()
+
+        # 🔍 Debug print:
+        print("🔍 Sample generator:", generators[0])
+        print("🔍 Sample line:", lines[0])
+        print("✅ About to return response")
+
+        return jsonify({
+            'generators': generators,
+            'lines': lines
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

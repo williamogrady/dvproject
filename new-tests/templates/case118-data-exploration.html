@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Grid Simulator</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2em;
+      background-color: #f8f9fa;
+    }
+    #dashboard {
+      display: flex;
+      gap: 2em;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-family: monospace;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.4em;
+      text-align: center;
+    }
+    th {
+      background-color: #333;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    .status-cell {
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .on {
+      background-color: green;
+      color: white;
+    }
+    .off {
+      background-color: red;
+      color: white;
+    }
+    .overloaded {
+      background-color: red;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Virtual Power Grid Simulator</h1>
+  <div id="dashboard">
+    <div>
+      <h2>Generators</h2>
+      <div id="genTable">Loading...</div>
+    </div>
+    <div>
+      <h2>Transmission Lines</h2>
+      <div id="lineTable">Loading...</div>
+    </div>
+  </div>
+
+<script>
+  let genSortCol = null;
+  let genSortDir = 'desc';
+  let lineSortCol = null;
+  let lineSortDir = 'desc';
+
+  async function loadDashboard() {
+    const [genRes, lineRes] = await Promise.all([
+      fetch('/api/generators'),
+      fetch('/api/lines')
+    ]);
+    const gens = await genRes.json();
+    const lines = await lineRes.json();
+    renderGenerators(gens);
+    renderLines(lines);
+  }
+
+  function renderGenerators(gens) {
+    const container = document.getElementById('genTable');
+    container.innerHTML = '';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+
+    const headers = ['Bus', 'Pmax', 'Status'];
+    headers.forEach((label, i) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      th.style.cursor = 'pointer';
+      th.onclick = () => {
+        if (genSortCol === i) {
+          genSortDir = genSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          genSortCol = i;
+          genSortDir = 'desc';
+        }
+        gens.sort((a, b) => {
+          const values = [a.bus, a.pmax, a.status];
+          const va = values[genSortCol];
+          const vb = [b.bus, b.pmax, b.status][genSortCol];
+          return genSortDir === 'asc' ? va - vb : vb - va;
+        });
+        renderGenerators(gens); // re-render sorted
+      };
+      headRow.appendChild(th);
+    });
+
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    gens.forEach(gen => {
+      const row = document.createElement('tr');
+      const cells = [
+        document.createTextNode(gen.bus),
+        document.createTextNode(gen.pmax),
+      ];
+
+      const statusCell = document.createElement('td');
+      statusCell.className = `status-cell ${gen.status ? 'on' : 'off'}`;
+      statusCell.textContent = gen.status ? 'ON' : 'OFF';
+      statusCell.onclick = async () => {
+      try {
+          const res = await fetch(`/api/toggle/${gen.index}`, { method: 'POST' });
+
+          if (!res.ok) {
+            const error = await res.json();
+            alert("Error: " + (error.error || "unknown server error"));
+            return;
+          }
+
+          const data = await res.json();
+          renderGenerators(data.generators);
+          renderLines(data.lines);
+
+        } catch (err) {
+          console.error("Toggle failed", err);
+          alert("Toggle failed: " + err.message);
+        }
+    };
+      cells.forEach(cell => {
+        const td = document.createElement('td');
+        td.appendChild(cell);
+        row.appendChild(td);
+      });
+      row.appendChild(statusCell);
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+  }
+
+  function renderLines(lines) {
+    const container = document.getElementById('lineTable');
+    container.innerHTML = '';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+
+    const headers = ['From', 'To', 'Flow', 'Limit', 'Status'];
+    headers.forEach((label, i) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      th.style.cursor = 'pointer';
+      th.onclick = () => {
+        if (lineSortCol === i) {
+          lineSortDir = lineSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          lineSortCol = i;
+          lineSortDir = 'desc';
+        }
+        lines.sort((a, b) => {
+          const valuesA = [a.from_bus, a.to_bus, a.flow, a.rate_a, a.overloaded ? 1 : 0];
+          const valuesB = [b.from_bus, b.to_bus, b.flow, b.rate_a, b.overloaded ? 1 : 0];
+          const va = valuesA[lineSortCol];
+          const vb = valuesB[lineSortCol];
+          return lineSortDir === 'asc' ? va - vb : vb - va;
+        });
+        renderLines(lines); // re-render sorted
+      };
+      headRow.appendChild(th);
+    });
+
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    lines.forEach(line => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${line.from_bus}</td>
+        <td>${line.to_bus}</td>
+        <td>${line.flow.toFixed(2)}</td>
+        <td>${line.rate_a}</td>
+      `;
+      const statusCell = document.createElement('td');
+      statusCell.textContent = line.overloaded ? 'OVERLOADED' : 'OK';
+      statusCell.className = line.overloaded ? 'overloaded' : '';
+      row.appendChild(statusCell);
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+  }
+
+  loadDashboard();
+</script>
+
+</body>
+</html>
