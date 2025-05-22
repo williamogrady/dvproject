@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>IEEE 118 Data Viewer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2em;
+      background: #f8f9fa;
+    }
+    select {
+      padding: 0.5em;
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1em;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.4em;
+      text-align: right;
+      font-family: monospace;
+      cursor: pointer;
+    }
+    th:hover {
+      background-color: #444;
+    }
+    th.sorted {
+      background-color: #555;
+      color: yellow;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    caption {
+      caption-side: top;
+      text-align: left;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+      font-size: 1.1em;
+    }
+    #sortStatus {
+      margin-top: 1em;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>IEEE 118 Data Viewer</h1>
+  <label for="datasetSelect">Choose dataset:</label>
+  <select id="datasetSelect">
+    <option value="buses">Buses</option>
+    <option value="generators">Generators</option>
+    <option value="branches">Branches</option>
+    <option value="gencosts">GenCosts</option>
+  </select>
+
+  <div id="tableContainer">Loading...</div>
+  <div id="sortStatus"></div>
+
+  <script>
+    let caseData = null;
+    let currentDataset = 'buses';
+    let currentSortCol = null;
+    let currentSortDir = 'desc';
+
+    const columnNames = {
+      buses: [
+        'BUS_I', 'TYPE', 'PD', 'QD', 'GS', 'BS', 'BUS_AREA',
+        'VM', 'VA', 'BASE_KV', 'ZONE', 'VMAX', 'VMIN'
+      ],
+      generators: [
+        'GEN_BUS', 'PG', 'QG', 'QMAX', 'QMIN', 'VG',
+        'MBASE', 'GEN_STATUS', 'PMAX', 'PMIN'
+      ],
+      branches: [
+        'F_BUS', 'T_BUS', 'R', 'X', 'B', 'RATE_A',
+        'RATE_B', 'RATE_C', 'TAP', 'SHIFT', 'BR_STATUS',
+        'ANGMIN', 'ANGMAX'
+      ],
+      gencosts: [
+        'MODEL', 'STARTUP', 'SHUTDOWN', 'NCOST',
+        'COST_1', 'COST_2', 'COST_3'
+      ]
+    };
+
+    async function loadData() {
+      const response = await fetch('case118_data.json');
+      caseData = await response.json();
+      showTable('buses');
+    }
+
+    function showTable(type) {
+      currentDataset = type;
+      currentSortCol = null; // reset sort
+      currentSortDir = 'desc';
+      renderTable(caseData[type], columnNames[type]);
+    }
+
+    function renderTable(data, headers) {
+      const container = document.getElementById('tableContainer');
+      const status = document.getElementById('sortStatus');
+      container.innerHTML = '';
+      status.textContent = '';
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p>No data available.</p>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      const caption = document.createElement('caption');
+      caption.textContent = currentDataset.toUpperCase();
+      table.appendChild(caption);
+
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+
+      headers.forEach((col, colIndex) => {
+        const th = document.createElement('th');
+        th.textContent = col;
+        if (colIndex === currentSortCol) {
+          th.classList.add('sorted');
+        }
+        th.addEventListener('click', () => {
+          if (currentSortCol === colIndex) {
+            currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
+          } else {
+            currentSortCol = colIndex;
+            currentSortDir = 'desc';
+          }
+
+          const sortedData = [...caseData[currentDataset]].sort((a, b) => {
+            const valA = parseFloat(a[colIndex]);
+            const valB = parseFloat(b[colIndex]);
+            return currentSortDir === 'desc' ? valB - valA : valA - valB;
+          });
+
+          status.textContent = `Currently sorting: ${col} (${currentSortDir === 'desc' ? 'highest → lowest' : 'lowest → highest'})`;
+          renderTable(sortedData, headers);
+        });
+        headRow.appendChild(th);
+      });
+
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+    }
+
+    document.getElementById('datasetSelect').addEventListener('change', (e) => {
+      showTable(e.target.value);
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
