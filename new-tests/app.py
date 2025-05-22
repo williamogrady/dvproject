@@ -22,26 +22,27 @@ def get_lines():
 def toggle_generator(gen_id):
     try:
         success = grid.toggle_generator(gen_id)
-        if not success:
-            return jsonify({'error': 'Power flow failed'}), 500
-
-        generators = grid.get_generators()
-        lines = grid.get_branches()
-
-        # 🔍 Debug print:
-        print("🔍 Sample generator:", generators[0])
-        print("🔍 Sample line:", lines[0])
-        print("✅ About to return response")
+        print("✅ TOGGLE SOLVE RESULT:", success)
 
         return jsonify({
-            'generators': generators,
-            'lines': lines
+            'generators': grid.get_generators(),
+            'lines': grid.get_branches(),
+            'total_cost': grid.last_total_cost,
+            'solved': success  # ✅ this will now be True or False
         })
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'generators': grid.get_generators(),
+            'lines': grid.get_branches(),
+            'total_cost': None,
+            'solved': False,
+            'error': str(e)
+        })
+
+
 
 
 if __name__ == '__main__':

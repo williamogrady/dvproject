@@ -1,6 +1,7 @@
 # grid.py
 
 from pypower import case118, runpf
+from pypower.ppoption import ppoption
 import numpy as np
 import copy
 
@@ -61,33 +62,58 @@ class Grid:
 
         self.generators = [
             Generator(i, row) for i, row in enumerate(self.case['gen'])
-        ]
+            ]
         self.branches = [
             Branch(i, row) for i, row in enumerate(self.case['branch'])
-        ]
+            ]
+
+        self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
     def update_case_from_objects(self):
         for gen in self.generators:
             self.case['gen'][gen.index][7] = gen.status  # update status
 
+    def compute_total_cost(self, results):
+        total_cost = 0
+        Pg_matrix = results['gen'][:, 1]  # PG values after runpf
+        gencost = results['gencost']
+
+        for i, row in enumerate(gencost):
+            model = int(row[0])
+            n = int(row[3])
+            coeffs = row[4:4+n]
+
+            # PyPower gives highest-degree term first
+            Pg = Pg_matrix[i]
+            cost = 0
+            for power, coeff in enumerate(reversed(coeffs)):
+                cost += coeff * Pg**power
+            total_cost += cost
+
+        return float(total_cost)
+
+
     def run_power_flow(self):
-        print("🧪 Running power flow...")
         self.case = case118.case118()
         self.update_case_from_objects()
 
         try:
-            from pypower.ppoption import ppoption
-            options = ppoption(VERBOSE=0, OUT_ALL=0)  # ✅ silent mode, no print
+            options = ppoption(VERBOSE=0, OUT_ALL=0)
             results, success = runpf.runpf(self.case, options)
             print("✅ runpf executed, success =", success)
         except Exception as e:
-            print("❌ Error running runpf:", e)
-            raise
+            print("❌ runpf exception:", e)
+            return False  # ❗️ must return explicitly here
 
         if success:
             self.update_branch_flows(results['branch'])
-            return results
-        return None
+            self.last_total_cost = self.compute_total_cost(results)
+        else:
+            self.last_total_cost = None
+
+        return success  # ✅ return True or False, always
+
+
 
 
 
@@ -98,11 +124,9 @@ class Grid:
     def toggle_generator(self, gen_index):
         if gen_index < 0 or gen_index >= len(self.generators):
             raise IndexError(f"Generator {gen_index} does not exist")
+
         self.generators[gen_index].toggle()
-        results = self.run_power_flow()
-        if not results:
-            raise RuntimeError("Power flow failed")
-        return True
+        return self.run_power_flow()  # ✅ pass success through
 
     def get_generators(self):
         return [json_clean(gen.to_dict()) for gen in self.generators]

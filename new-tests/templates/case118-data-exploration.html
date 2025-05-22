@@ -51,6 +51,7 @@
 </head>
 <body>
   <h1>Virtual Power Grid Simulator</h1>
+  <div id="overview" style="margin-bottom: 1em; font-size: 1.2em; font-weight: bold;"></div>
   <div id="dashboard">
     <div>
       <h2>Generators</h2>
@@ -67,6 +68,32 @@
   let genSortDir = 'desc';
   let lineSortCol = null;
   let lineSortDir = 'desc';
+  
+function renderOverview(generators, lines, totalCost = null, solved = true) {
+  const overviewDiv = document.getElementById('overview');
+
+  const totalOnline = generators
+    .filter(g => g.status === 1)
+    .reduce((sum, g) => sum + g.pmax, 0);
+
+  const overloadedCount = lines.filter(l => l.overloaded).length;
+
+  let statusMsg = solved
+    ? ''
+    : `<div style="color:red; font-weight:bold;">⚠️ Power flow could not be solved</div>`;
+
+  const costDisplay = solved && totalCost !== null
+    ? `$${totalCost.toFixed(2)}`
+    : `–`;
+
+  overviewDiv.innerHTML = `
+    ${statusMsg}
+    🟩 Total Generation Online: <span style="color:green">${totalOnline.toFixed(1)} MW</span><br>
+    🟥 Overloaded Lines: <span style="color:${overloadedCount > 0 ? 'red' : 'green'}">${overloadedCount}</span><br>
+    💸 Total Cost: <span style="color:blue">${costDisplay}</span>
+  `;
+}
+
 
   async function loadDashboard() {
     const [genRes, lineRes] = await Promise.all([
@@ -77,6 +104,7 @@
     const lines = await lineRes.json();
     renderGenerators(gens);
     renderLines(lines);
+    renderOverview(gens, lines); // keep this for now — no cost available at init
   }
 
   function renderGenerators(gens) {
@@ -129,11 +157,20 @@
     statusCell.className = `status-cell ${gen.status ? 'on' : 'off'}`;
     statusCell.textContent = gen.status ? 'ON' : 'OFF';
     statusCell.onclick = async () => {
-      const res = await fetch(`/api/toggle/${gen.index}`, { method: 'POST' });
-      const data = await res.json();
-      renderGenerators(data.generators); // ← will reapply sort
-      renderLines(data.lines);
+      try {
+        const res = await fetch(`/api/toggle/${gen.index}`, { method: 'POST' });
+        const data = await res.json();
+
+        renderGenerators(data.generators);
+        renderLines(data.lines);
+        renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        renderOverview([], [], null, false);  // fallback if even fetch fails
+      }
     };
+
 
     cells.forEach(cell => {
       const td = document.createElement('td');
