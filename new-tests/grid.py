@@ -20,10 +20,7 @@ class Generator:
         self.bus = int(row[0])
         self.pmax = float(row[8])
         self.pg = 0  # initial output in MW
-        self.status = 0  # 1 = on, 0 = off
 
-    def toggle(self):
-        self.status = 0 if self.status == 1 else 1
 
     def to_dict(self):
         return {
@@ -31,13 +28,13 @@ class Generator:
             'bus': int(self.bus),
             'pmax': float(self.pmax),
             'pg': float(self.pg),         # ✅ ADD THIS LINE
-            'status': int(self.status)
+
         }
     
     def set_percent(self, percent):
         percent = max(0, min(100, percent))
         self.pg = (percent / 100.0) * self.pmax
-        self.status = 1 if percent > 0 else 0
+
 
 class Branch:
     def __init__(self, index, row):
@@ -78,8 +75,9 @@ class Grid:
 
     def update_case_from_objects(self):
         for gen in self.generators:
-            self.case['gen'][gen.index][7] = 1 if gen.pg > 0 else 0
-            self.case['gen'][gen.index][1] = gen.pg       # Pg (real power output)
+            pg = gen.pg
+            self.case['gen'][gen.index][1] = pg      # column 1 = Pg
+
 
     def compute_total_cost(self, results):
         total_cost = 0
@@ -105,7 +103,7 @@ class Grid:
         # Reset the base case from the template
         self.case = copy.deepcopy(self.original_case)
 
-        # Inject pg and status values into case
+        # Inject pg value into case
         self.update_case_from_objects()
 
         try:
