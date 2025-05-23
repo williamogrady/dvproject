@@ -57,14 +57,12 @@
 
 <!-- New layout: stacked containers -->
 <table style="width: 100%; font-family: monospace;">
+  <h2>Generators</h2>
   <thead>
     <tr id="genSortBar" style="cursor: pointer;"></tr>
   </thead>
 </table>
 <div id="genTable"></div>
-<h2>Generators</h2>
-<div id="genTable" style="margin-bottom: 60px;">Loading...</div>
-
 <h2>Transmission Lines</h2>
 <div id="lineTable">Loading...</div>
   </div>
@@ -165,7 +163,7 @@ function renderGenerators(gens) {
   //const color = d3.scaleOrdinal(d3.schemeSet3); // Or schemeTableau10, schemePaired, etc.
 
       function getBlockBackground(d) {
-      return d.data.pg > 0 ? "#b2d8b2" : "#333"; // light green vs dark gray
+      return d.data.pg > 0 ? "#ffffff" : "#ffffff"; // light green vs dark gray
     }
 
     function getFillColor(d) {
