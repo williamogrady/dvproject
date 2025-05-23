@@ -70,6 +70,10 @@ class Grid:
         self.branches = [
             Branch(i, row) for i, row in enumerate(self.case['branch'])
             ]
+        
+        # Debug: testing overloaded lines
+        #for branch in self.branches:
+        #    branch.rate_a = 1000  # Set all line limits low
 
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
