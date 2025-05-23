@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <meta charset="UTF-8">
   <title>Grid Simulator</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -51,21 +52,26 @@
 </head>
 <body>
   <h1>Virtual Power Grid Simulator</h1>
-  <div id="overview" style="margin-bottom: 1em; font-size: 1.2em; font-weight: bold;"></div>
-  <div id="dashboard">
-    <div>
-      <h2>Generators</h2>
-      <div id="genTable">Loading...</div>
-    </div>
-    <div>
-      <h2>Transmission Lines</h2>
-      <div id="lineTable">Loading...</div>
-    </div>
+  <!-- Overview stays at the top -->
+<div id="overview" style="margin-bottom: 1em; font-size: 1.2em; font-weight: bold;"></div>
+
+<!-- New layout: stacked containers -->
+<table style="width: 100%; font-family: monospace;">
+  <thead>
+    <tr id="genSortBar" style="cursor: pointer;"></tr>
+  </thead>
+</table>
+<div id="genTable"></div>
+<h2>Generators</h2>
+<div id="genTable" style="margin-bottom: 60px;">Loading...</div>
+
+<h2>Transmission Lines</h2>
+<div id="lineTable">Loading...</div>
   </div>
 
 <script>
-  let genSortCol = null;
-  let genSortDir = 'desc';
+  let genSortKey = null;
+let genSortDir = 'desc';
   let lineSortCol = null;
   let lineSortDir = 'desc';
   
@@ -108,94 +114,180 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
     renderOverview(gens, lines); // keep this for now — no cost available at init
   }
 
-  function renderGenerators(gens) {
-  // Reapply sorting if it’s defined
-  if (genSortCol !== null) {
+
+function renderGenSortBar() {
+  const bar = d3.select("#genSortBar");
+  bar.selectAll("*").remove();
+
+  const headers = [
+    { key: "bus", label: "Bus" },
+    { key: "pmax", label: "Pmax" },
+    { key: "pg", label: "Pg" }
+  ];
+
+  headers.forEach(({ key, label }) => {
+    bar.append("th")
+      .text(label + (genSortKey === key ? (genSortDir === "asc" ? " ▲" : " ▼") : ""))
+      .style("background-color", "#333")
+      .style("color", "white")
+      .style("padding", "0.4em")
+      .style("font-weight", "bold")
+      .style("border", "1px solid #ccc")
+      .on("click", () => {
+        if (genSortKey === key) {
+          genSortDir = genSortDir === "asc" ? "desc" : "asc";
+        } else {
+          genSortKey = key;
+          genSortDir = "asc";
+        }
+        loadDashboard(); // re-fetch and re-render
+      });
+  });
+}
+
+
+  
+function renderGenerators(gens) {
+
+    renderGenSortBar(); // draw the sort bar
+
+  if (genSortKey) {
     gens.sort((a, b) => {
-      const values = [a.bus, a.pmax, a.pg ?? 0];
-      const va = values[genSortCol];
-      const vb = [b.bus, b.pmax, b.pg ?? 0][genSortCol];
-      return genSortDir === 'asc' ? va - vb : vb - va;
+      const va = a[genSortKey];
+      const vb = b[genSortKey];
+      return genSortDir === "asc" ? va - vb : vb - va;
     });
   }
 
-  const container = document.getElementById('genTable');
-  container.innerHTML = '';
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
+  const container = d3.select("#genTable");
+  container.selectAll("*").remove();
 
-  const headers = ['Bus', 'Pmax', 'Output'];
-  headers.forEach((label, i) => {
-    const th = document.createElement('th');
-    th.textContent = label;
-    th.style.cursor = 'pointer';
-    th.onclick = () => {
-      if (genSortCol === i) {
-        genSortDir = genSortDir === 'asc' ? 'desc' : 'asc';
-      } else {
-        genSortCol = i;
-        genSortDir = 'desc';
-      }
-      renderGenerators(gens); // apply new sort
+  //const color = d3.scaleOrdinal(d3.schemeSet3); // Or schemeTableau10, schemePaired, etc.
+
+      function getBlockBackground(d) {
+      return d.data.pg > 0 ? "#b2d8b2" : "#333"; // light green vs dark gray
+    }
+
+    function getFillColor(d) {
+      return d.data.pg > 0 ? "#006400" : "none"; // dark green or none
+    }
+
+  const width = 1400;
+  const height = 800;
+  const marginTop = 30;
+  const padding = 0;
+  const numRows = 4;
+
+  // Group into 4 fake rows for treemap structure
+  const grouped = Array.from({ length: numRows }, () => []);
+  gens.forEach((g, i) => grouped[i % numRows].push(g));
+  const nested = grouped.map((group, i) => ({ name: `row${i}`, children: group }));
+
+  const root = d3.hierarchy({ children: nested }).sum(d => d.pmax || 1);
+  d3.treemap()
+    .tile(d3.treemapSliceDice)
+    .size([width, height - marginTop])
+    .paddingInner(padding)
+    .paddingOuter(padding)
+    (root);
+
+  const svg = container.append("svg")
+  .attr("viewBox", [0, 0, width, height])
+  .attr("width", width)
+  .attr("height", height)
+  .style("font", "10px sans-serif");
+
+  const blocks = svg.selectAll("g")
+    .data(root.leaves())
+    .join("g")
+    .attr("transform", d => `translate(${d.x0},${d.y0 + marginTop})`);
+
+  // Background
+  blocks.append("rect")
+  .attr("width", d => d.x1 - d.x0)
+  .attr("height", d => d.y1 - d.y0)
+  .attr("fill", d => getBlockBackground(d))
+  .attr("stroke", "#444")
+  .attr("stroke-width", 1.5);
+
+
+
+
+
+  // Green fill layer
+  const fills = blocks.append("rect")
+  .attr("x", 0)
+  .attr("y", d => (d.y1 - d.y0) * (1 - d.data.pg / d.data.pmax))
+  .attr("width", d => d.x1 - d.x0)
+  .attr("height", d => (d.y1 - d.y0) * (d.data.pg / d.data.pmax))
+  .attr("fill", d => getFillColor(d));
+
+
+  // Labels
+  blocks.append("text")
+  .attr("x", 6)
+  .attr("y", 14)
+  .attr("fill", d => d.data.pg > 0 ? "black" : "white")
+  .text(d => `Bus: ${d.data.bus}`);
+
+
+  blocks.append("text")
+    .attr("x", 6)
+    .attr("y", 28)
+    .attr("fill", "black")
+    .text(d => `Pmax: ${d.data.pmax}`);
+
+  const pgLabels = blocks.append("text")
+    .attr("x", 6)
+    .attr("y", 42)
+    .attr("fill", "black")
+    .text(d => `Pg: ${d.data.pg} (${Math.round((d.data.pg / d.data.pmax) * 100) || 0}%)`);
+
+  // Interaction logic
+  blocks.on("mousedown", function (event, d) {
+    const [x0, y0] = d3.pointer(event, this);
+    const blockHeight = d.y1 - d.y0;
+
+    const onMove = (event) => {
+      const [_, y] = d3.pointer(event, this);
+      const clamped = Math.max(0, Math.min(y, blockHeight));
+      const percent = 1 - clamped / blockHeight;
+      const newPg = Math.round(percent * d.data.pmax);
+
+      d.data.pg = newPg;
+
+      fills
+        .filter(dd => dd === d)
+        .attr("y", blockHeight * (1 - percent))
+        .attr("height", blockHeight * percent);
+
+      pgLabels
+        .filter(dd => dd === d)
+        .text(`Pg: ${newPg} (${Math.round((newPg / d.data.pmax) * 100) || 0}%)`);
     };
-    headRow.appendChild(th);
-  });
 
-  thead.appendChild(headRow);
-  table.appendChild(thead);
+    const onUp = () => {
+      svg.on("mousemove", null).on("mouseup", null);
+      const percent = Math.round((d.data.pg / d.data.pmax) * 100);
 
-  const tbody = document.createElement('tbody');
-  gens.forEach(gen => {
-    const row = document.createElement('tr');
-
-    const busCell = document.createElement('td');
-    busCell.textContent = gen.bus;
-    row.appendChild(busCell);
-
-    const pmaxCell = document.createElement('td');
-    pmaxCell.textContent = gen.pmax;
-    row.appendChild(pmaxCell);
-
-    const outputCell = document.createElement('td');
-
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = 0;
-    slider.max = 100;
-    slider.step = 25;
-    slider.value = Math.round((gen.pg / gen.pmax) * 100);
-
-    const label = document.createElement('span');
-    label.textContent = ` ${slider.value}%`;
-
-    slider.oninput = () => {
-      label.textContent = ` ${slider.value}%`;
-    };
-
-    slider.onchange = async () => {
-      const percent = parseInt(slider.value);
-      const res = await fetch(`/api/set_generation/${gen.index}`, {
+      fetch(`/api/set_generation/${d.data.index}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ percent })
-      });
-
-      const data = await res.json();
-      renderGenerators(data.generators);
-      renderLines(data.lines);
-      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      })
+        .then(res => res.json())
+        .then(data => {
+          renderGenerators(data.generators);
+          renderLines(data.lines);
+          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+        });
     };
 
-    outputCell.appendChild(slider);
-    outputCell.appendChild(label);
-    row.appendChild(outputCell);
-    tbody.appendChild(row);
+    svg.on("mousemove", onMove).on("mouseup", onUp);
   });
-
-  table.appendChild(tbody);
-  container.appendChild(table);
 }
+
+
 
 function renderLines(lines) {
   if (lineSortCol !== null) {
