@@ -5,6 +5,7 @@ from pypower.ppoption import ppoption
 import numpy as np
 import copy
 from scenarios import load_scenario
+from generator_info import GENERATOR_FUEL_TYPES
 
 def json_clean(d):
     def safe(v):
@@ -19,8 +20,29 @@ class Generator:
     def __init__(self, index, row):
         self.index = index
         self.bus = int(row[0])
+
+        self.fuel_type = GENERATOR_FUEL_TYPES.get(self.bus, "gas")
+
+        # Assign costs and emissions based on fuel type
+        fuel_costs = {
+            "coal": 6.0,
+            "gas": 7.5,
+            "combined": 4.0,
+            "hydro": 0.5
+        }
+        fuel_emissions = {
+        "coal": 2.0,     # previously 950
+        "gas": 1.2,      # previously 500
+        "combined": 0.8, # previously 400
+        "hydro": 0
+}
+
+        self.cost_per_mw = fuel_costs.get(self.fuel_type, 75)
+        self.emissions_per_mw = fuel_emissions.get(self.fuel_type, 500)
+
         self.pmax = float(row[8])
-        self.pg = 0  # initial output in MW
+        self.pg = 0
+
 
 
     def to_dict(self):
@@ -29,7 +51,10 @@ class Generator:
             'bus': int(self.bus),
             'pmax': float(self.pmax),
             'pg': float(self.pg),
-            'unavailable': getattr(self, 'unavailable', False)
+            'unavailable': getattr(self, 'unavailable', False),
+            'fuel_type': self.fuel_type,
+            'cost_per_mw': self.cost_per_mw,
+            'emissions_per_mw': self.emissions_per_mw
 
         }
     
@@ -66,6 +91,7 @@ class Grid:
     def __init__(self):
         self.original_case = case118.case118()
         self.case = copy.deepcopy(self.original_case)
+        self.active_scenario = None
 
         self.generators = [
             Generator(i, row) for i, row in enumerate(self.case['gen'])
@@ -87,6 +113,8 @@ class Grid:
 
 
     def compute_total_cost(self, results):
+        
+        """
         total_cost = 0
         Pg_matrix = results['gen'][:, 1]  # PG values after runpf
         gencost = results['gencost']
@@ -104,7 +132,13 @@ class Grid:
             total_cost += cost
 
         return float(total_cost)
-    
+        """
+        return sum(
+            gen.pg * gen.cost_per_mw
+            for gen in self.generators
+        )
+
+
     def apply_scenario(self, scenario_id):
         scenario = load_scenario(scenario_id)
         self.active_scenario = scenario
@@ -114,6 +148,10 @@ class Grid:
             gen.unavailable = gen.index in [
                 int(gid.replace("Gen", "")) for gid in scenario['disabled_generators']
             ]
+        
+        initial_outputs = scenario.get("initial_outputs", {})
+        for gen in self.generators:
+            gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
 
         # Reset branch states
         for branch in self.branches:
@@ -150,6 +188,13 @@ class Grid:
     def update_branch_flows(self, new_branch_data):
         for i, branch_data in enumerate(new_branch_data):
             self.branches[i].update_flow(branch_data)
+
+
+    def compute_total_emissions(self):
+        return sum(
+            gen.pg * getattr(gen, 'emissions_per_mw', 0)
+            for gen in self.generators
+        )
 
     def toggle_generator(self, gen_index):
         if gen_index < 0 or gen_index >= len(self.generators):

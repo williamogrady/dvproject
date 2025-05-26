@@ -73,6 +73,40 @@ def apply_scenario(scenario_id):
         'lines': grid.get_branches()
     })
 
+@app.route('/api/status')
+def get_status():
+    total_pg = sum(gen.pg for gen in grid.generators)
+    total_cost = grid.last_total_cost or 0
+    total_emissions = grid.compute_total_emissions()
+    overloaded_lines = sum(1 for line in grid.branches if line.flow > line.rate_a)
+
+    scenario = grid.active_scenario or {}
+
+    scenario_met = (
+    (not scenario.get('target_mw') or total_pg >= scenario['target_mw']) and
+    (not scenario.get('cost_limit') or total_cost <= scenario['cost_limit']) and
+    (not scenario.get('emissions_limit') or total_emissions <= scenario['emissions_limit']) and
+    overloaded_lines == 0
+        )
+    return jsonify({
+        'current': {
+            'pg': total_pg,
+            'cost': total_cost,
+            'emissions': total_emissions,
+            'overloads': overloaded_lines
+        },
+        'target': {
+            'pg': scenario.get('target_mw'),
+            'cost': scenario.get('cost_limit'),
+            'emissions': scenario.get('emissions_limit'),
+            'line_pct': scenario.get('line_limit_pct')
+        },
+        'scenario_met': scenario_met
+    })
+
+
+
+
 
 
 if __name__ == '__main__':

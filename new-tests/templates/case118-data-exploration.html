@@ -67,6 +67,11 @@
     <option value="default">Default</option>
     <option value="clean_north_power" selected>Clean North Power</option>
   </select>
+  <button id="reset-button">🔁 Reset Scenario</button>
+  <div id="scenario-legend" style="font-size:0.9em; border:1px solid #ccc; padding:1em; max-width:300px; background:#f1f1f1;">
+  <strong>Scenario Goals</strong>
+  <div id="goal-details"></div>
+</div>
 </div>
   <h1>Virtual Power Grid Simulator</h1>
   <!-- Overview stays at the top -->
@@ -85,15 +90,17 @@
   </div>
 
 <script>
+  
   let genSortKey = null;
-let genSortDir = 'desc';
+  let genSortDir = 'desc';
   let lineSortCol = null;
   let lineSortDir = 'desc';
 
-let currentGenerators = [];
-let currentLines = [];
+  let currentGenerators = [];
+  let currentLines = [];
+  let currentScenarioId = ''; // default scenario
   
-
+/* EVENT LISTENERS */
 document.getElementById('scenario-select').addEventListener('change', async (e) => {
   const id = e.target.value;
   const res = await fetch(`/api/scenario/${id}`);
@@ -103,6 +110,10 @@ document.getElementById('scenario-select').addEventListener('change', async (e) 
   renderOverview(data.generators, data.lines);
 });
 
+document.getElementById('reset-button').addEventListener('click', async () => {
+  await loadDashboard(currentScenarioId);       // reloads scenario
+  window.scenarioAlreadyWon = false;            // reset win alert guard
+});
   
 function renderOverview(generators, lines, totalCost = null, solved = true) {
   const overviewDiv = document.getElementById('overview');
@@ -135,10 +146,12 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
 
     currentGenerators = data.generators;
     currentLines = data.lines;
+    currentScenarioId = scenarioId; // update current scenario ID
 
     renderGenerators(currentGenerators);
     renderLines(currentLines);
     renderOverview(currentGenerators, currentLines, data.total_cost, data.solved);
+     renderScenarioStatus();  // ✅ add this here
   }
 
 
@@ -308,6 +321,7 @@ function renderGenerators(gens) {
           renderGenerators(data.generators);
           renderLines(data.lines);
           renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+          renderScenarioStatus();
         });
     };
 
@@ -389,6 +403,42 @@ function renderLines(lines) {
   container.appendChild(table);
 
 }
+
+async function renderScenarioStatus() {
+  const res = await fetch('/api/status');
+  const { current, target, scenario_met } = await res.json(); // ✅ now target is defined
+
+  const legend = document.getElementById('goal-details');
+  legend.innerHTML = `
+    <div><strong>Target:</strong> ${target.pg || '–'} MW</div>
+    <div><strong>Max Cost:</strong> ${target.cost || '–'}</div>
+    <div><strong>Max Emissions:</strong> ${target.emissions || '–'}</div>
+    <div><strong>No Overloads Allowed</strong></div>
+  `;
+
+  function line(label, value, limit, unit, invert = false) {
+    if (limit == null) return '';
+    const met = invert ? value <= limit : value >= limit;
+    const color = met ? 'green' : 'red';
+    return `<div>${label}: <span style="color:${color}">${value.toFixed(1)} / ${limit} ${unit}</span></div>`;
+  }
+
+  const output = [
+    line("Power Output", current.pg, target.pg, "MW"),
+    line("Cost", current.cost, target.cost, "$", true),
+    line("Emissions", current.emissions, target.emissions, "CO₂", true),
+    line("Overloaded Lines", current.overloads, 0, "", true)
+  ].join('');
+
+  legend.innerHTML = output;
+
+  // Optionally show alert
+  if (scenario_met) {
+    alert("🎉 Scenario completed!");
+  }
+}
+
+
 
 
   loadDashboard('clean_north_power');  // loads Clean North Power on start
