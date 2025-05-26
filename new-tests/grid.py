@@ -4,7 +4,7 @@ from pypower import case118, runpf
 from pypower.ppoption import ppoption
 import numpy as np
 import copy
-import scenarios
+from scenarios import load_scenario
 
 def json_clean(d):
     def safe(v):
@@ -106,7 +106,7 @@ class Grid:
         return float(total_cost)
     
     def apply_scenario(self, scenario_id):
-        scenario = scenarios.load_scenario(scenario_id)
+        scenario = load_scenario(scenario_id)
         self.active_scenario = scenario
 
         # Reset generator states

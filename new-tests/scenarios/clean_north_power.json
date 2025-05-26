@@ -6,6 +6,10 @@
     "cost_limit": 3000,
     "line_limit_pct": 0.8,
     "disabled_generators": [
+        "Gen1",
+        "Gen4",
+        "Gen8",
+        "Gen69",
         "Gen44",
         "Gen47"
     ],

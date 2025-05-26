@@ -89,6 +89,9 @@
 let genSortDir = 'desc';
   let lineSortCol = null;
   let lineSortDir = 'desc';
+
+let currentGenerators = [];
+let currentLines = [];
   
 
 document.getElementById('scenario-select').addEventListener('change', async (e) => {
@@ -126,14 +129,16 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
   `;
 }
 
-
     async function loadDashboard(scenarioId) {
     const res = await fetch(`/api/scenario/${scenarioId}`);
     const data = await res.json();
 
-    renderGenerators(data.generators);
-    renderLines(data.lines);
-    renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+    currentGenerators = data.generators;
+    currentLines = data.lines;
+
+    renderGenerators(currentGenerators);
+    renderLines(currentLines);
+    renderOverview(currentGenerators, currentLines, data.total_cost, data.solved);
   }
 
 
@@ -148,23 +153,23 @@ function renderGenSortBar() {
   ];
 
   headers.forEach(({ key, label }) => {
-    bar.append("th")
-      .text(label + (genSortKey === key ? (genSortDir === "asc" ? " ▲" : " ▼") : ""))
-      .style("background-color", "#333")
-      .style("color", "white")
-      .style("padding", "0.4em")
-      .style("font-weight", "bold")
-      .style("border", "1px solid #ccc")
-      .on("click", () => {
-        if (genSortKey === key) {
-          genSortDir = genSortDir === "asc" ? "desc" : "asc";
-        } else {
-          genSortKey = key;
-          genSortDir = "asc";
-        }
-        loadDashboard(); // re-fetch and re-render
-      });
-  });
+  bar.append("th")
+    .text(label + (genSortKey === key ? (genSortDir === "asc" ? " ▲" : " ▼") : ""))
+    .style("background-color", "#333")
+    .style("color", "white")
+    .style("padding", "0.4em")
+    .style("font-weight", "bold")
+    .style("border", "1px solid #ccc")
+    .on("click", () => {
+      if (genSortKey === key) {
+        genSortDir = genSortDir === "asc" ? "desc" : "asc";
+      } else {
+        genSortKey = key;
+        genSortDir = "asc";
+      }
+      renderGenerators(currentGenerators); // ✅ use in-memory data
+    });
+});
 }
 
 
