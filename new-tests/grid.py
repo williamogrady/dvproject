@@ -4,6 +4,7 @@ from pypower import case118, runpf
 from pypower.ppoption import ppoption
 import numpy as np
 import copy
+import scenarios
 
 def json_clean(d):
     def safe(v):
@@ -27,7 +28,8 @@ class Generator:
             'index': int(self.index),
             'bus': int(self.bus),
             'pmax': float(self.pmax),
-            'pg': float(self.pg),         # ✅ ADD THIS LINE
+            'pg': float(self.pg),
+            'unavailable': getattr(self, 'unavailable', False)
 
         }
     
@@ -56,7 +58,8 @@ class Branch:
             'to_bus': int(self.to_bus),
             'flow': float(self.flow),
             'rate_a': float(self.rate_a),
-            'overloaded': bool(self.overloaded)
+            'overloaded': bool(self.overloaded),
+            'unavailable': getattr(self, 'unavailable', False)
         }
 
 class Grid:
@@ -101,6 +104,22 @@ class Grid:
             total_cost += cost
 
         return float(total_cost)
+    
+    def apply_scenario(self, scenario_id):
+        scenario = scenarios.load_scenario(scenario_id)
+        self.active_scenario = scenario
+
+        # Reset generator states
+        for gen in self.generators:
+            gen.unavailable = gen.index in [
+                int(gid.replace("Gen", "")) for gid in scenario['disabled_generators']
+            ]
+
+        # Reset branch states
+        for branch in self.branches:
+            branch.unavailable = f"Line-{branch.from_bus}-{branch.to_bus}" in scenario['disabled_lines']
+
+        return scenario  # Optional: return it to pass back to frontend
 
 
     def run_power_flow(self):

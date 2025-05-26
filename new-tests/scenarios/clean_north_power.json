@@ -1,0 +1,17 @@
+{
+    "scenario_id": "S2",
+    "title": "Clean North Power",
+    "target_mw": 1500,
+    "emissions_limit": 200,
+    "cost_limit": 3000,
+    "line_limit_pct": 0.8,
+    "disabled_generators": [
+        "Gen44",
+        "Gen47"
+    ],
+    "disabled_lines": [
+        "Line-13-14",
+        "Line-23-24"
+    ],
+    "bonus": "Only use North generators"
+}

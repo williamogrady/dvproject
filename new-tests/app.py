@@ -62,6 +62,16 @@ def set_generation(gen_id):
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/api/scenario/<scenario_id>')
+def apply_scenario(scenario_id):
+    scenario = grid.apply_scenario(scenario_id)
+    return jsonify({
+        'scenario': scenario,
+        'generators': grid.get_generators(),
+        'lines': grid.get_branches()
+    })
 
 
 

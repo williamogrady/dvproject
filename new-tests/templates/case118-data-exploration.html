@@ -48,9 +48,26 @@
       background-color: red;
       color: white;
     }
+    .generator-unavailable rect {
+    fill: gray !important;
+    stroke: black !important;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .line-unavailable {
+    background-color: #ddd !important;
+    opacity: 0.5;
+  }
   </style>
 </head>
 <body>
+  <div id="scenario-menu">
+  <label for="scenario-select">Scenario:</label>
+  <select id="scenario-select">
+    <option value="default">Default</option>
+    <option value="clean_north_power" selected>Clean North Power</option>
+  </select>
+</div>
   <h1>Virtual Power Grid Simulator</h1>
   <!-- Overview stays at the top -->
 <div id="overview" style="margin-bottom: 1em; font-size: 1.2em; font-weight: bold;"></div>
@@ -73,6 +90,16 @@ let genSortDir = 'desc';
   let lineSortCol = null;
   let lineSortDir = 'desc';
   
+
+document.getElementById('scenario-select').addEventListener('change', async (e) => {
+  const id = e.target.value;
+  const res = await fetch(`/api/scenario/${id}`);
+  const data = await res.json();
+  renderGenerators(data.generators);
+  renderLines(data.lines);
+  renderOverview(data.generators, data.lines);
+});
+
   
 function renderOverview(generators, lines, totalCost = null, solved = true) {
   const overviewDiv = document.getElementById('overview');
@@ -100,16 +127,13 @@ function renderOverview(generators, lines, totalCost = null, solved = true) {
 }
 
 
-  async function loadDashboard() {
-    const [genRes, lineRes] = await Promise.all([
-      fetch('/api/generators'),
-      fetch('/api/lines')
-    ]);
-    const gens = await genRes.json();
-    const lines = await lineRes.json();
-    renderGenerators(gens);
-    renderLines(lines);
-    renderOverview(gens, lines); // keep this for now — no cost available at init
+    async function loadDashboard(scenarioId) {
+    const res = await fetch(`/api/scenario/${scenarioId}`);
+    const data = await res.json();
+
+    renderGenerators(data.generators);
+    renderLines(data.lines);
+    renderOverview(data.generators, data.lines, data.total_cost, data.solved);
   }
 
 
@@ -208,7 +232,8 @@ function renderGenerators(gens) {
   .attr("stroke", "#444")
   .attr("stroke-width", 1.5);
 
-
+  // Add a class for unavailable generators
+  blocks.classed("generator-unavailable", d => d.data.unavailable);
 
 
 
@@ -326,6 +351,9 @@ function renderLines(lines) {
   const tbody = document.createElement('tbody');
   lines.forEach(line => {
     const row = document.createElement('tr');
+      if (line.unavailable) {
+      row.classList.add('line-unavailable');
+    }
     const percent = (line.flow / line.rate_a) * 100;
 
     row.innerHTML = `
@@ -354,10 +382,11 @@ function renderLines(lines) {
 
   table.appendChild(tbody);
   container.appendChild(table);
+
 }
 
 
-  loadDashboard();
+  loadDashboard('clean_north_power');  // loads Clean North Power on start
 </script>
 
 </body>
