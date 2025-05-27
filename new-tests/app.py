@@ -8,7 +8,7 @@ grid = Grid()
 
 @app.route('/')
 def index():
-    return render_template('case118-data-exploration.html')
+    return render_template('listview-prototype-week22.html')
 
 @app.route('/api/generators')
 def get_generators():
