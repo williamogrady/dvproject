@@ -73,11 +73,17 @@
     }
 
     .overview-scenario {
-      background: #3a3a3a;
-      padding: 0.75rem 1.5rem;
-      border-radius: 20px;
-      box-shadow: inset 0 0 0 1px #555;
-    }
+        height: 100%;
+        width: 45%;
+        background: #3a3a3a;
+        color: #ccc;
+        padding: 1.0rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: inset 0 0 0 1px #555;
+        }
 
     /* Lines */
     #row-2 {
@@ -371,13 +377,13 @@
             <div class="power-value" id="overview-power">–</div>
             <div class="label">Total Power</div>
           </div>
-          <div class="overview-scenario">Scenario</div>
           <div class="overview-right">
             <div class="cost-value" id="overview-cost">–</div>
             <div class="label">Total Cost</div>
             <div class="emissions-value" id="overview-emissions">–</div>
             <div class="label">Total Emissions</div>
           </div>
+          <div class="overview-scenario">Scenario</div>   
         </div>
       </div>
 
@@ -435,24 +441,30 @@
     }
 
     function renderLines(lines) {
-        const container = document.getElementById("line-scroll");
-        container.innerHTML = "";
+  const container = document.getElementById("line-scroll");
+  container.innerHTML = "";
 
-        lines.forEach(line => {
-            const pct = Math.round((line.flow / line.rate_a) * 100);
-            const color = d3.interpolateReds(pct / 100);
+  // ✅ Sort lines by load percentage descending
+  const sorted = [...lines].sort((a, b) => {
+    const pctA = a.flow / a.rate_a;
+    const pctB = b.flow / b.rate_a;
+    return pctB - pctA;
+  });
 
-            const textColor = pct > 60 ? "white" : "#111";
+  sorted.forEach(line => {
+    const pct = Math.round((line.flow / line.rate_a) * 100);
+    const color = d3.interpolateReds(pct / 100);
+    const textColor = pct > 60 ? "white" : "#111";
 
-            const card = document.createElement("div");
-            card.className = "line-card";
-            card.style.background = color;
-            card.style.color = textColor;
-            card.innerHTML = `Line ${line.from_bus} → ${line.to_bus}<br>${pct}%`;
+    const card = document.createElement("div");
+    card.className = "line-card";
+    card.style.background = color;
+    card.style.color = textColor;
+    card.innerHTML = `Line ${line.from_bus} → ${line.to_bus}<br>${pct}%`;
 
-            container.appendChild(card);
-        });
-        }
+    container.appendChild(card);
+  });
+}
 
 
     function renderGenerators(gens) {
@@ -467,10 +479,9 @@
 
         const left = document.createElement("div");
         left.className = "gen-section left";
-        left.innerHTML = `<div class="gen-name">Gen ${gen.bus}</div>
-                          <div class="gen-number">#${gen.index}</div>
-                          <div class="gen-type">${gen.fuel_type}</div>`;
-
+        left.innerHTML = `<div class="gen-name">${gen.station_name}</div>
+                         <div class="gen-number">#${gen.index}</div>
+                         <div class="gen-type">${gen.fuel_type}</div>`;
         const center = document.createElement("div");
         center.className = "gen-section center";
         const percent = Math.round((gen.pg / gen.pmax) * 100);

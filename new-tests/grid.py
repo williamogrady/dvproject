@@ -5,7 +5,7 @@ from pypower.ppoption import ppoption
 import numpy as np
 import copy
 from scenarios import load_scenario
-from generator_info import GENERATOR_FUEL_TYPES
+from generator_info import GENERATOR_FUEL_TYPES, GENERATOR_NAMES
 
 def json_clean(d):
     def safe(v):
@@ -39,7 +39,7 @@ class Generator:
 
         self.cost_per_mw = fuel_costs.get(self.fuel_type, 75)
         self.emissions_per_mw = fuel_emissions.get(self.fuel_type, 500)
-
+        
         self.pmax = float(row[8])
         self.pg = 0
 
@@ -54,7 +54,8 @@ class Generator:
             'unavailable': getattr(self, 'unavailable', False),
             'fuel_type': self.fuel_type,
             'cost_per_mw': self.cost_per_mw,
-            'emissions_per_mw': self.emissions_per_mw
+            'emissions_per_mw': self.emissions_per_mw,
+            'station_name': GENERATOR_NAMES.get(self.bus, f"Gen {self.bus}")
 
         }
     
