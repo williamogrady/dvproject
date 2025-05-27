@@ -1,5 +1,6 @@
 # app.py
 
+import traceback
 from flask import Flask, jsonify, request, render_template
 from grid import Grid
 
@@ -67,11 +68,16 @@ def set_generation(gen_id):
 @app.route('/api/scenario/<scenario_id>')
 def apply_scenario(scenario_id):
     scenario = grid.apply_scenario(scenario_id)
-    return jsonify({
-        'scenario': scenario,
-        'generators': grid.get_generators(),
-        'lines': grid.get_branches()
-    })
+    try:
+        return jsonify({
+            'scenario': scenario,
+            'generators': grid.get_generators(),
+            'lines': grid.get_branches()
+        })
+    except Exception as e:
+            print("❌ Error loading scenario:")
+            traceback.print_exc()
+            return jsonify({"error": str(e)}), 500
 
 @app.route('/api/status')
 def get_status():

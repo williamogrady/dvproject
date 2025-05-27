@@ -1,5 +1,6 @@
 # grid.py
 
+
 from pypower import case118, runpf
 from pypower.ppoption import ppoption
 import numpy as np
@@ -9,7 +10,7 @@ from generator_info import GENERATOR_FUEL_TYPES, GENERATOR_NAMES
 
 def json_clean(d):
     def safe(v):
-        if isinstance(v, (np.bool_, np.bool)): return bool(v)
+        if isinstance(v, (np.bool_, bool)): return bool(v)
         if isinstance(v, (np.integer, np.int64)): return int(v)
         if isinstance(v, (np.floating, np.float64)): return float(v)
         return v
@@ -101,9 +102,9 @@ class Grid:
             Branch(i, row) for i, row in enumerate(self.case['branch'])
             ]
         
-        # Debug: testing overloaded lines
-        #for branch in self.branches:
-        #    branch.rate_a = 1000  # Set all line limits low
+        #Debug: testing overloaded lines
+        for branch in self.branches:
+            branch.rate_a = 1000  # Set all line limits low
 
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
