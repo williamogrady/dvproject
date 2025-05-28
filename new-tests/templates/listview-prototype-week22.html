@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Case118 Grid Simulator</title>
+  <title>listview prototype week22</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <style>
     /* Basic Layout & Colors */
     html, body {
@@ -433,6 +434,8 @@
       background-color: #2196f3;
     }
 
+    
+
 
 
   </style>
@@ -460,9 +463,7 @@
           </div>
 
           <div class="overview-scenario">
-            <div class="label">Scenario</div>
-            <div class="scenario-name">Clean North Power</div>
-          </div>
+        </div>
         </div>
       </div>
 
@@ -520,25 +521,31 @@
 
       <!-- Row 4: Submit -->
           <div class="row" id="row-4">
-      <div class="controls-left">
-        [Admin Controls Placeholder]
-      </div>
-      <div class="controls-right">
-        <button class="submit-button">Submit</button>
-      </div>
-    </div>
+  <div class="controls-left">
+    <label for="scenario-select">Load Scenario:</label>
+    <select id="scenario-select"></select>
+    <button id="reset-button">🔁 Reset</button>
+  </div>
+  <div class="controls-right">
+    <button class="submit-button">Submit</button>
+  </div>
+</div>
     </div>
     <div id="map-panel">Map</div>
   </div>
 
   <script>
 
+    
+
     let activeSort = {
         inactive: 'bus',
         active: 'bus'
       };
 
-
+    let currentScenarioId = "";
+    let currentScenarioData = null;
+    let availableScenarios = [];
 
     async function loadData() {
       const res = await fetch('/api/scenario/clean_north_power');
@@ -549,11 +556,92 @@
       bindSortListeners();
     }
 
+    async function fetchAllScenarios() {
+      const res = await fetch("/api/scenarios");
+      const data = await res.json();
+
+      availableScenarios = data;
+
+      // Find default scenario
+      const defaultScenario = data.find(s => s.scenario_id === "default");
+
+        if (defaultScenario) {
+    currentScenarioId = defaultScenario.scenario_id;
+    currentScenarioData = defaultScenario;
+
+        populateScenarioDropdown(data, currentScenarioId);
+        loadScenario(currentScenarioId);
+      } else {
+        console.error("No scenario with ID 'default' found.");
+      }
+    }
+
+    function populateScenarioDropdown(scenarios, selectedId) {
+        const select = document.getElementById("scenario-select");
+        select.innerHTML = "";
+
+        scenarios.forEach(s => {
+          const option = document.createElement("option");
+          option.value = s.scenario_id;
+          option.textContent = s.title || s.scenario_id;
+          if (s.scenario_id === selectedId) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      }
+
+
+        async function loadScenario(scenarioId) {
+      const res = await fetch(`/api/scenario/${scenarioId}`);
+      const data = await res.json();
+      currentScenarioId = scenarioId;
+      currentScenarioData = data;
+      
+      console.log("Loaded scenario data:", data);
+      console.log("Current scenario set to:", currentScenarioData?.title);
+
+      renderGenerators(data.generators);
+      renderLines(data.lines);
+      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      bindSortListeners(); // if needed
+    }
+
+    function populateScenarioDropdown(scenarios, defaultId) {
+      const select = document.getElementById("scenario-select");
+      select.innerHTML = "";
+
+      scenarios.forEach(s => {
+        const option = document.createElement("option");
+        option.value = s.scenario_id;
+        option.textContent = s.title;
+        if (s.scenario_id === defaultId) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+    }
+
+        document.getElementById("scenario-select").addEventListener("change", (e) => {
+      loadScenario(e.target.value);
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+      loadScenario(currentScenarioId); // reload current scenario
+    });
+
+
     function renderOverview(gens, lines) {
       const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
       const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
       const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
       const overloaded = lines.filter(l => l.overloaded).length;
+
+      const scenarioArea = document.querySelector(".overview-scenario");
+      scenarioArea.innerHTML = `
+        <div class="label">Scenario</div>
+        <div class="scenario-name">${currentScenarioData?.title || currentScenarioId || "No Scenario Loaded"}</div>
+      `;
 
       document.getElementById("overview-power").textContent = `${totalPower.toFixed(1)} MW`;
       document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
@@ -701,13 +789,13 @@ function bindSortListeners() {
       const list = el.closest('.sort-options').dataset.type;
       const sort = el.dataset.sort;
       activeSort[list] = sort;
-      loadData(); // this reloads and re-sorts
+      loadScenario(currentScenarioId);
     });
   });
 }
 
 
-    loadData();
+    fetchAllScenarios();
   </script>
 </body>
 </html>

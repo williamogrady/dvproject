@@ -70,7 +70,7 @@ def apply_scenario(scenario_id):
     scenario = grid.apply_scenario(scenario_id)
     try:
         return jsonify({
-            'scenario': scenario,
+            **scenario,  # expands scenario fields to top-level
             'generators': grid.get_generators(),
             'lines': grid.get_branches()
         })

@@ -1,11 +1,12 @@
 {
   "scenario_id": "default",
-  "title": "Default Scenario",
+  "title": "Default",
   "target_mw": null,
   "emissions_limit": null,
   "cost_limit": null,
   "line_limit_pct": null,
   "disabled_generators": [],
+  "initial_outputs": {},
   "disabled_lines": [],
   "bonus": null
 }

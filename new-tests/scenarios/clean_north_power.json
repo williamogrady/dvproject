@@ -1,5 +1,5 @@
 {
-    "scenario_id": "S2",
+    "scenario_id": "clean_north_power",
     "title": "Clean North Power",
     "target_mw": 1500,
     "emissions_limit": 200,
