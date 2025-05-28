@@ -70,14 +70,19 @@ def apply_scenario(scenario_id):
     scenario = grid.apply_scenario(scenario_id)
     try:
         return jsonify({
-            **scenario,  # expands scenario fields to top-level
+            **scenario,  # 👈 expands all top-level fields from the scenario file
             'generators': grid.get_generators(),
             'lines': grid.get_branches()
         })
     except Exception as e:
-            print("❌ Error loading scenario:")
-            traceback.print_exc()
-            return jsonify({"error": str(e)}), 500
+        print("❌ Error loading scenario:")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/scenarios")
+def get_all_scenarios():
+    from scenarios import list_all_scenarios
+    return jsonify(list_all_scenarios())
 
 @app.route('/api/status')
 def get_status():

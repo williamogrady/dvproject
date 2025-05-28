@@ -142,24 +142,38 @@ class Grid:
 
 
     def apply_scenario(self, scenario_id):
-        scenario = load_scenario(scenario_id)
-        self.active_scenario = scenario
+        import os
+        import json
+
+        path = os.path.join("scenarios", f"{scenario_id}.json")
+        with open(path, 'r') as f:
+            scenario_data = json.load(f)
+
+        self.active_scenario = scenario_data
 
         # Reset generator states
+        disabled_gens = [
+            int(gid.replace("Gen", ""))
+            for gid in scenario_data.get("disabled_generators", [])
+        ]
+
         for gen in self.generators:
-            gen.unavailable = gen.index in [
-                int(gid.replace("Gen", "")) for gid in scenario['disabled_generators']
-            ]
-        
-        initial_outputs = scenario.get("initial_outputs", {})
+            gen.unavailable = gen.index in disabled_gens
+
+        # Apply initial outputs
+        initial_outputs = scenario_data.get("initial_outputs", {})
         for gen in self.generators:
             gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
 
         # Reset branch states
+        disabled_lines = scenario_data.get("disabled_lines", [])
         for branch in self.branches:
-            branch.unavailable = f"Line-{branch.from_bus}-{branch.to_bus}" in scenario['disabled_lines']
+            line_id = f"Line-{branch.from_bus}-{branch.to_bus}"
+            branch.unavailable = line_id in disabled_lines
 
-        return scenario  # Optional: return it to pass back to frontend
+        # ✅ Return full scenario including title, ID, and limits
+        return scenario_data
+
 
 
     def run_power_flow(self):

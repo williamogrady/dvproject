@@ -8,22 +8,70 @@
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <style>
     /* Basic Layout & Colors */
-    html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    font-family: sans-serif;
-    background: #1e1e1e;
-    color: #f0f0f0;
-    box-sizing: border-box;
-    overflow: hidden;
-    }
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
 
     #main-layout {
   display: flex;
   height: 100vh;
   width: 100vw;
 }
+
+/* ========== Theme Base ========== */
+body {
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.dark-theme {
+  --bg: #1c1c1c;
+  --bg-card: #2f2f2f;
+  --text: #eee;
+  --accent: #42a5f5;
+}
+
+.light-theme {
+  --bg: #f8f8f8;
+  --bg-card: #ffffff;
+  --text: #222;
+  --accent: #1976d2;
+}
+
+/* ========== Apply Theme Vars ========== */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.overview-card,
+.generator-column,
+.status-label,
+.admin-panel,
+.line-card {
+  background-color: var(--bg-card);
+  color: var(--text);
+}
+
+.theme-button {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+
+/* ========== Layout ========== */
 
 #listView-container {
   width: 65%;
@@ -59,6 +107,8 @@
     }
 
     .overview-card {
+    background-color: var(--bg-card);
+    color: var(--text);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -68,7 +118,13 @@
       width: 100%;
     }
 
-    .overview-scenario,
+    .overview-scenario {
+      flex: 1;
+      max-width: 25%; /* or adjust as needed */
+      overflow: hidden;
+    }
+
+
     .overview-emissions,
     .overview-cost,
     .overview-power {
@@ -107,7 +163,12 @@
       font-size: 1.1rem;
       color: #ddd;
       font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
     }
+
 
 
     /* Lines */
@@ -149,6 +210,33 @@
     background-color: hsl(0, 100%, calc(100% - (var(--load, 0) * 70%)));
   }
 
+.status-label {
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background-color: #4caf50; /* Default: OK */
+  color: #fff;
+  display: inline-block;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  transition: background 0.3s ease;
+}
+
+.status-label.warning {
+  background-color: #f57c00; /* orange */
+}
+
+.status-label.danger {
+  background-color: #f44336; /* red */
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 8px #f44336; }
+  50%  { box-shadow: 0 0 20px #f44336; }
+  100% { box-shadow: 0 0 8px #f44336; }
+}
+
  #row-3 {
   height: 60%;
   padding: 0;
@@ -165,6 +253,8 @@
 }
 
 .generator-column {
+  background-color: var(--bg-card);
+  color: var(--text);
   flex: 1;
   min-width: 0;
   border-radius: 12px;
@@ -440,7 +530,7 @@
 
   </style>
 </head>
-<body>
+<body class="dark-mode">
   <div id="main-layout">
     <div id="listView-container">
       <!-- Row 1: Overview -->
@@ -466,13 +556,12 @@
         </div>
         </div>
       </div>
-
+ 
       <!-- Row 2: Transmission Lines -->
       <div class="row" id="row-2">
         <div class="lines-status-card">
-          <div class="status-number" id="line-status-count">–</div>
-          <div class="status-label">Overloaded Lines</div>
-        </div>
+        <div class="status-label" id="line-status">Loading...</div>
+      </div>
         <div class="lines-scroll-card" id="line-scroll"></div>
       </div>
 
@@ -525,6 +614,7 @@
     <label for="scenario-select">Load Scenario:</label>
     <select id="scenario-select"></select>
     <button id="reset-button">🔁 Reset</button>
+    <button id="theme-toggle" class="theme-button">🌞 Light Mode</button>
   </div>
   <div class="controls-right">
     <button class="submit-button">Submit</button>
@@ -534,10 +624,7 @@
     <div id="map-panel">Map</div>
   </div>
 
-  <script>
-
-    
-
+  <script> 
     let activeSort = {
         inactive: 'bus',
         active: 'bus'
@@ -599,6 +686,7 @@
       currentScenarioData = data;
       
       console.log("Loaded scenario data:", data);
+      console.log("Scenario title in response:", data.title);
       console.log("Current scenario set to:", currentScenarioData?.title);
 
       renderGenerators(data.generators);
@@ -646,19 +734,38 @@
       document.getElementById("overview-power").textContent = `${totalPower.toFixed(1)} MW`;
       document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
       document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
-      document.getElementById("line-status-count").textContent = overloaded;
+      //document.getElementById("line-status-count").textContent = overloaded;
     }
 
-    function renderLines(lines) {
+
+function getLineLoadPct(line) {
+  return line.rate_a > 0 ? (line.flow / line.rate_a) : 0;
+}
+
+function renderLines(lines) {
   const container = document.getElementById("line-scroll");
   container.innerHTML = "";
 
   // ✅ Sort lines by load percentage descending
-  const sorted = [...lines].sort((a, b) => {
-    const pctA = a.flow / a.rate_a;
-    const pctB = b.flow / b.rate_a;
-    return pctB - pctA;
-  });
+    const sorted = [...lines].sort((a, b) => {
+      const pctA = getLineLoadPct(a);
+      const pctB = getLineLoadPct(b);
+      return pctB - pctA;
+    });
+
+    const statusLabel = document.getElementById("line-status");
+    const overloadedCount = lines.filter(l => getLineLoadPct(l) > 1).length;
+
+    if (overloadedCount === 0) {
+      statusLabel.textContent = "✔ All lines OK";
+      statusLabel.className = "status-label";
+    } else if (overloadedCount <= 3) {
+      statusLabel.textContent = `⚠ ${overloadedCount} line(s) overloaded`;
+      statusLabel.className = "status-label warning";
+    } else {
+      statusLabel.textContent = `🟥 ${overloadedCount} line(s) OVERLOADED`;
+      statusLabel.className = "status-label danger";
+    }
 
   sorted.forEach(line => {
     const pct = Math.round((line.flow / line.rate_a) * 100);
@@ -793,6 +900,17 @@ function bindSortListeners() {
     });
   });
 }
+
+document.getElementById("theme-toggle").addEventListener("click", () => {
+  const body = document.body;
+  const isDark = body.classList.contains("dark-theme");
+
+  body.classList.toggle("dark-theme", !isDark);
+  body.classList.toggle("light-theme", isDark);
+
+  const btn = document.getElementById("theme-toggle");
+  btn.textContent = isDark ? "🌙 Dark Mode" : "🌞 Light Mode";
+});
 
 
     fetchAllScenarios();
