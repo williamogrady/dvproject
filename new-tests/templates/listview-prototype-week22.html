@@ -6,60 +6,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
-  <style>
-    /* Basic Layout & Colors */
+<style>
+/* ===== BASE SETUP ===== */
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   font-family: sans-serif;
-  background: var(--bg);
-  color: var(--text);
   box-sizing: border-box;
   overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-    #main-layout {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-}
-
-/* ========== Theme Base ========== */
+/* ===== THEME VARIABLES ===== */
 body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* Dark Mode Palette */
 .dark-theme {
   --bg: #1c1c1c;
-  --bg-card: #2f2f2f;
+  --bg-soft: #2a2a2a;
+  --bg-card: #3a3a3a;
+  --bg-deep: #2c2c2c;
+  --bg-gencard: #2c2c2c;
+
+  --border-light: #444;
+  --border-dark: #222;
+
   --text: #eee;
+  --text-light: #ccc;
+  --text-faint: #999;
+
   --accent: #42a5f5;
+  --accent-soft: #64b5f6;
+  --accent-faint: #bbdefb;
+
+  --gen-off: #444;
+  --gen-on: #81c784;
+  --gen-hover: #66bb6a;
 }
 
+/* Light Mode Palette */
 .light-theme {
-  --bg: #f8f8f8;
-  --bg-card: #ffffff;
+  --bg: #f4f4f4;
+  --bg-soft: #eaeaea;
+  --bg-card: #e0e0e0;
+  --bg-deep: #d4d4d4;
+  --bg-gencard: #dcdcdc;
+
+  --border-light: #cccccc;
+  --border-dark: #999999;
+
   --text: #222;
+  --text-light: #444;
+  --text-faint: #666;
+
   --accent: #1976d2;
+  --accent-soft: #90caf9;
+  --accent-faint: #e3f2fd;
+
+  --gen-off: #d6d6d6;
+  --gen-on: #a5d6a7;
+  --gen-hover: #81c784;
 }
 
-/* ========== Apply Theme Vars ========== */
+/* ===== APPLY THEME ===== */
 body {
   background-color: var(--bg);
   color: var(--text);
 }
 
-.overview-card,
-.generator-column,
-.status-label,
-.admin-panel,
-.line-card {
-  background-color: var(--bg-card);
-  color: var(--text);
-}
-
+/* ===== BUTTON ===== */
 .theme-button {
   padding: 0.5rem 1rem;
   background: var(--accent);
@@ -70,8 +90,12 @@ body {
   font-weight: bold;
 }
 
-
-/* ========== Layout ========== */
+/* ===== LAYOUT ===== */
+#main-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
 
 #listView-container {
   width: 65%;
@@ -83,151 +107,136 @@ body {
   gap: 1rem;
 }
 
+#map-panel {
+  width: 35%;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #888;
+}
 
-    #map-panel {
-      width: 35%;
-      background: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      color: #888;
-    }
+.row {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0;
+}
 
-    .row {
-    display: flex;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.5rem 0;
-    }
+/* ===== ROW 1: OVERVIEW ===== */
+#row-1 { height: 15%; }
 
-    /* Overview */
-    #row-1 {
-      height: 15%;
-    }
+.overview-card {
+  background-color: var(--bg-card);
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 20px;
+  padding: 1rem 2rem;
+  width: 100%;
+}
 
-    .overview-card {
-    background-color: var(--bg-card);
-    color: var(--text);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2f2f2f;
-      border-radius: 20px;
-      padding: 1rem 2rem;
-      width: 100%;
-    }
+.overview-scenario {
+  flex: 1;
+  max-width: 25%;
+  overflow: hidden;
+}
 
-    .overview-scenario {
-      flex: 1;
-      max-width: 25%; /* or adjust as needed */
-      overflow: hidden;
-    }
+.overview-emissions,
+.overview-cost,
+.overview-power {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 
+.overview-power { align-items: flex-end; }
 
-    .overview-emissions,
-    .overview-cost,
-    .overview-power {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
+.label {
+  font-size: 0.85rem;
+  color: var(--text-faint);
+  margin-bottom: 0.25rem;
+}
 
-    .overview-power {
-      align-items: flex-end;
-    }
+.power-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #4caf50;
+}
 
-    .label {
-      font-size: 0.85rem;
-      color: #aaa;
-      margin-bottom: 0.25rem;
-    }
+.cost-value {
+  font-size: 1.4rem;
+  color: #ffc107;
+}
 
-    .power-value {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: #4caf50;
-    }
+.emissions-value {
+  font-size: 1.2rem;
+  color: #f44336;
+}
 
-    .cost-value {
-      font-size: 1.4rem;
-      color: #ffc107;
-    }
+.scenario-name {
+  font-size: 1.1rem;
+  color: var(--text-light);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
 
-    .emissions-value {
-      font-size: 1.2rem;
-      color: #f44336;
-    }
+/* ===== ROW 2: LINES ===== */
+#row-2 { height: 10%; gap: 1rem; }
 
-    .scenario-name {
-      font-size: 1.1rem;
-      color: #ddd;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      width: 100%;
-    }
+.lines-status-card {
+  width: 200px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
 
+.lines-scroll-card {
+  flex: 1;
+  background: var(--bg-soft);
+  border-radius: 10px;
+  overflow-x: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  cursor: grab;
+}
 
-
-    /* Lines */
-    #row-2 {
-      height: 10%;
-      gap: 1.0rem;
-    }
-
-    .lines-status-card {
-      width: 200px;
-      background: #2f2f2f;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .lines-scroll-card {
-      flex: 1;
-      background: #1c1c1c;
-      border-radius: 10px;
-      overflow-x: auto;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 1rem;
-      cursor: grab;
-    }
-
-  .line-card {
-    font-size: 0.95rem;
-    font-weight: bold;
-    min-width: 120px;
-    text-align: center;
-    padding: 0.5rem 1rem;
-    color: #111;
-    border-radius: 8px;
-    background-color: hsl(0, 100%, calc(100% - (var(--load, 0) * 70%)));
-  }
+.line-card {
+  font-size: 0.95rem;
+  font-weight: bold;
+  min-width: 120px;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  color: #111;
+  border-radius: 8px;
+  background-color: hsl(0, 100%, calc(100% - (var(--load, 0) * 70%)));
+}
 
 .status-label {
   font-size: 1rem;
   font-weight: bold;
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  background-color: #4caf50; /* Default: OK */
+  background-color: #4caf50;
   color: #fff;
   display: inline-block;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
   transition: background 0.3s ease;
 }
 
-.status-label.warning {
-  background-color: #f57c00; /* orange */
-}
-
+.status-label.warning { background-color: #f57c00; }
 .status-label.danger {
-  background-color: #f44336; /* red */
+  background-color: #f44336;
   animation: pulse 1s infinite;
 }
 
@@ -237,7 +246,8 @@ body {
   100% { box-shadow: 0 0 8px #f44336; }
 }
 
- #row-3 {
+/* ===== ROW 3: GENERATORS ===== */
+#row-3 {
   height: 60%;
   padding: 0;
 }
@@ -246,9 +256,9 @@ body {
   display: flex;
   width: 100%;
   height: 100%;
-  justify-content: space-between; /* ✅ pushes columns apart */
-  gap: 2rem;                      /* ✅ adds physical space */
-  padding: 0 1rem;                /* ✅ space from edge of row */
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 0 1rem;
   box-sizing: border-box;
 }
 
@@ -261,58 +271,56 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px #333;
+  box-shadow: inset 0 0 0 1px var(--border-dark);
 }
 
-/* Differentiated colors */
-#inactive-container {
-  background: #262626;
-}
-
-#active-container {
-  background: #1f1f1f;
-}
-
-
-/* HEADER = Top 10% */
 .generator-header {
   flex: 0 0 10%;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-dark);
   box-sizing: border-box;
 }
 
 .column-label {
   font-size: 0.95rem;
-  color: #aaa;
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 0.25rem;
 }
 
-.column-label-row {
+  /* Add sort arrow styles */
+.sort-buttons {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 0.5rem;
+  margin-top: 4px;
 }
 
-.sort-options {
+.sort-btn {
+  background: var(--bg-soft);
+  color: var(--text-faint);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 4px 8px;
   font-size: 0.75rem;
-  color: #888;
-}
-
-.sort-options span {
   cursor: pointer;
-  padding: 0 4px;
+  transition: all 0.2s ease;
 }
 
-.sort-options span:hover {
-  color: #42a5f5;
-  text-decoration: underline;
+.sort-btn.active {
+  font-weight: bold;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.sort-btn.asc::after {
+  content: " ▲";
+}
+.sort-btn.desc::after {
+  content: " ▼";
 }
 
 
-/* BODY = Bottom 90% (scrollable list of generator blocks) */
 .generator-body {
   flex: 1;
   padding: 1rem;
@@ -326,17 +334,17 @@ body {
   height: 90px;
   margin-bottom: 1rem;
   border-radius: 10px;
-  background: #2c2c2c;
+  background-color: var(--bg-gencard);
+  color: var(--text);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   font-size: 0.85rem;
 }
 
-/* LEFT = 20% */
 .gen-section.left {
   width: 20%;
-  background: #444;
-  color: #fff;
+  background-color: var(--bg-soft);
+  color: var(--text-light);
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -351,35 +359,30 @@ body {
 
 .gen-number {
   font-size: 0.75rem;
-  color: #aaa;
+  color: var(--text-faint);
 }
 
 .gen-type {
   font-size: 0.7rem;
-  background: #555;
+  background-color: var(--bg-deep);
+  color: var(--text-faint);
   border-radius: 4px;
   padding: 2px 6px;
   text-transform: uppercase;
 }
 
-/* CENTER = 50% */
 .gen-section.center {
   width: 50%;
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
+  background-color: var(--bg-gencard);
   gap: 0.4rem;
 }
 
-.gen-power .power-label {
-  font-size: 0.7rem;
-  color: #aaa;
-  margin-bottom: 0.2rem;
-}
-
 .power-bar {
-  background: #444;
+  background: var(--gen-off);
   height: 20px;
   border-radius: 6px;
   overflow: hidden;
@@ -387,7 +390,7 @@ body {
 }
 
 .power-fill {
-  background: #4caf50;
+  background: var(--gen-on);
   height: 100%;
   position: absolute;
   top: 0;
@@ -402,7 +405,7 @@ body {
   width: 100%;
   height: 100%;
   font-size: 0.75rem;
-  color: white;
+  color: var(--text);
   text-align: center;
   line-height: 20px;
   pointer-events: none;
@@ -422,44 +425,15 @@ body {
   white-space: nowrap;
 }
 
-
-.faded {
-  opacity: 0.3;
-}
-
-/* RIGHT = 30% */
 .gen-section.right {
   width: 30%;
-  background: #1a1a1a;
+  background-color: var(--bg-gencard);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.inactive .gen-section.right {
-  background: #1a1a1a;
-}
-
-.plus-button {
-  font-size: 1.5rem;
-  border: 2px dashed #666;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  transition: all 0.2s ease;
-}
-
-.plus-button:hover {
-  background: #42a5f5;
-  border-color: #42a5f5;
-  color: #fff;
-}
-
-.minus-button {
+.plus-button, .minus-button {
   font-size: 1.5rem;
   border: 2px dashed #666;
   border-radius: 50%;
@@ -473,64 +447,65 @@ body {
   cursor: pointer;
 }
 
+.plus-button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .minus-button:hover {
   background: #f44336;
   border-color: #f44336;
   color: white;
 }
 
+/* ===== ROW 4: CONTROLS ===== */
+#row-4 {
+  height: 10%;
+  display: flex;
+  gap: 1rem;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  align-items: center;
+}
 
-    /* Row 4: Controls */
-    #row-4 {
-      height: 10%;
-      display: flex;
-      gap: 1rem;
-      padding: 0 1rem;
-      box-sizing: border-box;
-      align-items: center;
-    }
+.controls-left {
+  flex: 1;
+  background-color: var(--bg-deep);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  font-size: 0.9rem;
+}
 
-    .controls-left {
-      flex: 1;
-      background: #2a2a2a;
-      border-radius: 10px;
-      padding: 1rem;
-      display: flex;
-      align-items: center;
-      color: #ccc;
-      font-size: 0.9rem;
-    }
+.controls-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 160px;
+}
 
-    .controls-right {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      flex: 0 0 160px;
-    }
+.submit-button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
 
-    .submit-button {
-      padding: 0.75rem 1.5rem;
-      background-color: #42a5f5; /* blue: user/control color */
-      border: none;
-      border-radius: 6px;
-      color: white;
-      font-weight: bold;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: background 0.2s ease;
-    }
+.submit-button:hover {
+  background-color: #2196f3;
+}
+</style>
 
-    .submit-button:hover {
-      background-color: #2196f3;
-    }
-
-    
-
-
-
-  </style>
 </head>
-<body class="dark-mode">
+<body class="light-theme">
   <div id="main-layout">
     <div id="listView-container">
       <!-- Row 1: Overview -->
@@ -573,12 +548,11 @@ body {
           <div class="generator-header">
             <div class="column-label-row">
               <div class="column-label">Inactive Generators</div>
-              <div class="sort-options" data-type="inactive">
-                Sort by:
-                <span data-sort="bus">Bus</span> |
-                <span data-sort="pmax">Power</span> |
-                <span data-sort="cost">Cost</span> |
-                <span data-sort="emissions">Emissions</span>
+              <div class="sort-buttons" data-type="inactive">
+                <button class="sort-btn" data-sort="bus">Bus</button>
+                <button class="sort-btn" data-sort="pmax">Power</button>
+                <button class="sort-btn" data-sort="cost">Cost</button>
+                <button class="sort-btn" data-sort="emissions">Emissions</button>
               </div>
             </div>
           </div>
@@ -591,12 +565,11 @@ body {
           <div class="generator-header">
             <div class="column-label-row">
               <div class="column-label">Active Generators</div>
-              <div class="sort-options" data-type="inactive">
-                Sort by:
-                <span data-sort="bus">Bus</span> |
-                <span data-sort="pmax">Power</span> |
-                <span data-sort="cost">Cost</span> |
-                <span data-sort="emissions">Emissions</span>
+              <div class="sort-buttons" data-type="active">
+                <button class="sort-btn" data-sort="bus">Bus</button>
+                <button class="sort-btn" data-sort="pmax">Power</button>
+                <button class="sort-btn" data-sort="cost">Cost</button>
+                <button class="sort-btn" data-sort="emissions">Emissions</button>
               </div>
             </div>
           </div>
@@ -614,7 +587,7 @@ body {
     <label for="scenario-select">Load Scenario:</label>
     <select id="scenario-select"></select>
     <button id="reset-button">🔁 Reset</button>
-    <button id="theme-toggle" class="theme-button">🌞 Light Mode</button>
+    <button id="theme-toggle" class="theme-button">🌙 Dark Mode</button>
   </div>
   <div class="controls-right">
     <button class="submit-button">Submit</button>
@@ -626,13 +599,15 @@ body {
 
   <script> 
     let activeSort = {
-        inactive: 'bus',
-        active: 'bus'
-      };
+      inactive: { key: 'bus', order: 'asc' },
+      active: { key: 'bus', order: 'asc' }
+    };
 
     let currentScenarioId = "";
     let currentScenarioData = null;
     let availableScenarios = [];
+    let currentGenerators = [];
+
 
     async function loadData() {
       const res = await fetch('/api/scenario/clean_north_power');
@@ -679,21 +654,17 @@ body {
       }
 
 
-        async function loadScenario(scenarioId) {
-      const res = await fetch(`/api/scenario/${scenarioId}`);
-      const data = await res.json();
-      currentScenarioId = scenarioId;
-      currentScenarioData = data;
-      
-      console.log("Loaded scenario data:", data);
-      console.log("Scenario title in response:", data.title);
-      console.log("Current scenario set to:", currentScenarioData?.title);
+      async function loadScenario(scenarioId) {
+        const res = await fetch(`/api/scenario/${scenarioId}`);
+        const data = await res.json();
+        currentScenarioId = scenarioId;
+        currentScenarioData = data;
+        currentGenerators = data.generators;
 
-      renderGenerators(data.generators);
-      renderLines(data.lines);
-      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-      bindSortListeners(); // if needed
-    }
+        renderGenerators(currentGenerators);
+        renderLines(data.lines);
+        renderOverview(currentGenerators, data.lines, data.total_cost, data.solved);
+      }
 
     function populateScenarioDropdown(scenarios, defaultId) {
       const select = document.getElementById("scenario-select");
@@ -785,36 +756,37 @@ function renderLines(lines) {
 
 
 function renderGenerators(gens) {
-  const inactiveContainer = document.querySelector("#inactive-container .generator-body");
-  const activeContainer = document.querySelector("#active-container .generator-body");
-  inactiveContainer.innerHTML = "";
-  activeContainer.innerHTML = "";
+  currentGenerators = gens;
+  renderColumn("inactive");
+  renderColumn("active");
+}
 
-  const maxPmax = Math.max(...gens.map(g => g.pmax));
+function renderColumn(type) {
+  const container = document.querySelector(`#${type}-container .generator-body`);
+  container.innerHTML = "";
 
-  // 🔁 Separate and sort
-  const sortKey = key => (a, b) => {
-    if (key === 'cost') return b.cost_per_mw - a.cost_per_mw;
-    if (key === 'emissions') return b.emissions_per_mw - a.emissions_per_mw;
-    if (key === 'pmax') return b.pmax - a.pmax;
-    return a.bus - b.bus;
-  };
+  const isActive = type === "active";
+  const { key, order } = activeSort[type];
+  const maxPmax = Math.max(...currentGenerators.map(g => g.pmax));
 
-  const inactiveGens = gens.filter(g => g.pg === 0).sort(sortKey(activeSort.inactive));
-  const activeGens = gens.filter(g => g.pg > 0).sort(sortKey(activeSort.active));
+  const filtered = currentGenerators.filter(g => isActive ? g.pg > 0 : g.pg === 0);
+  const sorted = filtered.slice().sort(getSortFunction(key, order));
+  console.log(`📦 Rendering ${type} list sorted by ${key} (${order})`);
+  console.log("First 3 names:", sorted.slice(0, 3).map(g => g.name));
 
-  // 🔁 Render Inactive Generators
-  inactiveGens.forEach(gen => {
-    const card = createGeneratorCard(gen, maxPmax, true);
-    inactiveContainer.appendChild(card);
-  });
-
-  // 🔁 Render Active Generators
-  activeGens.forEach(gen => {
-    const card = createGeneratorCard(gen, maxPmax, false);
-    activeContainer.appendChild(card);
+  sorted.forEach(gen => {
+    container.appendChild(createGeneratorCard(gen, maxPmax));
   });
 }
+
+function getSortFunction(key, order) {
+  const dir = order === 'asc' ? 1 : -1;
+  if (key === 'cost') return (a, b) => dir * (a.cost_per_mw - b.cost_per_mw);
+  if (key === 'emissions') return (a, b) => dir * (a.emissions_per_mw - b.emissions_per_mw);
+  if (key === 'pmax') return (a, b) => dir * (a.pmax - b.pmax);
+  return (a, b) => dir * (a.bus - b.bus);
+}
+
 
 function createGeneratorCard(gen, maxPmax) {
   const relativePmax = Math.round((gen.pmax / maxPmax) * 100);
@@ -847,40 +819,16 @@ function createGeneratorCard(gen, maxPmax) {
   right.className = "gen-section right";
 
   if (gen.pg === 0) {
-    const plus = document.createElement("div");
-    plus.className = "plus-button";
-    plus.textContent = "+";
-    plus.onclick = () => {
-      fetch(`/api/set_generation/${gen.index}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ percent: 50 })
-      }).then(res => res.json())
-        .then(data => {
-          renderGenerators(data.generators);
-          renderLines(data.lines);
-          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-        });
-    };
-    right.appendChild(plus);
-  } else {
-    const minus = document.createElement("div");
-minus.className = "minus-button";
-minus.textContent = "−";
-minus.onclick = () => {
-  fetch(`/api/set_generation/${gen.index}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ percent: 0 })
-  }).then(res => res.json())
-    .then(data => {
-      renderGenerators(data.generators);
-      renderLines(data.lines);
-      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-      bindSortListeners(); // if you're using it
-    });
+    const toggle = document.createElement("div");
+toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
+toggle.textContent = gen.pg === 0 ? "+" : "−";
+
+toggle.onclick = () => {
+  gen.pg = gen.pg === 0 ? 50 : 0; // simulate state change
+  renderGenerators(currentGenerators);
 };
-right.appendChild(minus);
+
+right.appendChild(toggle);
   }
 
   card.appendChild(left);
@@ -889,17 +837,47 @@ right.appendChild(minus);
   return card;
 }
 
-
 function bindSortListeners() {
-  document.querySelectorAll('.sort-options span').forEach(el => {
-    el.addEventListener('click', () => {
-      const list = el.closest('.sort-options').dataset.type;
-      const sort = el.dataset.sort;
-      activeSort[list] = sort;
-      loadScenario(currentScenarioId);
+  console.log("Binding sort listeners...");
+  document.querySelectorAll('.sort-buttons .sort-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const type = button.closest('.sort-buttons').dataset.type;
+      const clickedKey = button.dataset.sort;
+      const current = activeSort[type];
+
+      if (current.key === clickedKey) {
+        current.order = current.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        current.key = clickedKey;
+        current.order = 'asc';
+      }
+
+      document.querySelectorAll(`.sort-buttons[data-type="${type}"] .sort-btn`).forEach(btn => {
+        btn.classList.remove('active', 'asc', 'desc');
+      });
+      button.classList.add('active', current.order);
+
+      renderColumn(type); // ✅ only once
     });
   });
 }
+
+
+function updateSortButtonStyles() {
+  ['active', 'inactive'].forEach(type => {
+    const { key, order } = activeSort[type];
+    document.querySelectorAll(`.sort-buttons[data-type="${type}"] .sort-btn`).forEach(btn => {
+      btn.classList.remove('active', 'asc', 'desc');
+      if (btn.dataset.sort === key) {
+        btn.classList.add('active', order);
+      }
+    });
+  });
+}
+
+
+
+
 
 document.getElementById("theme-toggle").addEventListener("click", () => {
   const body = document.body;
@@ -912,8 +890,16 @@ document.getElementById("theme-toggle").addEventListener("click", () => {
   btn.textContent = isDark ? "🌙 Dark Mode" : "🌞 Light Mode";
 });
 
+    window.addEventListener("DOMContentLoaded", () => {
+    const theme = document.body.classList.contains("dark-theme") ? "dark-theme"
+                : document.body.classList.contains("light-theme") ? "light-theme"
+                : "no theme applied";
+    console.log("🌗 Current theme on startup:", theme);
+    bindSortListeners();     // ✅ Only here
+    updateSortButtonStyles();   // ✅ This applies the correct style immediately
+    fetchAllScenarios();     // ✅ Normal startup logic
+  });
 
-    fetchAllScenarios();
   </script>
 </body>
 </html>

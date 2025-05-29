@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pokémon Sort Demo</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      justify-content: space-around;
+      padding: 2rem;
+    }
+    .column {
+      width: 45%;
+    }
+    .sort-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .sort-btn {
+      padding: 0.3rem 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f4f4f4;
+      cursor: pointer;
+    }
+    .sort-btn.active {
+      font-weight: bold;
+      border-color: #007bff;
+      color: #007bff;
+    }
+    .sort-btn.asc::after { content: ' \25B2'; }
+    .sort-btn.desc::after { content: ' \25BC'; }
+    .pokemon-card {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pokemon-info {
+      flex-grow: 1;
+    }
+    .move-btn {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="column">
+    <h2>Inactive Pokémon</h2>
+    <div class="sort-buttons" data-type="inactive">
+      <button class="sort-btn" data-sort="name">Name</button>
+      <button class="sort-btn" data-sort="attack">Attack</button>
+      <button class="sort-btn" data-sort="defense">Defense</button>
+      <button class="sort-btn" data-sort="speed">Speed</button>
+    </div>
+    <div id="inactive-list"></div>
+  </div>
+
+  <div class="column">
+    <h2>Active Pokémon</h2>
+    <div class="sort-buttons" data-type="active">
+      <button class="sort-btn" data-sort="name">Name</button>
+      <button class="sort-btn" data-sort="attack">Attack</button>
+      <button class="sort-btn" data-sort="defense">Defense</button>
+      <button class="sort-btn" data-sort="speed">Speed</button>
+    </div>
+    <div id="active-list"></div>
+  </div>
+
+  <script>
+    const allPokemon = [
+      { name: 'Pikachu', attack: 55, defense: 40, speed: 90 },
+      { name: 'Bulbasaur', attack: 49, defense: 49, speed: 45 },
+      { name: 'Charmander', attack: 52, defense: 43, speed: 65 },
+      { name: 'Squirtle', attack: 48, defense: 65, speed: 43 },
+      { name: 'Eevee', attack: 55, defense: 50, speed: 55 },
+      { name: 'Jigglypuff', attack: 45, defense: 20, speed: 20 }
+    ];
+
+    let activeList = [];
+    let inactiveList = [...allPokemon];
+
+    let sortState = {
+      active: { key: 'name', order: 'asc' },
+      inactive: { key: 'name', order: 'asc' }
+    };
+
+    function getSortFn(key, order) {
+      const dir = order === 'asc' ? 1 : -1;
+      return (a, b) => dir * (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0);
+    }
+
+    function renderList(type) {
+      const container = document.getElementById(`${type}-list`);
+      const data = type === 'active' ? activeList : inactiveList;
+      const { key, order } = sortState[type];
+      const sorted = [...data].sort(getSortFn(key, order));
+
+      container.innerHTML = '';
+      sorted.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'pokemon-card';
+
+        const info = document.createElement('div');
+        info.className = 'pokemon-info';
+        info.innerHTML = `<strong>${p.name}</strong><br>Atk: ${p.attack}, Def: ${p.defense}, Spd: ${p.speed}`;
+
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.textContent = type === 'active' ? 'Remove' : 'Add';
+        btn.onclick = () => {
+          if (type === 'active') {
+            activeList = activeList.filter(pk => pk !== p);
+            inactiveList.push(p);
+          } else {
+            inactiveList = inactiveList.filter(pk => pk !== p);
+            activeList.push(p);
+          }
+          renderAll();
+        };
+
+        card.appendChild(info);
+        card.appendChild(btn);
+        container.appendChild(card);
+      });
+    }
+
+    function renderAll() {
+      renderList('inactive');
+      renderList('active');
+    }
+
+    function bindSortButtons() {
+      document.querySelectorAll('.sort-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          const type = button.closest('.sort-buttons').dataset.type;
+          const key = button.dataset.sort;
+          const current = sortState[type];
+
+          if (current.key === key) {
+            current.order = current.order === 'asc' ? 'desc' : 'asc';
+          } else {
+            current.key = key;
+            current.order = 'asc';
+          }
+
+          document.querySelectorAll(`.sort-buttons[data-type="${type}"] .sort-btn`).forEach(btn => {
+            btn.classList.remove('active', 'asc', 'desc');
+          });
+
+          button.classList.add('active', current.order);
+          renderList(type);
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindSortButtons();
+      renderAll();
+    });
+  </script>
+</body>
+</html>
