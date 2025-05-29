@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Line Card Redesign</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f7f7f7;
+      color: #333;
+    }
+    .line-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .line-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      width: 280px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .line-header {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .line-path {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .status {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+    }
+    .status.normal {
+      background: #e0f7e9;
+      color: #2e7d32;
+    }
+    .status.warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status.overloaded {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .bar {
+      height: 8px;
+      background: #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: #2196f3;
+      width: 0%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Line Card Redesign</h1>
+  <div class="line-grid" id="lineGrid"></div>
+
+  <script>
+    const lines = [
+      { id: 1, from: "Bus A", to: "Bus B", flow: 300, limit: 500 },
+      { id: 2, from: "Bus C", to: "Bus D", flow: 520, limit: 500 },
+      { id: 3, from: "Bus E", to: "Bus F", flow: 420, limit: 450 }
+    ];
+
+    function renderLineCards() {
+      const grid = document.getElementById("lineGrid");
+      grid.innerHTML = "";
+
+      lines.forEach(line => {
+        const pct = (line.flow / line.limit) * 100;
+
+        const card = document.createElement("div");
+        card.className = "line-card";
+
+        const header = document.createElement("div");
+        header.className = "line-header";
+        header.textContent = `Line ${line.id}`;
+
+        const path = document.createElement("div");
+        path.className = "line-path";
+        path.textContent = `${line.from} → ${line.to}`;
+
+        const status = document.createElement("div");
+        status.className = "status";
+        if (pct > 100) status.classList.add("overloaded");
+        else if (pct > 90) status.classList.add("warning");
+        else status.classList.add("normal");
+        status.textContent = pct > 100 ? "Overloaded" : pct > 90 ? "Warning" : "Normal";
+
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = `${Math.min(pct, 100)}%`;
+        bar.appendChild(fill);
+
+        card.appendChild(header);
+        card.appendChild(path);
+        card.appendChild(status);
+        card.appendChild(bar);
+
+        grid.appendChild(card);
+      });
+    }
+
+    renderLineCards();
+  </script>
+</body>
+</html>

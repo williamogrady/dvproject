@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+>
+<head>
+  <meta charset="UTF-8">
+  <title>Generator Card Redesign</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f0f0f0;
+      color: #333;
+    }
+    .card-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .gen-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      width: 240px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .gen-header {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .gen-type {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.5rem;
+      background: lightgray;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .blocks {
+      position: relative;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+      user-select: none;
+    }
+    .power-block {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      background-color: #ccc;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .power-block.on {
+      background-color: #4caf50;
+    }
+    .arrow-indicator {
+      position: absolute;
+      bottom: -14px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 10px solid #4caf50;
+      transition: left 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generator Card Redesign</h1>
+  <div class="card-grid" id="generatorGrid"></div>
+
+  <script>
+    const generators = [
+      { id: 1, name: "Gen A", type: "Solar", capacity: 100, output: 0 },
+      { id: 2, name: "Gen B", type: "Coal", capacity: 300, output: 0 },
+      { id: 3, name: "Gen C", type: "Wind", capacity: 500, output: 0 }
+    ];
+
+    let isDragging = false;
+
+    function renderCards() {
+      const grid = document.getElementById("generatorGrid");
+      grid.innerHTML = "";
+
+      generators.forEach(gen => {
+        const blockCount = Math.round(gen.capacity / 100);
+
+        const card = document.createElement("div");
+        card.className = "gen-card";
+
+        const header = document.createElement("div");
+        header.className = "gen-header";
+        header.textContent = gen.name;
+
+        const type = document.createElement("div");
+        type.className = "gen-type";
+        type.textContent = gen.type;
+
+        const blocksContainer = document.createElement("div");
+        blocksContainer.className = "blocks";
+
+        const arrow = document.createElement("div");
+        arrow.className = "arrow-indicator";
+        blocksContainer.appendChild(arrow);
+
+        for (let i = 0; i < blockCount; i++) {
+          const block = document.createElement("div");
+          block.className = "power-block";
+          if ((i + 1) * 100 <= gen.output) {
+            block.classList.add("on");
+          }
+
+          block.addEventListener("mousedown", () => {
+            isDragging = true;
+            gen.output = (i + 1) * 100;
+            renderCards();
+          });
+
+          block.addEventListener("mouseenter", () => {
+            if (isDragging) {
+              gen.output = (i + 1) * 100;
+              renderCards();
+            }
+          });
+
+          blocksContainer.appendChild(block);
+        }
+
+        // Position the arrow under the current output level
+        const index = Math.floor(gen.output / 100);
+        if (index > 0) {
+          arrow.style.left = `${(index - 1) * 46 + 20}px`; // 40 width + 6 gap = 46, center of block
+        } else {
+          arrow.style.left = "-999px";
+        }
+
+        card.appendChild(header);
+        card.appendChild(type);
+        card.appendChild(blocksContainer);
+
+        grid.appendChild(card);
+      });
+    }
+
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    renderCards();
+  </script>
+</body>
+</html>
