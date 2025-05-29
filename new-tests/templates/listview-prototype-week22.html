@@ -47,6 +47,9 @@ body {
   --gen-off: #444;
   --gen-on: #81c784;
   --gen-hover: #66bb6a;
+
+  --scrollbar-thumb: rgba(200, 200, 200, 0.3);
+  --scrollbar-track: rgba(50, 50, 50, 0.2);
 }
 
 /* Light Mode Palette */
@@ -71,6 +74,9 @@ body {
   --gen-off: #d6d6d6;
   --gen-on: #a5d6a7;
   --gen-hover: #81c784;
+
+  --scrollbar-thumb: rgba(128, 128, 128, 0.5);
+  --scrollbar-track: transparent;
 }
 
 /* ===== APPLY THEME ===== */
@@ -79,7 +85,7 @@ body {
   color: var(--text);
 }
 
-/* ===== BUTTON ===== */
+/* ===== BUTTONS & SCROLLBAR ===== */
 .theme-button {
   padding: 0.5rem 1rem;
   background: var(--accent);
@@ -88,6 +94,20 @@ body {
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--scrollbar-track);
 }
 
 /* ===== LAYOUT ===== */
