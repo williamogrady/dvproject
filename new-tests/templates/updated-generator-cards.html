@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Styled Generator Cards</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --gen-on: #4caf50;
+      --gen-off: #ccc;
+      --color-hydro: #0077be;
+      --color-coal: #333;
+      --color-gas: #ff9800;
+      --color-combined: #6a1b9a;
+    }
+
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background: #f2f2f2;
+    }
+
+    .generator-card {
+      display: flex;
+      width: 600px;
+      margin-bottom: 16px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .gen-left {
+      width: 30%;
+      color: white;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 14px;
+      transition: background-color 0.3s ease;
+    }
+
+    .gen-name {
+      font-weight: bold;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .gen-row-top,
+    .gen-row-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .gen-type {
+      font-style: italic;
+    }
+
+    .gen-bus {
+      background: white;
+      color: black;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      display: inline-block;
+    }
+
+    .impact-bubble {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 50%;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .gen-center {
+      width: 60%;
+      background: white;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .power-block-row {
+      position: relative;
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+      height: 40px;
+    }
+
+    .power-block {
+      height: 40px;
+      border-radius: 6px;
+      background-color: var(--gen-off);
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .power-block.inactive {
+      cursor: default;
+      opacity: 0.4;
+    }
+
+    .arrow-indicator.inactive {
+      display: none;
+    }
+
+    .arrow-indicator {
+      position: absolute;
+      bottom: -10px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 10px solid var(--gen-on);
+      transition: left 0.2s ease;
+    }
+
+    .gen-right {
+      width: 10%;
+      background: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      cursor: pointer;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Generator Overview</h2>
+<div id="generator-list"></div>
+
+<script>
+const currentGenerators = [
+  { id: "Gen1", station_name: "Hydro Alpha", bus: 1, fuel_type: "hydro", pmax: 150, pg: 0, cost_per_mw: 3, emissions_per_mw: 1, active: false },
+  { id: "Gen2", station_name: "Coal Bravo", bus: 2, fuel_type: "coal", pmax: 800, pg: 300, cost_per_mw: 5, emissions_per_mw: 4, active: true },
+  { id: "Gen3", station_name: "Gas Charlie", bus: 5, fuel_type: "gas", pmax: 350, pg: 0, cost_per_mw: 2, emissions_per_mw: 2, active: false },
+];
+
+function getFuelColor(type) {
+  switch (type) {
+    case "hydro": return "var(--color-hydro)";
+    case "coal": return "var(--color-coal)";
+    case "gas": return "var(--color-gas)";
+    case "combined": return "var(--color-combined)";
+    default: return "#888";
+  }
+}
+
+function getCostColor(cost) {
+  if (cost <= 2) return '#4caf50';
+  if (cost <= 3) return '#ffeb3b';
+  if (cost <= 4) return '#ff9800';
+  return '#f44336';
+}
+
+function getEmissionColor(em) {
+  if (em <= 1) return '#4caf50';
+  if (em <= 2) return '#a5d6a7';
+  if (em <= 3) return '#c8e6c9';
+  return '#9e9e9e';
+}
+
+function renderGenerators(gens) {
+  const list = document.getElementById("generator-list");
+  list.innerHTML = "";
+  gens.forEach(gen => {
+    const card = createGeneratorCard(gen);
+    list.appendChild(card);
+  });
+}
+
+function createGeneratorCard(gen) {
+  const card = document.createElement("div");
+  card.className = "generator-card";
+
+  const left = document.createElement("div");
+  left.className = "gen-left";
+  left.style.backgroundColor = gen.active ? getFuelColor(gen.fuel_type) : "#777";
+
+  left.innerHTML = `
+    <div class="gen-name">${gen.station_name}</div>
+    <div class="gen-row-top">
+      <span class="gen-type">${gen.fuel_type}</span>
+      <span class="gen-bus">Bus ${gen.bus}</span>
+    </div>
+    <div class="gen-row-bottom">
+      <span class="impact-bubble cost-bubble" style="background-color:${getCostColor(gen.cost_per_mw)}">💲</span>
+      <span class="impact-bubble emission-bubble" style="background-color:${getEmissionColor(gen.emissions_per_mw)}">CO₂</span>
+    </div>
+  `;
+
+  const center = document.createElement("div");
+  center.className = "gen-center";
+  const blockRow = document.createElement("div");
+  blockRow.className = "power-block-row";
+  blockRow.innerHTML = `<div class="arrow-indicator"></div>`;
+  center.appendChild(blockRow);
+  renderPowerBlocks(gen, blockRow);
+
+  const right = document.createElement("div");
+  right.className = "gen-right";
+  right.textContent = gen.active ? "−" : "+";
+  right.onclick = () => {
+    gen.active = !gen.active;
+    if (!gen.active) gen.pg = 0;
+    renderGenerators(currentGenerators);
+  };
+
+  card.appendChild(left);
+  card.appendChild(center);
+  card.appendChild(right);
+
+  return card;
+}
+
+function renderPowerBlocks(gen, container) {
+  const arrow = container.querySelector(".arrow-indicator");
+  container.querySelectorAll(".power-block").forEach(b => b.remove());
+
+  const fullBlocks = Math.floor(gen.pmax / 100);
+  const partial = gen.pmax % 100;
+
+  for (let i = 0; i < fullBlocks; i++) {
+    const block = document.createElement("div");
+    block.className = "power-block";
+    block.style.width = "40px";
+    if ((i + 1) * 100 <= gen.pg) block.classList.add("on");
+    if (!gen.active) block.classList.add("inactive");
+    addBlockEvents(block, gen, (i + 1) * 100);
+    container.appendChild(block);
+  }
+
+  if (partial) {
+    const block = document.createElement("div");
+    block.className = "power-block";
+    block.style.width = `${40 * (partial / 100)}px`;
+    const level = fullBlocks * 100 + partial;
+    if (gen.pg >= level) block.classList.add("on");
+    if (!gen.active) block.classList.add("inactive");
+    addBlockEvents(block, gen, level);
+    container.appendChild(block);
+  }
+
+  setTimeout(() => {
+    if (!gen.active) {
+      arrow.style.left = "-999px";
+      return;
+    }
+    const onBlocks = container.querySelectorAll(".power-block.on");
+    if (onBlocks.length > 0) {
+      const last = onBlocks[onBlocks.length - 1];
+      const rect = last.getBoundingClientRect();
+      const parentRect = container.getBoundingClientRect();
+      const offset = rect.left - parentRect.left + rect.width / 2;
+      arrow.style.left = `${offset}px`;
+    } else {
+      arrow.style.left = "-999px";
+    }
+  }, 0);
+}
+
+function addBlockEvents(block, gen, level) {
+  block.addEventListener("mousedown", (e) => {
+    if (!gen.active || e.button !== 0) return;
+    gen.pg = level;
+    renderGenerators(currentGenerators);
+  });
+
+  block.addEventListener("mouseenter", (e) => {
+    if (!gen.active || e.buttons !== 1) return;
+    gen.pg = level;
+    renderGenerators(currentGenerators);
+  });
+
+  block.addEventListener("dblclick", () => {
+    if (!gen.active) return;
+    gen.pg = gen.pg > 0 ? 0 : gen.pmax;
+    renderGenerators(currentGenerators);
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  renderGenerators(currentGenerators);
+});
+</script>
+</body>
+</html>

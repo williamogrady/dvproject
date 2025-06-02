@@ -361,8 +361,22 @@ body {
   font-size: 0.85rem;
 }
 
+.gen-section.left { width: 22%; }
+.gen-section.center { width: 58%; }
+.gen-section.right { width: 10%; }
+
+.impact-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: white;
+}
+
 .gen-section.left {
-  width: 20%;
   background-color: var(--bg-soft);
   color: var(--text-light);
   padding: 0.75rem;
@@ -375,24 +389,35 @@ body {
 .gen-name {
   font-weight: bold;
   font-size: 0.95rem;
+  color: white;
+  text-shadow:
+    -1px -1px 0 rgb(39, 39, 39),
+     1px -1px 0 rgb(39, 39, 39),
+    -1px  1px 0 rgb(39, 39, 39),
+     1px  1px 0 rgb(39, 39, 39);
 }
 
 .gen-number {
+  font-weight: bold italic;
   font-size: 0.75rem;
-  color: var(--text-faint);
+  color: white;
+  text-shadow:
+    -1px -1px 0 rgb(39, 39, 39),
+     1px -1px 0 rgb(39, 39, 39),
+    -1px  1px 0 rgb(39, 39, 39),
+     1px  1px 0 rgb(39, 39, 39);
 }
 
 .gen-type {
   font-size: 0.7rem;
-  background-color: var(--bg-deep);
-  color: var(--text-faint);
+  background-color: #e8e8e8;
+  color: rgb(39, 39, 39);
   border-radius: 4px;
   padding: 2px 6px;
   text-transform: uppercase;
 }
 
 .gen-section.center {
-  width: 50%;
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -401,6 +426,8 @@ body {
   gap: 0.4rem;
 }
 
+
+/*
 .power-bar {
   background: var(--gen-off);
   height: 20px;
@@ -430,6 +457,19 @@ body {
   line-height: 20px;
   pointer-events: none;
 }
+*/
+
+.power-block.inactive {
+  cursor: default;
+  background-color: #e0e0e0;
+  border: 1px dashed #999;
+  box-shadow: none;
+}
+
+.power-block.on {
+  background-color: var(--gen-on);
+  box-shadow: 0 0 3px rgba(0,0,0,0.2) inset;
+}
 
 .gen-impact-row {
   display: flex;
@@ -445,8 +485,32 @@ body {
   white-space: nowrap;
 }
 
+.impact-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.impact-box {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+}
+
+.impact-label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+
 .gen-section.right {
-  width: 15%;
   background-color: var(--bg-gencard);
   display: flex;
   align-items: center;
@@ -525,7 +589,7 @@ body {
 </style>
 
 </head>
-<body class="light-theme">
+<body class="dark-theme">
   <div id="main-layout">
     <div id="listView-container">
       <!-- Row 1: Overview -->
@@ -607,7 +671,7 @@ body {
     <label for="scenario-select">Load Scenario:</label>
     <select id="scenario-select"></select>
     <button id="reset-button">🔁 Reset</button>
-    <button id="theme-toggle" class="theme-button">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="theme-button">🌞 Light Mode</button>
   </div>
   <div class="controls-right">
     <button class="submit-button">Submit</button>
@@ -776,7 +840,7 @@ function renderLines(lines, solved = true) {
     if (!solved) {
       card.innerHTML = `
         Line ${line.from_bus} → ${line.to_bus}<br>
-        <span style="font-size: 0.85rem; color: var(--text-faint);">(no power flow yet)</span>
+        <span style="font-size: 0.85rem; color: var(--text-faint);">(No power flow)</span>
       `;
     } else {
       const pct = Math.round((line.flow / line.rate_a) * 100);
@@ -853,7 +917,28 @@ function createGeneratorCard(gen, maxPmax) {
   const card = document.createElement("div");
   card.className = "generator-card";
 
+  function getCostColor(cost) {
+    if (cost < 2) return 'green';
+    if (cost < 5) return 'yellow';
+    if (cost < 7) return 'orange';
+    return 'red';
+  }
+
+  function getEmissionColor(emissions) {
+    if (emissions < 0.5) return 'green';
+    if (emissions < 1.0) return '#88cc88';
+    if (emissions < 1.5) return '#bbbb88';
+    return 'gray';
+  }
+
   const left = document.createElement("div");
+  const fuelColors = {
+    'coal': '#614732',
+    'gas': '#4a7838',
+    'hydro': '#4faad1',
+    'combined': '#ad7a37',
+  };
+  left.style.backgroundColor = fuelColors[gen.fuel_type.toLowerCase()] || 'var(--bg-soft)';
   left.className = "gen-section left";
   left.innerHTML = `
     <div class="gen-name">${gen.station_name}</div>
@@ -865,43 +950,98 @@ function createGeneratorCard(gen, maxPmax) {
   center.innerHTML = `
     <div class="gen-power">
       <div class="power-label">Power</div>
-      <div class="power-bar">
-        <div class="power-fill" style="width:${relativePmax}%"></div>
-        <div class="power-label-center">${gen.pmax.toFixed(1)} MW</div>
-      </div>
     </div>
     <div class="gen-impact-row">
-      <div class="gen-cost">${"💲".repeat(Math.round(gen.cost_per_mw))}</div>
-      <div class="gen-emissions">${"CO₂ ".repeat(Math.round(gen.emissions_per_mw))}</div>
-    </div>`;
+      <div class="gen-cost impact-wrapper">
+        <div class="impact-box" style="background:${getCostColor(gen.cost_per_mw)};">💲</div>
+        <div class="impact-label">${gen.cost_per_mw.toFixed(1)} / MW</div>
+      </div>
+      <div class="gen-emissions impact-wrapper">
+        <div class="impact-box" style="background:${getEmissionColor(gen.emissions_per_mw)};">☁️</div>
+        <div class="impact-label">${gen.emissions_per_mw.toFixed(1)} / MW</div>
+      </div>
+    </div>
+  `;
+
+  const powerContainer = center.querySelector(".gen-power");
+  const blockRow = document.createElement("div");
+  blockRow.className = "power-block-row";
+  blockRow.style.display = "flex";
+  blockRow.style.gap = "2px";
+  blockRow.style.marginTop = "4px";
+
+  const fullBlocks = Math.floor(gen.pmax / 100);
+  const remainder = gen.pmax % 100;
+  let accumulated = 0;
+
+  function createBlock(width, level) {
+    const block = document.createElement("div");
+    block.className = "power-block";
+    block.style.width = `${width}px`;
+    block.style.height = "20px";
+    block.style.borderRadius = "4px";
+    block.style.background = level <= gen.pg ? "var(--gen-on)" : "var(--gen-off)";
+    block.style.cursor = gen.pg > 0 ? "pointer" : "default";
+    block.title = `${level} MW`;
+
+    block.addEventListener("mousedown", () => {
+      if (gen.pg === 0) return;
+      const percent = Math.round((level / gen.pmax) * 100);
+
+      fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent })
+      })
+        .then(res => res.json())
+        .then(data => {
+          currentGenerators = data.generators;
+          renderGenerators(currentGenerators);
+          renderLines(data.lines, data.solved !== false);
+          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+        });
+    });
+
+    return block;
+  }
+
+  for (let i = 0; i < fullBlocks; i++) {
+    accumulated += 100;
+    blockRow.appendChild(createBlock(20, accumulated));
+  }
+
+  if (remainder > 0) {
+    accumulated += remainder;
+    blockRow.appendChild(createBlock(20 * (remainder / 100), accumulated));
+  }
+
+  powerContainer.appendChild(blockRow);
 
   const right = document.createElement("div");
   right.className = "gen-section right";
 
-  if (gen.pg === 0) {
-    const toggle = document.createElement("div");
-toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
-toggle.textContent = gen.pg === 0 ? "+" : "−";
+  const toggle = document.createElement("div");
+  toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
+  toggle.textContent = gen.pg === 0 ? "+" : "−";
 
-toggle.onclick = async () => {
-  const percent = gen.pg === 0 ? 50 : 0;
+  toggle.onclick = async () => {
+    const percent = gen.pg === 0 ? 100 : 0;
 
-  const res = await fetch(`/api/set_generation/${gen.index}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ percent })
-  });
+    const res = await fetch(`/api/set_generation/${gen.index}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ percent })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  currentGenerators = data.generators;
-  renderGenerators(currentGenerators);
-  renderLines(data.lines, data.solved !== false);
-  renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-};
+    currentGenerators = data.generators;
+    renderGenerators(currentGenerators);
+    renderLines(data.lines, data.solved !== false);
+    renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+  };
 
-right.appendChild(toggle);
-  }
+  right.appendChild(toggle);
 
   card.appendChild(left);
   card.appendChild(center);
