@@ -471,6 +471,38 @@ body {
   box-shadow: 0 0 3px rgba(0,0,0,0.2) inset;
 }
 
+.power-block-row {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+  align-items: center;
+  position: relative;
+}
+
+.power-block {
+  height: 20px;
+  min-width: 10px;
+  background-color: var(--gen-off);
+  border: 1px solid rgba(0, 0, 0, 0.2);  /* thin outline */
+  border-radius: 4px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  box-shadow: inset 0 0 1px rgba(0,0,0,0.1);
+}
+
+.generator-card.inactive .power-block {
+  background-color: #aaa;
+  opacity: 0.4;
+  border-color: rgba(0, 0, 0, 0.4);
+}
+
+.generator-card.active .power-block {
+  cursor: pointer;
+}
+
+.generator-card .power-block:hover {
+  filter: brightness(1.2);
+}
+
 .gen-impact-row {
   display: flex;
   align-items: center;
@@ -916,6 +948,7 @@ function createGeneratorCard(gen, maxPmax) {
   const relativePmax = Math.round((gen.pmax / maxPmax) * 100);
   const card = document.createElement("div");
   card.className = "generator-card";
+  card.classList.add(gen.pg === 0 ? "inactive" : "active");
 
   function getCostColor(cost) {
     if (cost < 2) return 'green';
@@ -969,6 +1002,7 @@ function createGeneratorCard(gen, maxPmax) {
   blockRow.style.display = "flex";
   blockRow.style.gap = "2px";
   blockRow.style.marginTop = "4px";
+  blockRow.style.alignItems = "center";
 
   const fullBlocks = Math.floor(gen.pmax / 100);
   const remainder = gen.pmax % 100;
@@ -982,6 +1016,7 @@ function createGeneratorCard(gen, maxPmax) {
     block.style.borderRadius = "4px";
     block.style.background = level <= gen.pg ? "var(--gen-on)" : "var(--gen-off)";
     block.style.cursor = gen.pg > 0 ? "pointer" : "default";
+    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
     block.title = `${level} MW`;
 
     block.addEventListener("mousedown", () => {
@@ -1015,6 +1050,14 @@ function createGeneratorCard(gen, maxPmax) {
     blockRow.appendChild(createBlock(20 * (remainder / 100), accumulated));
   }
 
+  // ➕ MW label to the right of the blocks
+  const maxLabel = document.createElement("span");
+  maxLabel.style.marginLeft = "8px";
+  maxLabel.style.fontSize = "0.75rem";
+  maxLabel.style.color = "var(--text-light)";
+  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
+
+  blockRow.appendChild(maxLabel);
   powerContainer.appendChild(blockRow);
 
   const right = document.createElement("div");
@@ -1048,6 +1091,7 @@ function createGeneratorCard(gen, maxPmax) {
   card.appendChild(right);
   return card;
 }
+
 
 function bindSortListeners() {
   console.log("Binding sort listeners...");

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>overview bar redesign</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+.overview-card.improved {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background-color: #2a2a2a;
+  border-radius: 16px;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+  max-width: 1400px;
+  height: 100%;
+  color: #eee;
+  gap: 1.25rem;
+}
+
+.overview-section {
+  flex: 1 1 25%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.section-banner {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #ccc;
+  margin-bottom: 0.4rem;
+}
+
+.power-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.power-block {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  margin: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.power-block.goal {
+  background: #666;
+}
+
+.power-block.full {
+  background: #81c784;
+}
+
+.power-block.over {
+  background: #e53935;
+  color: white;
+}
+
+.power-block.partial {
+  background: linear-gradient(to right, #81c784 50%, #666 50%);
+}
+
+
+
+.goal-indicator {
+  position: relative;
+  font-size: 1rem;
+  text-align: center;
+  height: 1.2rem;
+}
+.goal-line {
+  width: 2px;
+  height: 20px;
+  background: #ccc;
+  margin: 0 auto;
+  transform: translateY(2px);
+}
+
+.bar-container {
+  height: 14px;
+  background: #444;
+  border-radius: 7px;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.bar-container {
+  display: flex;
+  height: 14px;
+  background: #444;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-fill.cost-fill {
+  background: #ffc107;
+}
+
+.bar-fill.emissions-fill {
+  background: linear-gradient(to right, #4caf50, gray);
+}
+
+.bar-fill.over-fill {
+  background: #e53935;
+}
+
+.cost-bar-fill.over,
+.emissions-bar-fill.over {
+  background: #e53935 !important;
+}
+
+.bar-label {
+  font-size: 0.75rem;
+  color: #bbb;
+  margin-top: 0.4rem;
+  text-align: right;
+}
+
+.scenario-banner {
+  flex-basis: 100%;
+  background: #3a3a3a;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.25rem;
+}
+.scenario-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #eee;
+}
+.scenario-desc {
+  font-size: 0.8rem;
+  color: #bbb;
+  margin-top: 2px;
+}
+
+.overview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  background: var(--bg-soft);
+  padding: 1rem;
+  border-radius: 12px;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.overview-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+
+
+
+</style>
+</head>
+<body>
+<div class="overview-card improved">
+  <!-- Power (takes up most space) -->
+  <div class="overview-section power-section grow-2">
+    <div class="section-banner">🔌 Power</div>
+    <div class="power-blocks">
+      <div class="power-block full"></div><div class="power-block full"></div><div class="power-block full"></div>
+      <div class="power-block full"></div><div class="power-block full"></div><div class="power-block full"></div>
+      <div class="power-block full"></div><div class="power-block full"></div><div class="power-block full"></div>
+      <div class="power-block full"></div><div class="power-block full"></div><div class="power-block full"></div>
+      <div class="power-block over">+300</div>
+    </div>
+    <div class="bar-label" id="power-label">–</div>
+  </div>
+
+  <!-- Cost -->
+  <div class="overview-section grow-1">
+    <div class="section-banner">💰 Cost</div>
+    <div class="goal-indicator">🎯<div class="goal-line"></div></div>
+    <div class="bar-container">
+  <div class="bar-fill cost-bar-fill" style="width: 75%;"></div>
+  <div class="bar-fill cost-over-fill" style="width: 0%; background: #e53935;"></div>
+</div>
+    <div class="bar-label">$2550 / $3000</div>
+  </div>
+
+  <!-- Emissions -->
+  <div class="overview-section grow-1">
+    <div class="section-banner">☁️ Emissions</div>
+    <div class="goal-indicator">🎯<div class="goal-line"></div></div>
+    <div class="bar-container">
+  <div class="bar-fill emissions-bar-fill" style="width: 40%; background: linear-gradient(to right, #4caf50, gray);"></div>
+  <div class="bar-fill emissions-over-fill" style="width: 0%; background: #e53935;"></div>
+</div>
+    <div class="bar-label">80 / 200 CO₂</div>
+  </div>
+
+  <!-- Scenario inline -->
+  <div class="overview-scenario inline-scenario">
+    <div class="scenario-title">Scenario: Clean North Power</div>
+    <div class="scenario-desc">Bonus: Only use North generators</div>
+  </div>
+</div>
+<div class="overview-controls">
+  <label>
+    🔌 Goal Blocks:
+    <input type="number" id="powerGoal" min="0" max="30" value="15">
+  </label>
+  <label>
+    🔌 Powered Blocks:
+    <input type="number" id="powerFilled" min="0" max="30" value="18">
+  </label>
+
+  <label>
+    💰 Cost Goal:
+    <input type="number" id="costGoal" value="3000">
+  </label>
+  <label>
+    💰 Current Cost:
+    <input type="number" id="costCurrent" value="2550">
+  </label>
+
+  <label>
+    ☁️ Emission Goal:
+    <input type="number" id="emGoal" value="200">
+  </label>
+  <label>
+    ☁️ Current Emissions:
+    <input type="number" id="emCurrent" value="80">
+  </label>
+</div>
+
+
+
+
+
+<script>
+const inputs = [
+  "powerGoal", "powerFilled",
+  "costGoal", "costCurrent",
+  "emGoal", "emCurrent"
+];
+inputs.forEach(id => document.getElementById(id).addEventListener("input", updateOverview));
+
+function updateOverview() {
+  // Power logic
+const powerGoal = parseFloat(document.getElementById("powerGoal").value);
+const powerFilled = parseFloat(document.getElementById("powerFilled").value);
+const container = document.querySelector(".power-blocks");
+const label = document.getElementById("power-label");
+container.innerHTML = "";
+
+const blockCount = Math.ceil(powerGoal); // Total blocks to draw
+const overAmount = powerFilled - powerGoal;
+const showOver = overAmount > 0;
+
+for (let i = 0; i < blockCount; i++) {
+  const block = document.createElement("div");
+  block.className = "power-block goal"; // default gray
+
+  const fillStart = i;
+  const fillEnd = i + 1;
+
+  if (powerFilled >= fillEnd) {
+    block.className = "power-block full"; // full green
+  } else if (powerFilled > fillStart) {
+    block.className = "power-block partial"; // partial fill
+  }
+
+  container.appendChild(block);
+}
+
+// Turn last block red if overfilled
+if (showOver && blockCount > 0) {
+  const lastBlock = container.lastElementChild;
+  if (lastBlock) {
+    lastBlock.className = "power-block over";
+    const roundedOver = Math.ceil(overAmount);
+    lastBlock.textContent = roundedOver > 20 ? "!!!" : `+${roundedOver}`;
+  }
+}
+
+label.textContent = `${powerFilled} / ${powerGoal} Blocks`;
+
+
+  // Cost logic
+  const cost = parseFloat(document.getElementById("costCurrent").value);
+  const costGoal = parseFloat(document.getElementById("costGoal").value);
+  const costFill = document.querySelector(".cost-bar-fill");
+  const costOver = document.querySelector(".cost-over-fill");
+  const costPct = Math.min(100, (cost / costGoal) * 100);
+  const costExcess = Math.max(0, ((cost - costGoal) / costGoal) * 100);
+  costFill.style.width = `${Math.min(100, costPct)}%`;
+  costOver.style.width = `${Math.min(100, costExcess)}%`;
+
+  // Emissions logic
+  const em = parseFloat(document.getElementById("emCurrent").value);
+  const emGoal = parseFloat(document.getElementById("emGoal").value);
+  const emFill = document.querySelector(".emissions-bar-fill");
+  const emOver = document.querySelector(".emissions-over-fill");
+  const emPct = Math.min(100, (em / emGoal) * 100);
+  const emExcess = Math.max(0, ((em - emGoal) / emGoal) * 100);
+  emFill.style.width = `${Math.min(100, emPct)}%`;
+  emOver.style.width = `${Math.min(100, emExcess)}%`;
+}
+
+updateOverview(); // Initial call to set up the overview
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overview Bar Visualization Variants</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #1c1c1c;
+      color: #eee;
+      margin: 0;
+      padding: 2rem;
+    }
+    .variant-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin: 2rem 0 0.5rem;
+    }
+    .overview-card {
+      display: flex;
+      flex-wrap: wrap;
+      background-color: #2a2a2a;
+      border-radius: 20px;
+      padding: 1rem 1.5rem;
+      gap: 1rem;
+      justify-content: space-between;
+      align-items: flex-start;
+      max-width: 1200px;
+    }
+    .overview-section {
+      flex: 1 1 200px;
+      min-width: 180px;
+    }
+    .label {
+      font-size: 0.85rem;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    .bar-track, .bar-circle-track, .bar-dots {
+      background-color: #444;
+      border-radius: 6px;
+      position: relative;
+      margin-top: 6px;
+    }
+    .bar-track {
+      height: 14px;
+      width: 100%;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background-color: #42a5f5;
+      width: 0%;
+    }
+    .bar-label {
+      position: absolute;
+      top: -18px;
+      right: 0;
+      font-size: 0.75rem;
+      color: #ccc;
+      white-space: nowrap;
+    }
+    .bar-circle-track {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: conic-gradient(#4caf50 40%, #444 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: white;
+    }
+    .bar-dots {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      background: #666;
+      border-radius: 50%;
+    }
+    .dot.full { background: #f44336; }
+    .overview-scenario {
+      flex: 1 1 200px;
+      min-width: 180px;
+      background: #3a3a3a;
+      padding: 1rem;
+      border-radius: 12px;
+    }
+    .scenario-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .scenario-bonus {
+      font-size: 0.75rem;
+      color: #bbb;
+      margin-top: 4px;
+    }
+
+.dot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #666;
+  border-radius: 50%;
+}
+.dot.full { background: #81c784; }
+.dot.over { background: orange; }
+
+/* Target emoji above marker */
+.goal-marker {
+  text-align: center;
+  margin-bottom: 0.25rem;
+  font-size: 1.1rem;
+  position: relative;
+}
+.goal-arrow {
+  font-size: 1rem;
+  color: #bbb;
+  transform: translateY(-4px);
+}
+
+/* Bowl-shaped cost fill */
+.bowl-container {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  background: #333;
+  border-radius: 0 0 40px 40px;
+  overflow: hidden;
+  box-shadow: inset 0 -1px 3px #000;
+}
+.bowl-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: #ffc107;
+  transition: height 0.3s ease;
+}
+
+/* Capsule-shaped emissions fill */
+.capsule-container {
+  position: relative;
+  width: 30px;
+  height: 60px;
+  margin: 0 auto;
+  border-radius: 20px;
+  background: #444;
+  overflow: hidden;
+  box-shadow: inset 0 0 4px #000;
+}
+.capsule-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  transition: height 0.3s ease;
+}
+
+/* Scenario styling */
+.scenario-bubble {
+  background: #3a3a3a;
+  padding: 1rem;
+  border-radius: 12px;
+}
+  </style>
+</head>
+<body>
+<h1>Overview Visualization Variants</h1>
+<div class="variant-title">Variant A: Standard Bar Fills</div>
+
+<div class="overview-card">
+  <!-- POWER SECTION -->
+  <div class="overview-section">
+    <div class="label">Power</div>
+    <div class="goal-marker">🎯<div class="goal-arrow">⬇</div></div>
+    <div class="dot-row">
+      <!-- 15 dots = 1500 MW target -->
+      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
+      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
+      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
+      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
+      <div class="dot over"></div><div class="dot over"></div><div class="dot over"></div>
+    </div>
+  </div>
+
+  <!-- COST SECTION -->
+  <div class="overview-section">
+    <div class="label">Cost</div>
+    <div class="goal-marker">🎯<div class="goal-arrow">⬇</div></div>
+    <div class="bowl-container">
+      <div class="bowl-fill" style="height: 85%;"></div>
+    </div>
+    <div class="bar-label">$2550 / $3000</div>
+  </div>
+
+  <!-- EMISSIONS SECTION -->
+  <div class="overview-section">
+    <div class="label">Emissions</div>
+    <div class="goal-marker">🎯<div class="goal-arrow">⬇</div></div>
+    <div class="capsule-container">
+      <div class="capsule-fill" style="height: 40%; background: linear-gradient(to top, gray, #4caf50);"></div>
+    </div>
+    <div class="bar-label">80 CO₂ / 200</div>
+  </div>
+
+  <!-- SCENARIO -->
+  <div class="overview-scenario scenario-bubble">
+    <div class="scenario-name">Clean North Power</div>
+    <div class="scenario-bonus">🎯 Bonus: Only use North generators</div>
+  </div>
+</div>
+        
+</body></html>
