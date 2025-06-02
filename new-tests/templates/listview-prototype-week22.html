@@ -627,13 +627,14 @@ body {
     let currentScenarioData = null;
     let availableScenarios = [];
     let currentGenerators = [];
+    let previousLineFlows = {};  // keyed by `from_bus-to_bus`
 
-
+    // TO DO: What is this function?  if not only for loading clean_north_power?
     async function loadData() {
       const res = await fetch('/api/scenario/clean_north_power');
       const data = await res.json();
       renderOverview(data.generators, data.lines);
-      renderLines(data.lines);
+      renderLines(data.lines, data.solved !== false);
       renderGenerators(data.generators);
       bindSortListeners();
     }
@@ -682,8 +683,9 @@ body {
         currentGenerators = data.generators;
 
         renderGenerators(currentGenerators);
-        renderLines(data.lines);
+        renderLines(data.lines, data.solved !== false);
         renderOverview(currentGenerators, data.lines, data.total_cost, data.solved);
+        console.log("🧪 Solved status?", data.solved);
       }
 
     function populateScenarioDropdown(scenarios, defaultId) {
@@ -702,10 +704,12 @@ body {
     }
 
         document.getElementById("scenario-select").addEventListener("change", (e) => {
+      previousLineFlows = {}; // reset previous flows
       loadScenario(e.target.value);
     });
 
     document.getElementById("reset-button").addEventListener("click", () => {
+      previousLineFlows = {}; // reset previous flows
       loadScenario(currentScenarioId); // reload current scenario
     });
 
@@ -733,18 +737,24 @@ function getLineLoadPct(line) {
   return line.rate_a > 0 ? (line.flow / line.rate_a) : 0;
 }
 
-function renderLines(lines) {
+function renderLines(lines, solved = true) {
   const container = document.getElementById("line-scroll");
   container.innerHTML = "";
 
   // ✅ Sort lines by load percentage descending
-    const sorted = [...lines].sort((a, b) => {
-      const pctA = getLineLoadPct(a);
-      const pctB = getLineLoadPct(b);
-      return pctB - pctA;
-    });
+  const sorted = [...lines].sort((a, b) => {
+    const pctA = getLineLoadPct(a);
+    const pctB = getLineLoadPct(b);
+    return pctB - pctA;
+  });
 
-    const statusLabel = document.getElementById("line-status");
+  const statusLabel = document.getElementById("line-status");
+
+  if (!solved) {
+    statusLabel.textContent = "⏳ No power flow yet";
+    statusLabel.className = "status-label warning";
+  } else {
+    console.log("🧪 Solved status?", solved);
     const overloadedCount = lines.filter(l => getLineLoadPct(l) > 1).length;
 
     if (overloadedCount === 0) {
@@ -757,22 +767,52 @@ function renderLines(lines) {
       statusLabel.textContent = `🟥 ${overloadedCount} line(s) OVERLOADED`;
       statusLabel.className = "status-label danger";
     }
+  }
 
   sorted.forEach(line => {
-    const pct = Math.round((line.flow / line.rate_a) * 100);
-    const color = d3.interpolateReds(pct / 100);
-    const textColor = pct > 60 ? "white" : "#111";
-
     const card = document.createElement("div");
     card.className = "line-card";
-    card.style.background = color;
-    card.style.color = textColor;
-    card.style.setProperty('--load', pct / 100);
-    card.innerHTML = `Line ${line.from_bus} → ${line.to_bus}<br>${pct}%`;
+
+    if (!solved) {
+      card.innerHTML = `
+        Line ${line.from_bus} → ${line.to_bus}<br>
+        <span style="font-size: 0.85rem; color: var(--text-faint);">(no power flow yet)</span>
+      `;
+    } else {
+      const pct = Math.round((line.flow / line.rate_a) * 100);
+      const color = d3.interpolateReds(pct / 100);
+      const textColor = pct > 60 ? "white" : "#111";
+      card.style.background = color;
+      card.style.color = textColor;
+      card.style.setProperty('--load', pct / 100);
+
+      const key = `${line.from_bus}-${line.to_bus}`;
+      const prev = previousLineFlows[key] ?? line.flow;
+      const oldPct = (prev / line.rate_a) * 100;
+      const newPct = (line.flow / line.rate_a) * 100;
+      const delta = Math.round(newPct - oldPct);
+      previousLineFlows[key] = line.flow;
+
+      let deltaText = "";
+      if (delta > 0) {
+        deltaText = `<span style="color: limegreen;">▲ +${delta}%</span>`;
+      } else if (delta < 0) {
+        deltaText = `<span style="color: crimson;">▼ ${Math.abs(delta)}%</span>`;
+      } else {
+        deltaText = `<span style="color: gray;">–</span>`;
+      }
+
+      card.innerHTML = `
+        Line ${line.from_bus} → ${line.to_bus}<br>
+        ${pct}%<br>
+        ${deltaText}
+      `;
+    }
 
     container.appendChild(card);
   });
 }
+
 
 
 function renderGenerators(gens) {
@@ -843,9 +883,21 @@ function createGeneratorCard(gen, maxPmax) {
 toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
 toggle.textContent = gen.pg === 0 ? "+" : "−";
 
-toggle.onclick = () => {
-  gen.pg = gen.pg === 0 ? 50 : 0; // simulate state change
+toggle.onclick = async () => {
+  const percent = gen.pg === 0 ? 50 : 0;
+
+  const res = await fetch(`/api/set_generation/${gen.index}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ percent })
+  });
+
+  const data = await res.json();
+
+  currentGenerators = data.generators;
   renderGenerators(currentGenerators);
+  renderLines(data.lines, data.solved !== false);
+  renderOverview(data.generators, data.lines, data.total_cost, data.solved);
 };
 
 right.appendChild(toggle);

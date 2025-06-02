@@ -109,6 +109,7 @@ class Grid:
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
     def update_case_from_objects(self):
+        print("🔍 Generator PGs before runpf:", [g.pg for g in self.generators])
         for gen in self.generators:
             pg = gen.pg
             self.case['gen'][gen.index][1] = pg      # column 1 = Pg
@@ -160,6 +161,9 @@ class Grid:
         for gen in self.generators:
             gen.unavailable = gen.index in disabled_gens
 
+        for b in self.branches:
+            print(f"{b.from_bus} → {b.to_bus} = {b.flow:.2f}")
+
         # Apply initial outputs
         initial_outputs = scenario_data.get("initial_outputs", {})
         for gen in self.generators:
@@ -177,28 +181,33 @@ class Grid:
 
 
     def run_power_flow(self):
-        # Reset the base case from the template
         self.case = copy.deepcopy(self.original_case)
-
-        # Inject pg value into case
         self.update_case_from_objects()
 
         try:
             options = ppoption(VERBOSE=0, OUT_ALL=0)
-            print("🚧 CASE GEN BEFORE RUNPF:\n", self.case['gen'])  # ✅ Add this!
+            print("🚧 CASE GEN BEFORE RUNPF:\n", self.case['gen'])
             results, success = runpf.runpf(self.case, options)
             print("✅ runpf executed, success =", success)
         except Exception as e:
             print("❌ runpf exception:", e)
-            return False
+            success = False
+            results = None
 
         if success:
             self.update_branch_flows(results['branch'])
             self.last_total_cost = self.compute_total_cost(results)
         else:
+            print("⚠️ Power flow failed — clearing branch flows")
+            success = False
+            for branch in self.branches:
+                branch.flow = 0.0
+                branch.overloaded = False
             self.last_total_cost = None
 
         return success
+
+
 
 
     def update_branch_flows(self, new_branch_data):

@@ -67,17 +67,30 @@ def set_generation(gen_id):
 
 @app.route('/api/scenario/<scenario_id>')
 def apply_scenario(scenario_id):
-    scenario = grid.apply_scenario(scenario_id)
     try:
+        scenario = grid.apply_scenario(scenario_id)
+        solved = grid.run_power_flow()
+
         return jsonify({
-            **scenario,  # 👈 expands all top-level fields from the scenario file
+            **scenario,
             'generators': grid.get_generators(),
-            'lines': grid.get_branches()
+            'lines': grid.get_branches(),
+            'total_cost': grid.last_total_cost,
+            'solved': solved
         })
+
     except Exception as e:
         print("❌ Error loading scenario:")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e),
+            "generators": grid.get_generators(),
+            "lines": grid.get_branches(),
+            "total_cost": None,
+            "solved": False
+        }), 500
+
+
     
 @app.route("/api/scenarios")
 def get_all_scenarios():
