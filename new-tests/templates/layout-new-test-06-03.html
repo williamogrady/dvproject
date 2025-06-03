@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ListView Layout Mock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+    }
+
+    #main-layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #listView-container {
+      width: 65%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map-panel {
+      width: 35%;
+      background-color: #b30000; /* red */
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    #row-1 { background-color: #336699; height: 30%; }  /* dark blue */
+    #row-2 { background-color: #4d88cc; height: 10%; }  /* medium blue */
+    #row-3 { background-color: #80b3ff; height: 50%; }  /* lighter blue */
+    #row-4 { background-color: #99ccff; height: 10%; }  /* lightest blue */
+  </style>
+</head>
+<body>
+  <div id="main-layout">
+    <div id="listView-container">
+      <div class="row" id="row-1">overview: power, cost, emissions, line loading</div>
+      <div class="row" id="row-2">scenario</div>
+      <div class="row" id="row-3">generators</div>
+      <div class="row" id="row-4">admin controls & submit</div>
+    </div>
+    <div id="map-panel">map</div>
+  </div>
+</body>
+</html>

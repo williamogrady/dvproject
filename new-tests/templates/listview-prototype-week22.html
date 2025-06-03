@@ -6,620 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
-<style>
-/* ===== BASE SETUP ===== */
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-  box-sizing: border-box;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  transition: background 0.3s ease, color 0.3s ease;
-}
-
-/* ===== THEME VARIABLES ===== */
-body {
-  transition: background 0.3s ease, color 0.3s ease;
-}
-
-/* Dark Mode Palette */
-.dark-theme {
-  --bg: #1c1c1c;
-  --bg-soft: #2a2a2a;
-  --bg-card: #3a3a3a;
-  --bg-deep: #2c2c2c;
-  --bg-gencard: #2c2c2c;
-
-  --border-light: #444;
-  --border-dark: #222;
-
-  --text: #eee;
-  --text-light: #ccc;
-  --text-faint: #999;
-
-  --accent: #42a5f5;
-  --accent-soft: #64b5f6;
-  --accent-faint: #bbdefb;
-
-  --gen-off: #444;
-  --gen-on: #81c784;
-  --gen-hover: #66bb6a;
-
-  --scrollbar-thumb: rgba(200, 200, 200, 0.3);
-  --scrollbar-track: rgba(50, 50, 50, 0.2);
-}
-
-/* Light Mode Palette */
-.light-theme {
-  --bg: #f4f4f4;
-  --bg-soft: #eaeaea;
-  --bg-card: #e0e0e0;
-  --bg-deep: #d4d4d4;
-  --bg-gencard: #dcdcdc;
-
-  --border-light: #cccccc;
-  --border-dark: #999999;
-
-  --text: #222;
-  --text-light: #444;
-  --text-faint: #666;
-
-  --accent: #1976d2;
-  --accent-soft: #90caf9;
-  --accent-faint: #e3f2fd;
-
-  --gen-off: #d6d6d6;
-  --gen-on: #a5d6a7;
-  --gen-hover: #81c784;
-
-  --scrollbar-thumb: rgba(128, 128, 128, 0.5);
-  --scrollbar-track: transparent;
-}
-
-/* ===== APPLY THEME ===== */
-body {
-  background-color: var(--bg);
-  color: var(--text);
-}
-
-/* ===== BUTTONS & SCROLLBAR ===== */
-.theme-button {
-  padding: 0.5rem 1rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background-color: var(--scrollbar-track);
-}
-
-/* ===== LAYOUT ===== */
-#main-layout {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-}
-
-#listView-container {
-  width: 65%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding: 0 20px;
-  box-sizing: border-box;
-  gap: 1rem;
-}
-
-#map-panel {
-  width: 35%;
-  background: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  color: #888;
-}
-
-.row {
-  display: flex;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.5rem 0;
-}
-
-/* ===== ROW 1: OVERVIEW ===== */
-#row-1 { height: 15%; }
-
-.overview-card {
-  background-color: var(--bg-card);
-  color: var(--text);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 20px;
-  padding: 1rem 2rem;
-  width: 100%;
-}
-
-.overview-scenario {
-  flex: 1;
-  max-width: 25%;
-  overflow: hidden;
-}
-
-.overview-emissions,
-.overview-cost,
-.overview-power {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.overview-power { align-items: flex-end; }
-
-.label {
-  font-size: 0.85rem;
-  color: var(--text-faint);
-  margin-bottom: 0.25rem;
-}
-
-.power-value {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #4caf50;
-}
-
-.cost-value {
-  font-size: 1.4rem;
-  color: #ffc107;
-}
-
-.emissions-value {
-  font-size: 1.2rem;
-  color: #f44336;
-}
-
-.scenario-name {
-  font-size: 1.1rem;
-  color: var(--text-light);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-/* ===== ROW 2: LINES ===== */
-#row-2 { height: 10%; gap: 1rem; }
-
-.lines-status-card {
-  width: 200px;
-  background: var(--bg-card);
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.lines-scroll-card {
-  flex: 1;
-  background: var(--bg-soft);
-  border-radius: 10px;
-  overflow-x: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  cursor: grab;
-}
-
-.line-card {
-  font-size: 0.95rem;
-  font-weight: bold;
-  min-width: 120px;
-  text-align: center;
-  padding: 0.5rem 1rem;
-  color: #111;
-  border-radius: 8px;
-  background-color: hsl(0, 100%, calc(100% - (var(--load, 0) * 70%)));
-}
-
-.status-label {
-  font-size: 1rem;
-  font-weight: bold;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  background-color: #4caf50;
-  color: #fff;
-  display: inline-block;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  transition: background 0.3s ease;
-}
-
-.status-label.warning { background-color: #f57c00; }
-.status-label.danger {
-  background-color: #f44336;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%   { box-shadow: 0 0 8px #f44336; }
-  50%  { box-shadow: 0 0 20px #f44336; }
-  100% { box-shadow: 0 0 8px #f44336; }
-}
-
-/* ===== ROW 3: GENERATORS ===== */
-#row-3 {
-  height: 60%;
-  padding: 0;
-}
-
-#generators-container {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  justify-content: space-between;
-  gap: 2rem;
-  padding: 0 1rem;
-  box-sizing: border-box;
-}
-
-.generator-column {
-  background-color: var(--bg-card);
-  color: var(--text);
-  flex: 1;
-  min-width: 0;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: inset 0 0 0 1px var(--border-dark);
-}
-
-.generator-header {
-  flex: 0 0 10%;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-dark);
-  box-sizing: border-box;
-}
-
-.column-label {
-  font-size: 0.95rem;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.25rem;
-}
-
-  /* Add sort arrow styles */
-.sort-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 4px;
-}
-
-.sort-btn {
-  background: var(--bg-soft);
-  color: var(--text-faint);
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sort-btn.active {
-  font-weight: bold;
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.sort-btn.asc::after {
-  content: " ▲";
-}
-.sort-btn.desc::after {
-  content: " ▼";
-}
-
-
-.generator-body {
-  flex: 1;
-  padding: 1rem;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-
-.generator-card {
-  display: flex;
-  width: 100%;
-  height: 90px;
-  margin-bottom: 1rem;
-  border-radius: 10px;
-  background-color: var(--bg-gencard);
-  color: var(--text);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-  font-size: 0.85rem;
-}
-
-.gen-section.left { width: 22%; }
-.gen-section.center { width: 58%; }
-.gen-section.right { width: 10%; }
-
-.impact-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  color: white;
-}
-
-.gen-section.left {
-  background-color: var(--bg-soft);
-  color: var(--text-light);
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.2rem;
-}
-
-.gen-name {
-  font-weight: bold;
-  font-size: 0.95rem;
-  color: white;
-  text-shadow:
-    -1px -1px 0 rgb(39, 39, 39),
-     1px -1px 0 rgb(39, 39, 39),
-    -1px  1px 0 rgb(39, 39, 39),
-     1px  1px 0 rgb(39, 39, 39);
-}
-
-.gen-number {
-  font-weight: bold italic;
-  font-size: 0.75rem;
-  color: white;
-  text-shadow:
-    -1px -1px 0 rgb(39, 39, 39),
-     1px -1px 0 rgb(39, 39, 39),
-    -1px  1px 0 rgb(39, 39, 39),
-     1px  1px 0 rgb(39, 39, 39);
-}
-
-.gen-type {
-  font-size: 0.7rem;
-  background-color: #e8e8e8;
-  color: rgb(39, 39, 39);
-  border-radius: 4px;
-  padding: 2px 6px;
-  text-transform: uppercase;
-}
-
-.gen-section.center {
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  background-color: var(--bg-gencard);
-  gap: 0.4rem;
-}
-
-
-/*
-.power-bar {
-  background: var(--gen-off);
-  height: 20px;
-  border-radius: 6px;
-  overflow: hidden;
-  position: relative;
-}
-
-.power-fill {
-  background: var(--gen-on);
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 6px;
-}
-
-.power-label-center {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  font-size: 0.75rem;
-  color: var(--text);
-  text-align: center;
-  line-height: 20px;
-  pointer-events: none;
-}
-*/
-
-.power-block.inactive {
-  cursor: default;
-  background-color: #e0e0e0;
-  border: 1px dashed #999;
-  box-shadow: none;
-}
-
-.power-block.on {
-  background-color: var(--gen-on);
-  box-shadow: 0 0 3px rgba(0,0,0,0.2) inset;
-}
-
-.power-block-row {
-  display: flex;
-  gap: 2px;
-  margin-top: 4px;
-  align-items: center;
-  position: relative;
-}
-
-.power-block {
-  height: 20px;
-  min-width: 10px;
-  background-color: var(--gen-off);
-  border: 1px solid rgba(0, 0, 0, 0.2);  /* thin outline */
-  border-radius: 4px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  box-shadow: inset 0 0 1px rgba(0,0,0,0.1);
-}
-
-.generator-card.inactive .power-block {
-  background-color: #aaa;
-  opacity: 0.4;
-  border-color: rgba(0, 0, 0, 0.4);
-}
-
-.generator-card.active .power-block {
-  cursor: pointer;
-}
-
-.generator-card .power-block:hover {
-  filter: brightness(1.2);
-}
-
-.gen-impact-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.85rem;
-  margin-top: 0.4rem;
-}
-
-.gen-cost, .gen-emissions {
-  display: flex;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.impact-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.impact-box {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-}
-
-.impact-label {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  white-space: nowrap;
-}
-
-
-.gen-section.right {
-  background-color: var(--bg-gencard);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.plus-button, .minus-button {
-  font-size: 1.5rem;
-  border: 2px dashed #666;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.plus-button:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.minus-button:hover {
-  background: #f44336;
-  border-color: #f44336;
-  color: white;
-}
-
-/* ===== ROW 4: CONTROLS ===== */
-#row-4 {
-  height: 10%;
-  display: flex;
-  gap: 1rem;
-  padding: 0 1rem;
-  box-sizing: border-box;
-  align-items: center;
-}
-
-.controls-left {
-  flex: 1;
-  background-color: var(--bg-deep);
-  border-radius: 10px;
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  color: var(--text);
-  font-size: 0.9rem;
-}
-
-.controls-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 160px;
-}
-
-.submit-button {
-  padding: 0.75rem 1.5rem;
-  background-color: var(--accent);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: bold;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.submit-button:hover {
-  background-color: #2196f3;
-}
-</style>
-
+  <link rel="stylesheet" href="/new-tests/css/listview-core.css">
 </head>
 <body class="dark-theme">
   <div id="main-layout">
@@ -629,9 +16,12 @@ body {
         <div class="overview-card">
 
           <div class="overview-power">
-            <div class="label">Power</div>
-            <div class="power-value" id="overview-power">–</div>
+          <div class="label">Power</div>
+          <div class="power-blocks-wrapper">
+            <div class="power-blocks" id="overview-power-blocks"></div>
+            <div class="power-block-label" id="overview-power-label">–</div>
           </div>
+        </div>
 
           <div class="overview-emissions">
             <div class="label">Emissions</div>
@@ -822,7 +212,47 @@ body {
         <div class="scenario-name">${currentScenarioData?.title || currentScenarioId || "No Scenario Loaded"}</div>
       `;
 
-      document.getElementById("overview-power").textContent = `${totalPower.toFixed(1)} MW`;
+ const BLOCK_SIZE = 100;
+const powerGoal = currentScenarioData?.target_mw || 150;
+const powerFilled = totalPower;
+
+const container = document.getElementById("overview-power-blocks");
+const label = document.getElementById("overview-power-label");
+container.innerHTML = "";
+
+const blockGoalCount = Math.ceil(powerGoal / BLOCK_SIZE);
+const scaledFilled = powerFilled / BLOCK_SIZE;
+const overAmount = scaledFilled - blockGoalCount;
+const showOver = overAmount > 0;
+
+for (let i = 0; i < blockGoalCount; i++) {
+  const block = document.createElement("div");
+  block.className = "power-block goal";
+
+  const fillStart = i;
+  const fillEnd = i + 1;
+
+  if (scaledFilled >= fillEnd) {
+    block.className = "power-block full";
+  } else if (scaledFilled > fillStart) {
+    block.className = "power-block partial";
+  }
+
+  container.appendChild(block);
+}
+
+if (showOver && blockGoalCount > 0) {
+  const lastBlock = container.lastElementChild;
+  if (lastBlock) {
+    lastBlock.className = "power-block over";
+    const roundedOver = Math.ceil(overAmount);
+    lastBlock.textContent = roundedOver > 20 ? "!!!" : `+${roundedOver}`;
+  }
+}
+
+label.textContent = `${powerFilled.toFixed(0)} / ${powerGoal} MW`;
+
+
       document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
       document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
       //document.getElementById("line-status-count").textContent = overloaded;
@@ -945,10 +375,20 @@ function getSortFunction(key, order) {
 
 
 function createGeneratorCard(gen, maxPmax) {
-  const relativePmax = Math.round((gen.pmax / maxPmax) * 100);
+
+  console.log("Checking gen", gen.station_name, {
+  isDisabled: currentScenarioData?.disabled_generators?.includes(gen.station_name),
+  isLocked: currentScenarioData?.locked_generators?.includes(gen.station_name)
+  });
+  const disabled = currentScenarioData?.disabled_generators?.includes(gen.station_name);
+  const locked = currentScenarioData?.locked_generators?.includes(gen.station_name);
+  console.log("example locked generator", currentScenarioData?.locked_generators?.[0]);
+  
   const card = document.createElement("div");
   card.className = "generator-card";
   card.classList.add(gen.pg === 0 ? "inactive" : "active");
+  if (disabled) card.classList.add("disabled");
+  if (locked) card.classList.add("locked");
 
   function getCostColor(cost) {
     if (cost < 2) return 'green';
@@ -999,10 +439,6 @@ function createGeneratorCard(gen, maxPmax) {
   const powerContainer = center.querySelector(".gen-power");
   const blockRow = document.createElement("div");
   blockRow.className = "power-block-row";
-  blockRow.style.display = "flex";
-  blockRow.style.gap = "2px";
-  blockRow.style.marginTop = "4px";
-  blockRow.style.alignItems = "center";
 
   const fullBlocks = Math.floor(gen.pmax / 100);
   const remainder = gen.pmax % 100;
@@ -1015,27 +451,27 @@ function createGeneratorCard(gen, maxPmax) {
     block.style.height = "20px";
     block.style.borderRadius = "4px";
     block.style.background = level <= gen.pg ? "var(--gen-on)" : "var(--gen-off)";
-    block.style.cursor = gen.pg > 0 ? "pointer" : "default";
     block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
     block.title = `${level} MW`;
 
-    block.addEventListener("mousedown", () => {
-      if (gen.pg === 0) return;
-      const percent = Math.round((level / gen.pmax) * 100);
-
-      fetch(`/api/set_generation/${gen.index}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ percent })
-      })
-        .then(res => res.json())
-        .then(data => {
-          currentGenerators = data.generators;
-          renderGenerators(currentGenerators);
-          renderLines(data.lines, data.solved !== false);
-          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-        });
-    });
+    if (!disabled && !locked && gen.pg > 0) {
+      block.style.cursor = "pointer";
+      block.addEventListener("mousedown", () => {
+        const percent = Math.round((level / gen.pmax) * 100);
+        fetch(`/api/set_generation/${gen.index}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ percent })
+        })
+          .then(res => res.json())
+          .then(data => {
+            currentGenerators = data.generators;
+            renderGenerators(currentGenerators);
+            renderLines(data.lines, data.solved !== false);
+            renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+          });
+      });
+    }
 
     return block;
   }
@@ -1044,19 +480,16 @@ function createGeneratorCard(gen, maxPmax) {
     accumulated += 100;
     blockRow.appendChild(createBlock(20, accumulated));
   }
-
   if (remainder > 0) {
     accumulated += remainder;
     blockRow.appendChild(createBlock(20 * (remainder / 100), accumulated));
   }
 
-  // ➕ MW label to the right of the blocks
   const maxLabel = document.createElement("span");
   maxLabel.style.marginLeft = "8px";
   maxLabel.style.fontSize = "0.75rem";
   maxLabel.style.color = "var(--text-light)";
   maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
-
   blockRow.appendChild(maxLabel);
   powerContainer.appendChild(blockRow);
 
@@ -1064,32 +497,36 @@ function createGeneratorCard(gen, maxPmax) {
   right.className = "gen-section right";
 
   const toggle = document.createElement("div");
-  toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
-  toggle.textContent = gen.pg === 0 ? "+" : "−";
 
-  toggle.onclick = async () => {
-    const percent = gen.pg === 0 ? 100 : 0;
+  if (locked) {
+    toggle.className = "minus-button";
+    toggle.textContent = "🔒";
+    toggle.style.cursor = "default";
+  } else {
+    toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
+    toggle.textContent = gen.pg === 0 ? "+" : "−";
 
-    const res = await fetch(`/api/set_generation/${gen.index}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ percent })
-    });
+    toggle.onclick = async () => {
+      const percent = gen.pg === 0 ? 100 : 0;
 
-    const data = await res.json();
+      const res = await fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent })
+      });
 
-    currentGenerators = data.generators;
-    renderGenerators(currentGenerators);
-    renderLines(data.lines, data.solved !== false);
-    renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-  };
-
+      const data = await res.json();
+      currentGenerators = data.generators;
+      renderGenerators(currentGenerators);
+      renderLines(data.lines, data.solved !== false);
+      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+    };
+  }
   right.appendChild(toggle);
-
-  card.appendChild(left);
-  card.appendChild(center);
-  card.appendChild(right);
-  return card;
+card.appendChild(left);
+card.appendChild(center);
+card.appendChild(right);
+return card;
 }
 
 

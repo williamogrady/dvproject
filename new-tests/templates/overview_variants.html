@@ -102,124 +102,77 @@
       color: #bbb;
       margin-top: 4px;
     }
-
-.dot-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0;
-}
-.dot {
-  width: 10px;
-  height: 10px;
-  background: #666;
-  border-radius: 50%;
-}
-.dot.full { background: #81c784; }
-.dot.over { background: orange; }
-
-/* Target emoji above marker */
-.goal-marker {
-  text-align: center;
-  margin-bottom: 0.25rem;
-  font-size: 1.1rem;
-  position: relative;
-}
-.goal-arrow {
-  font-size: 1rem;
-  color: #bbb;
-  transform: translateY(-4px);
-}
-
-/* Bowl-shaped cost fill */
-.bowl-container {
-  position: relative;
-  width: 100%;
-  height: 50px;
-  background: #333;
-  border-radius: 0 0 40px 40px;
-  overflow: hidden;
-  box-shadow: inset 0 -1px 3px #000;
-}
-.bowl-fill {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  background: #ffc107;
-  transition: height 0.3s ease;
-}
-
-/* Capsule-shaped emissions fill */
-.capsule-container {
-  position: relative;
-  width: 30px;
-  height: 60px;
-  margin: 0 auto;
-  border-radius: 20px;
-  background: #444;
-  overflow: hidden;
-  box-shadow: inset 0 0 4px #000;
-}
-.capsule-fill {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  transition: height 0.3s ease;
-}
-
-/* Scenario styling */
-.scenario-bubble {
-  background: #3a3a3a;
-  padding: 1rem;
-  border-radius: 12px;
-}
   </style>
 </head>
 <body>
 <h1>Overview Visualization Variants</h1>
 <div class="variant-title">Variant A: Standard Bar Fills</div>
 
-<div class="overview-card">
-  <!-- POWER SECTION -->
-  <div class="overview-section">
-    <div class="label">Power</div>
-    <div class="goal-marker">🎯<div class="goal-arrow">⬇</div></div>
-    <div class="dot-row">
-      <!-- 15 dots = 1500 MW target -->
-      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
-      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
-      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
-      <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div>
-      <div class="dot over"></div><div class="dot over"></div><div class="dot over"></div>
-    </div>
-  </div>
+        <div class="overview-card">
+          <div class="overview-section">
+            <div class="label">Cost</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 85%; background:#ffc107;"></div>
+              <div class="bar-label">$2550 / $3000</div>
+            </div>
+          </div>
+          <div class="overview-section">
+            <div class="label">Emissions</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 40%; background:#4caf50;"></div>
+              <div class="bar-label">80 CO₂ / 200</div>
+            </div>
+          </div>
+          <div class="overview-scenario">
+            <div class="label">Scenario</div>
+            <div class="scenario-name">Clean North Power</div>
+            <div class="scenario-bonus">🎯 Only use North generators</div>
+          </div>
+        </div>
+        
+<div class="variant-title">Variant B: Circular Emissions Tracker</div>
 
-  <!-- COST SECTION -->
-  <div class="overview-section">
-    <div class="label">Cost</div>
-    <div class="goal-marker">🎯<div class="goal-arrow">⬇</div></div>
-    <div class="bowl-container">
-      <div class="bowl-fill" style="height: 85%;"></div>
-    </div>
-    <div class="bar-label">$2550 / $3000</div>
-  </div>
+        <div class="overview-card">
+          <div class="overview-section">
+            <div class="label">Emissions</div>
+            <div class="bar-circle-track" style="background:conic-gradient(#f44336 40%, #444 0);">40%</div>
+          </div>
+          <div class="overview-section">
+            <div class="label">Cost</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 70%; background:#ff9800;"></div>
+              <div class="bar-label">$2100 / $3000</div>
+            </div>
+          </div>
+          <div class="overview-scenario">
+            <div class="label">Scenario</div>
+            <div class="scenario-name">Eco Moderate</div>
+            <div class="scenario-bonus">Limit both emissions and costs</div>
+          </div>
+        </div>
+        
+<div class="variant-title">Variant C: Dot Matrix Budget Tracker</div>
 
-  <!-- EMISSIONS SECTION -->
-  <div class="overview-section">
-    <div class="label">Emissions</div>
-    <div class="goal-marker">🎯<div class="goal-arrow">⬇</div></div>
-    <div class="capsule-container">
-      <div class="capsule-fill" style="height: 40%; background: linear-gradient(to top, gray, #4caf50);"></div>
-    </div>
-    <div class="bar-label">80 CO₂ / 200</div>
-  </div>
-
-  <!-- SCENARIO -->
-  <div class="overview-scenario scenario-bubble">
-    <div class="scenario-name">Clean North Power</div>
-    <div class="scenario-bonus">🎯 Bonus: Only use North generators</div>
-  </div>
-</div>
+        <div class="overview-card">
+          <div class="overview-section">
+            <div class="label">Cost</div>
+            <div class="bar-dots">
+              <div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot full"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+            <div class="bar-label" style="top:-1.5rem; position:relative;">$2550 / $3000</div>
+          </div>
+          <div class="overview-section">
+            <div class="label">Emissions</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 50%; background:#66bb6a;"></div>
+              <div class="bar-label">100 CO₂ / 200</div>
+            </div>
+          </div>
+          <div class="overview-scenario">
+            <div class="label">Scenario</div>
+            <div class="scenario-name">Frugal Burn</div>
+            <div class="scenario-bonus">Try to keep under $3000 and 200 CO₂</div>
+          </div>
+        </div>
         
 </body></html>

@@ -17,8 +17,11 @@
         "Line-13-14",
         "Line-23-24"
     ],
+    "locked_generators": [
+        "Gen25"
+    ],
     "initial_outputs": {
-        "Gen25": 75,
+        "Gen25": 100,
         "Gen31": 100
     },
     "bonus": "Only use North generators"

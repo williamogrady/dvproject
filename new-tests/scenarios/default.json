@@ -1,7 +1,7 @@
 {
   "scenario_id": "default",
   "title": "Default",
-  "target_mw": null,
+  "target_mw": 1000,
   "emissions_limit": null,
   "cost_limit": null,
   "line_limit_pct": null,
