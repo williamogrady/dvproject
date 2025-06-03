@@ -455,67 +455,72 @@ function createGeneratorCard(gen, maxPmax) {
     </div>
   `;
 
-  // Build dynamic power blocks row
-  const powerContainer = center.querySelector(".gen-power");
-  const blockRow = document.createElement("div");
-  blockRow.className = "power-block-row";
+// === Power block row ===
+const powerContainer = center.querySelector(".gen-power");
+const blockRow = document.createElement("div");
+blockRow.className = "power-block-row";
+powerContainer.appendChild(blockRow);  // 🔧 FIXED: append early!
 
-  const fullBlocks = Math.floor(gen.pmax / 100);     // each full block = 100 MW
-  const remainder = gen.pmax % 100;                  // final partial block
-  let accumulated = 0;
+// Build block levels
+let levels = [];
+let current = 0;
 
-  function createBlock(width, level) {
-    const block = document.createElement("div");
-    block.className = "power-block";
-    block.style.width = `${width}px`;
-    block.style.height = "20px";
-    block.style.borderRadius = "4px";
-    block.style.background = level <= gen.pg ? "var(--gen-on)" : "var(--gen-off)";
-    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
-    block.title = `${level} MW`;
+while (current + 100 <= gen.pmax) {
+  current += 100;
+  levels.push(current);
+}
+if (current < gen.pmax) {
+  current = gen.pmax; // Final remainder block
+  levels.push(current);
+}
 
-    // If not locked or disabled, allow interactive click to set output
-    if (!disabled && !locked && gen.pg > 0) {
-      block.style.cursor = "pointer";
-      block.addEventListener("mousedown", () => {
-        const percent = Math.round((level / gen.pmax) * 100);
-        fetch(`/api/set_generation/${gen.index}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ percent })
-        })
-          .then(res => res.json())
-          .then(data => {
-            currentGenerators = data.generators;
-            renderGenerators(currentGenerators);
-            renderLines(data.lines, data.solved !== false);
-            renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-          });
-      });
-    }
+function createBlock(level, isHalf = false) {
+  const block = document.createElement("div");
+  block.className = "power-block";
+  block.style.width = isHalf ? `10px` : `20px`;
+  block.style.height = "20px";
+  block.style.borderRadius = "4px";
+  block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+  block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
+  block.title = `${level} MW`;
 
-    return block;
+  if (!disabled && !locked) {
+    block.style.cursor = "pointer";
+    block.addEventListener("mousedown", () => {
+      const percent = (level === 100 && gen.pg === 100) ? 0 : Math.min(100, Math.round((level / gen.pmax) * 100));
+      fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent })
+      })
+        .then(res => res.json())
+        .then(data => {
+          currentGenerators = data.generators;
+          renderGenerators(currentGenerators);
+          renderLines(data.lines, data.solved !== false);
+          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+        });
+    });
   }
 
-  // Create all blocks
-  for (let i = 0; i < fullBlocks; i++) {
-    accumulated += 100;
-    blockRow.appendChild(createBlock(20, accumulated));
-  }
-  if (remainder > 0) {
-    accumulated += remainder;
-    blockRow.appendChild(createBlock(20 * (remainder / 100), accumulated));
-  }
+  return block;
+}
 
-  // Label showing max capacity
-  const maxLabel = document.createElement("span");
-  maxLabel.style.marginLeft = "8px";
-  maxLabel.style.fontSize = "0.75rem";
-  maxLabel.style.color = "var(--text-light)";
-  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
-  blockRow.appendChild(maxLabel);
+// Append blocks to the row
+levels.forEach((level, i) => {
+  const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+  const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+  blockRow.appendChild(createBlock(level, isHalf));
+});
 
-  powerContainer.appendChild(blockRow);
+// Add max capacity label
+const maxLabel = document.createElement("span");
+maxLabel.style.marginLeft = "8px";
+maxLabel.style.fontSize = "0.75rem";
+maxLabel.style.color = "var(--text-light)";
+maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
+blockRow.appendChild(maxLabel);
+
 
   // ========== RIGHT SECTION ==========
   const right = document.createElement("div");
