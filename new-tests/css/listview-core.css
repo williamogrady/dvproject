@@ -414,15 +414,9 @@ body {
   font-size: 0.85rem;
 }
 
-.generator-card.disabled {
-  filter: grayscale(100%);
-  pointer-events: none;
-}
-
-.generator-card.locked {
-  border: 2px solid gold;
-  box-shadow: 0 0 10px gold;
-}
+.generator-card.locked { border: 2px solid gold; }
+.generator-card.disabled { opacity: 0.3; filter: grayscale(100%); }
+.generator-card.disabled .power-block { pointer-events: none; }
 
 .generator-card.locked .minus-button,
 .generator-card.disabled .plus-button,
@@ -432,7 +426,6 @@ body {
   cursor: not-allowed;
 }
 
-.generator-card.locked .power-block,
 .generator-card.disabled .power-block {
   pointer-events: none;
   opacity: 0.3;

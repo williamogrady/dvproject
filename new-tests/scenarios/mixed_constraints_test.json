@@ -1,0 +1,18 @@
+{
+  "scenario_id": "mixed_constraints_test",
+  "title": "Mixed Constraints Test",
+  "target_mw": 3000,
+  "cost_limit": 8000,
+  "emissions_limit": 3500,
+
+  "locked_generators": ["Gen24", "Gen42"],  
+  "disabled_generators": ["Gen13", "Gen91"],
+
+  "initial_outputs": {
+    "Gen24": 100,      
+    "Gen42": 200,
+    "Gen31": 150      
+  },
+  "disabled_lines": [],
+  "bonus": null
+}

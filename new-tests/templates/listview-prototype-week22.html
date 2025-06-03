@@ -122,7 +122,7 @@
       availableScenarios = data;
 
       // Find default scenario
-      const defaultScenario = data.find(s => s.scenario_id === "default");
+      const defaultScenario = data.find(s => s.scenario_id === "mixed_constraints_test");
 
         if (defaultScenario) {
     currentScenarioId = defaultScenario.scenario_id;
@@ -333,27 +333,34 @@ function renderLines(lines, solved = true) {
 
 function renderGenerators(gens) {
   currentGenerators = gens;
-  renderColumn("inactive");
-  renderColumn("active");
+
+  // Split gens by status
+  const lockedGens = gens.filter(g => g.locked);
+  const disabledGens = gens.filter(g => g.disabled);
+  const activeGens = gens.filter(g => g.pg > 0 && !g.locked && !g.disabled);
+  const inactiveGens = gens.filter(g => g.pg === 0 && !g.locked && !g.disabled);
+
+  // Pass specific arrays to renderColumn
+  renderColumn("inactive", inactiveGens);
+  renderColumn("active", [...lockedGens, ...activeGens]);
 }
 
-function renderColumn(type) {
+function renderColumn(type, gens) {
   const container = document.querySelector(`#${type}-container .generator-body`);
   container.innerHTML = "";
 
-  const isActive = type === "active";
   const { key, order } = activeSort[type];
   const maxPmax = Math.max(...currentGenerators.map(g => g.pmax));
+  const sorted = gens.slice().sort(getSortFunction(key, order));
 
-  const filtered = currentGenerators.filter(g => isActive ? g.pg > 0 : g.pg === 0);
-  const sorted = filtered.slice().sort(getSortFunction(key, order));
   console.log(`📦 Rendering ${type} list sorted by ${key} (${order})`);
-  console.log("First 3 names:", sorted.slice(0, 3).map(g => g.name));
+  console.log("First 3 names:", sorted.slice(0, 3).map(g => g.station_name || g.name));
 
   sorted.forEach(gen => {
     container.appendChild(createGeneratorCard(gen, maxPmax));
   });
 }
+
 
 function getSortFunction(key, order) {
   const dir = order === 'asc' ? 1 : -1;
@@ -365,22 +372,41 @@ function getSortFunction(key, order) {
 
 
 function createGeneratorCard(gen, maxPmax) {
-  const disabled = currentScenarioData?.disabled_generators?.includes(gen.station_name);
-  const locked = currentScenarioData?.locked_generators?.includes(gen.station_name);
+  
+  const genId = `Gen${gen.index}`;
 
+const locked = currentScenarioData?.locked_generators?.includes(genId);
+const disabled = currentScenarioData?.disabled_generators?.includes(genId);
+
+  // Determine whether it's currently producing power
+  const status = gen.pg === 0 ? "inactive" : "active";
+
+  // Create the main generator card container with dynamic classes
   const card = document.createElement("div");
-  card.className = "generator-card";
-  card.classList.add(gen.pg === 0 ? "inactive" : "active");
-  if (disabled) card.classList.add("disabled");
-  if (locked) card.classList.add("locked");
+  card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
+  // Debugging output: print generator status info in dev tools
+  console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
+  console.log("  → Bus:", gen.bus);
+  console.log("  → pg:", gen.pg);
+  console.log("  → In scenario disabled list:", currentScenarioData?.disabled_generators?.includes(gen.station_name));
+  console.log("  → In scenario locked list:", currentScenarioData?.locked_generators?.includes(gen.station_name));
+  console.log("  → Final styling:");
+  console.log("     ⮡", disabled ? "DISABLED" : locked ? "LOCKED" : status.toUpperCase());
+  console.groupEnd();
+
+  // Color-coded debug log for visual confirmation
+  const label = disabled ? "DISABLED" : locked ? "LOCKED" : status.toUpperCase();
+  const color = disabled ? "gray" : locked ? "goldenrod" : status === "active" ? "green" : "blue";
+  console.log(`%c⮡ Applying: ${label}`, `color: ${color}; font-weight: bold`);
+
+  // Helper functions to color cost/emissions indicators
   function getCostColor(cost) {
     if (cost < 2) return 'green';
     if (cost < 5) return 'yellow';
     if (cost < 7) return 'orange';
     return 'red';
   }
-
   function getEmissionColor(emissions) {
     if (emissions < 0.5) return 'green';
     if (emissions < 1.0) return '#88cc88';
@@ -388,6 +414,7 @@ function createGeneratorCard(gen, maxPmax) {
     return 'gray';
   }
 
+  // ========== LEFT SECTION ==========
   const left = document.createElement("div");
   const fuelColors = {
     'coal': '#614732',
@@ -395,6 +422,7 @@ function createGeneratorCard(gen, maxPmax) {
     'hydro': '#4faad1',
     'combined': '#ad7a37',
   };
+  // Set background color based on fuel type
   left.style.backgroundColor = fuelColors[gen.fuel_type.toLowerCase()] || 'var(--bg-soft)';
   left.className = "gen-section left";
   left.innerHTML = `
@@ -402,6 +430,7 @@ function createGeneratorCard(gen, maxPmax) {
     <div class="gen-number">Bus ${gen.bus}</div>
     <div class="gen-type">${gen.fuel_type}</div>`;
 
+  // ========== CENTER SECTION ==========
   const center = document.createElement("div");
   center.className = "gen-section center";
   center.innerHTML = `
@@ -420,12 +449,13 @@ function createGeneratorCard(gen, maxPmax) {
     </div>
   `;
 
+  // Build dynamic power blocks row
   const powerContainer = center.querySelector(".gen-power");
   const blockRow = document.createElement("div");
   blockRow.className = "power-block-row";
 
-  const fullBlocks = Math.floor(gen.pmax / 100);
-  const remainder = gen.pmax % 100;
+  const fullBlocks = Math.floor(gen.pmax / 100);     // each full block = 100 MW
+  const remainder = gen.pmax % 100;                  // final partial block
   let accumulated = 0;
 
   function createBlock(width, level) {
@@ -438,6 +468,7 @@ function createGeneratorCard(gen, maxPmax) {
     block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
     block.title = `${level} MW`;
 
+    // If not locked or disabled, allow interactive click to set output
     if (!disabled && !locked && gen.pg > 0) {
       block.style.cursor = "pointer";
       block.addEventListener("mousedown", () => {
@@ -460,6 +491,7 @@ function createGeneratorCard(gen, maxPmax) {
     return block;
   }
 
+  // Create all blocks
   for (let i = 0; i < fullBlocks; i++) {
     accumulated += 100;
     blockRow.appendChild(createBlock(20, accumulated));
@@ -469,19 +501,22 @@ function createGeneratorCard(gen, maxPmax) {
     blockRow.appendChild(createBlock(20 * (remainder / 100), accumulated));
   }
 
+  // Label showing max capacity
   const maxLabel = document.createElement("span");
   maxLabel.style.marginLeft = "8px";
   maxLabel.style.fontSize = "0.75rem";
   maxLabel.style.color = "var(--text-light)";
   maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
   blockRow.appendChild(maxLabel);
+
   powerContainer.appendChild(blockRow);
 
+  // ========== RIGHT SECTION ==========
   const right = document.createElement("div");
   right.className = "gen-section right";
-
   const toggle = document.createElement("div");
 
+  // Determine what the right-hand button should do and look like
   if (locked) {
     toggle.className = "minus-button";
     toggle.textContent = "🔒";
@@ -495,7 +530,6 @@ function createGeneratorCard(gen, maxPmax) {
   } else {
     toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
     toggle.textContent = gen.pg === 0 ? "+" : "−";
-
     toggle.onclick = async () => {
       const percent = gen.pg === 0 ? 100 : 0;
       const res = await fetch(`/api/set_generation/${gen.index}`, {
@@ -509,16 +543,18 @@ function createGeneratorCard(gen, maxPmax) {
       renderGenerators(currentGenerators);
       renderLines(data.lines, data.solved !== false);
       renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-      console.log(gen.station_name, "disabled:", disabled, "locked:", locked);
     };
   }
 
+  // Assemble the full card
   right.appendChild(toggle);
   card.appendChild(left);
   card.appendChild(center);
   card.appendChild(right);
+
   return card;
 }
+
 
 
 
@@ -559,9 +595,6 @@ function updateSortButtonStyles() {
     });
   });
 }
-
-
-
 
 
 document.getElementById("theme-toggle").addEventListener("click", () => {

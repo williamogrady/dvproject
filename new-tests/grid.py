@@ -43,6 +43,8 @@ class Generator:
         
         self.pmax = float(row[8])
         self.pg = 0
+        self.locked = False  # New attribute to track if generator is locked
+        self.disabled = False
 
 
 
@@ -52,12 +54,12 @@ class Generator:
             'bus': int(self.bus),
             'pmax': float(self.pmax),
             'pg': float(self.pg),
-            'unavailable': getattr(self, 'unavailable', False),
             'fuel_type': self.fuel_type,
             'cost_per_mw': self.cost_per_mw,
             'emissions_per_mw': self.emissions_per_mw,
-            'station_name': GENERATOR_NAMES.get(self.bus, f"Gen {self.bus}")
-
+            'station_name': GENERATOR_NAMES.get(self.bus, f"Gen {self.bus}"),
+            'disabled': getattr(self, 'disabled', False),
+            'locked': getattr(self, 'locked', False)
         }
     
     def set_percent(self, percent):
@@ -158,8 +160,15 @@ class Grid:
             for gid in scenario_data.get("disabled_generators", [])
         ]
 
+        locked_gens = [
+            int(gid.replace("Gen", "")) for gid in scenario_data.get("locked_generators", [])
+        ]
+
         for gen in self.generators:
-            gen.unavailable = gen.index in disabled_gens
+            gen.locked = gen.index in locked_gens
+
+        for gen in self.generators:
+            gen.disabled = gen.index in disabled_gens
 
         for b in self.branches:
             print(f"{b.from_bus} → {b.to_bus} = {b.flow:.2f}")
