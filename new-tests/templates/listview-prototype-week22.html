@@ -114,6 +114,8 @@
     let availableScenarios = [];
     let currentGenerators = [];
     let previousLineFlows = {};  // keyed by `from_bus-to_bus`
+    let activeGenerators = [];
+    let inactiveGenerators = [];
 
     async function fetchAllScenarios() {
       const res = await fetch("/api/scenarios");
@@ -334,17 +336,19 @@ function renderLines(lines, solved = true) {
 function renderGenerators(gens) {
   currentGenerators = gens;
 
-  // Split gens by status
   const lockedGens = gens.filter(g => g.locked);
   const disabledGens = gens.filter(g => g.disabled);
   const activeGens = gens.filter(g => g.pg > 0 && !g.locked && !g.disabled);
   const inactiveGens = gens.filter(g =>
-  (g.pg === 0 && !g.locked) || g.disabled
-);
+    (g.pg === 0 && !g.locked) || g.disabled
+  );
 
-  // Pass specific arrays to renderColumn
-  renderColumn("inactive", inactiveGens);
-  renderColumn("active", [...lockedGens, ...activeGens]);
+  // ✅ Save for future sorting
+  activeGenerators = [...lockedGens, ...activeGens];
+  inactiveGenerators = inactiveGens;
+
+  renderColumn("inactive", inactiveGenerators);
+  renderColumn("active", activeGenerators);
 }
 
 function renderColumn(type, gens) {
@@ -580,7 +584,9 @@ function bindSortListeners() {
       });
       button.classList.add('active', current.order);
 
-      renderColumn(type); // ✅ only once
+      // ✅ Pass correct array
+      const data = type === "active" ? activeGenerators : inactiveGenerators;
+      renderColumn(type, data);
     });
   });
 }
