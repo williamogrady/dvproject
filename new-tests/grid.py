@@ -1,6 +1,4 @@
 # grid.py
-
-
 from pypower import case118, runpf
 from pypower.ppoption import ppoption
 import numpy as np
@@ -147,28 +145,36 @@ class Grid:
     def apply_scenario(self, scenario_id):
         import os
         import json
+        
 
         path = os.path.join("scenarios", f"{scenario_id}.json")
         with open(path, 'r') as f:
             scenario_data = json.load(f)
 
         self.active_scenario = scenario_data
+        initial_outputs = scenario_data.get("initial_outputs", {})
 
-        # Reset generator states
+        def extract_bus_id(gid):
+            if gid.startswith("Gen") and gid[3:].isdigit():
+                return int(gid[3:])
+            return None
+
         disabled_gens = [
-            int(gid.replace("Gen", ""))
-            for gid in scenario_data.get("disabled_generators", [])
+            extract_bus_id(gid) for gid in scenario_data.get("disabled_generators", [])
         ]
+        disabled_gens = [bus for bus in disabled_gens if bus is not None]
 
         locked_gens = [
-            int(gid.replace("Gen", "")) for gid in scenario_data.get("locked_generators", [])
+            extract_bus_id(gid) for gid in scenario_data.get("locked_generators", [])
         ]
+        locked_gens = [bus for bus in locked_gens if bus is not None]
+
 
         for gen in self.generators:
-            gen.locked = gen.index in locked_gens
-
-        for gen in self.generators:
-            gen.disabled = gen.index in disabled_gens
+            gen.pg = 0
+            gen.disabled = gen.bus in disabled_gens
+            gen.locked = gen.bus in locked_gens
+            gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
 
         for b in self.branches:
             print(f"{b.from_bus} → {b.to_bus} = {b.flow:.2f}")

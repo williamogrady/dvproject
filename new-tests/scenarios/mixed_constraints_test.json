@@ -6,12 +6,12 @@
   "emissions_limit": 3500,
 
   "locked_generators": ["Gen24", "Gen42"],  
-  "disabled_generators": ["Gen13", "Gen91"],
+  "disabled_generators": ["Gen1", "Gen4"],
 
   "initial_outputs": {
     "Gen24": 100,      
-    "Gen42": 200,
-    "Gen31": 150      
+    "Gen42": 100,
+    "Gen31": 107     
   },
   "disabled_lines": [],
   "bonus": null

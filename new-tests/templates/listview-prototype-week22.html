@@ -376,10 +376,9 @@ function getSortFunction(key, order) {
 
 function createGeneratorCard(gen, maxPmax) {
   
-  const genId = `Gen${gen.index}`;
-
-const locked = currentScenarioData?.locked_generators?.includes(genId);
-const disabled = currentScenarioData?.disabled_generators?.includes(genId);
+  const genId = `Gen${gen.bus}`;
+  const locked = currentScenarioData?.locked_generators?.includes(genId);
+  const disabled = currentScenarioData?.disabled_generators?.includes(genId);
 
   // Determine whether it's currently producing power
   const status = gen.pg === 0 ? "inactive" : "active";
