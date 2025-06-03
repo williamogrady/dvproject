@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
-  <link rel="stylesheet" href="/new-tests/css/listview-core.css">
+  <link rel="stylesheet" href="/css/listview-core.css">
 </head>
 <body class="dark-theme">
   <div id="main-layout">
@@ -114,16 +114,6 @@
     let availableScenarios = [];
     let currentGenerators = [];
     let previousLineFlows = {};  // keyed by `from_bus-to_bus`
-
-    // TO DO: What is this function?  if not only for loading clean_north_power?
-    async function loadData() {
-      const res = await fetch('/api/scenario/clean_north_power');
-      const data = await res.json();
-      renderOverview(data.generators, data.lines);
-      renderLines(data.lines, data.solved !== false);
-      renderGenerators(data.generators);
-      bindSortListeners();
-    }
 
     async function fetchAllScenarios() {
       const res = await fetch("/api/scenarios");
@@ -375,15 +365,9 @@ function getSortFunction(key, order) {
 
 
 function createGeneratorCard(gen, maxPmax) {
-
-  console.log("Checking gen", gen.station_name, {
-  isDisabled: currentScenarioData?.disabled_generators?.includes(gen.station_name),
-  isLocked: currentScenarioData?.locked_generators?.includes(gen.station_name)
-  });
   const disabled = currentScenarioData?.disabled_generators?.includes(gen.station_name);
   const locked = currentScenarioData?.locked_generators?.includes(gen.station_name);
-  console.log("example locked generator", currentScenarioData?.locked_generators?.[0]);
-  
+
   const card = document.createElement("div");
   card.className = "generator-card";
   card.classList.add(gen.pg === 0 ? "inactive" : "active");
@@ -501,14 +485,19 @@ function createGeneratorCard(gen, maxPmax) {
   if (locked) {
     toggle.className = "minus-button";
     toggle.textContent = "🔒";
+    toggle.title = "Locked by scenario";
     toggle.style.cursor = "default";
+  } else if (disabled) {
+    toggle.className = "minus-button";
+    toggle.textContent = "−";
+    toggle.title = "Disabled in this scenario";
+    toggle.style.cursor = "not-allowed";
   } else {
     toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
     toggle.textContent = gen.pg === 0 ? "+" : "−";
 
     toggle.onclick = async () => {
       const percent = gen.pg === 0 ? 100 : 0;
-
       const res = await fetch(`/api/set_generation/${gen.index}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -520,14 +509,17 @@ function createGeneratorCard(gen, maxPmax) {
       renderGenerators(currentGenerators);
       renderLines(data.lines, data.solved !== false);
       renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      console.log(gen.station_name, "disabled:", disabled, "locked:", locked);
     };
   }
+
   right.appendChild(toggle);
-card.appendChild(left);
-card.appendChild(center);
-card.appendChild(right);
-return card;
+  card.appendChild(left);
+  card.appendChild(center);
+  card.appendChild(right);
+  return card;
 }
+
 
 
 function bindSortListeners() {

@@ -1,15 +1,17 @@
 # app.py
 
 import traceback
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, render_template, send_from_directory, jsonify, request
 from grid import Grid
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='css', static_url_path='/css')
 grid = Grid()
 
 @app.route('/')
 def index():
     return render_template('listview-prototype-week22.html')
+
 
 @app.route('/api/generators')
 def get_generators():

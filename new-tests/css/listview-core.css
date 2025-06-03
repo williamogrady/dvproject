@@ -289,15 +289,22 @@ body {
 }
 
 .status-label {
+  width: 100%;
+  height: 100%;
   font-size: 1rem;
   font-weight: bold;
-  padding: 0.5rem 1rem;
   border-radius: 8px;
   background-color: #4caf50;
   color: #fff;
-  display: inline-block;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
   transition: background 0.3s ease;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 .status-label.warning { background-color: #f57c00; }
@@ -408,7 +415,6 @@ body {
 }
 
 .generator-card.disabled {
-  opacity: 0.3;
   filter: grayscale(100%);
   pointer-events: none;
 }
@@ -417,6 +423,23 @@ body {
   border: 2px solid gold;
   box-shadow: 0 0 10px gold;
 }
+
+.generator-card.locked .minus-button,
+.generator-card.disabled .plus-button,
+.generator-card.disabled .minus-button {
+  pointer-events: none;
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.generator-card.locked .power-block,
+.generator-card.disabled .power-block {
+  pointer-events: none;
+  opacity: 0.3;
+  filter: grayscale(100%);
+}
+
+
 
 .gen-section.left { width: 22%; }
 .gen-section.center { width: 58%; }
