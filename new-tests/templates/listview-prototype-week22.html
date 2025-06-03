@@ -338,7 +338,9 @@ function renderGenerators(gens) {
   const lockedGens = gens.filter(g => g.locked);
   const disabledGens = gens.filter(g => g.disabled);
   const activeGens = gens.filter(g => g.pg > 0 && !g.locked && !g.disabled);
-  const inactiveGens = gens.filter(g => g.pg === 0 && !g.locked && !g.disabled);
+  const inactiveGens = gens.filter(g =>
+  (g.pg === 0 && !g.locked) || g.disabled
+);
 
   // Pass specific arrays to renderColumn
   renderColumn("inactive", inactiveGens);
@@ -360,6 +362,7 @@ function renderColumn(type, gens) {
     container.appendChild(createGeneratorCard(gen, maxPmax));
   });
 }
+
 
 
 function getSortFunction(key, order) {
