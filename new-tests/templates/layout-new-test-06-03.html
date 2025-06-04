@@ -54,8 +54,23 @@
   stroke-width: 4px;
 }
 
-    #row-1 { background-color: #336699; height: 30%; }  /* dark blue */
-    #row-2 { background-color: #4d88cc; height: 10%; }  /* medium blue */
+.line-load-indicator {
+  pointer-events: none;
+}
+
+.map-line.hovered {
+  stroke: orange;
+  stroke-width: 4px;
+}
+
+.line-load-indicator.hovered {
+  stroke: yellow;
+  stroke-width: 2px;
+}
+
+
+    #row-1 { background-color: #336699; height: 10%; }  /* dark blue */
+    #row-2 { background-color: #4d88cc; height: 30%; }  /* medium blue */
     #row-3 { background-color: #80b3ff; height: 50%; }  /* lighter blue */
     #row-4 { background-color: #99ccff; height: 10%; }  /* lightest blue */
   </style>
@@ -64,7 +79,10 @@
   <div id="main-layout">
     <div id="listView-container">
       <div class="row" id="row-1">overview: power, cost, emissions, line loading</div>
-      <div class="row" id="row-2">scenario</div>
+      <div class="row" id="row-2" style="flex-direction: column; align-items: stretch;">
+      <div class="status-label" id="line-status">Line Loading</div>
+      <div class="lines-scroll-card" id="line-scroll" style="flex: 1; overflow-y: auto; padding: 6px;"></div>
+    </div>
       <div class="row" id="row-3">
       <div id="inactive-container" style="flex: 1; overflow-y: auto; padding: 8px;">
         <div class="generator-body" id="generator-list"></div>
@@ -80,6 +98,7 @@
   const svgWidth = 600;
   const svgHeight = 600;
   let selectedGeneratorId = null;
+  let selectedLineId = null;
 
   const mockGenerators = [
   { bus: 24, pg: 0, pmax: 400, cost_per_mw: 3.5, emissions_per_mw: 0.6, fuel_type: "Coal", station_name: "Gen24", index: 0, user_active: false },
@@ -100,6 +119,76 @@ function renderInactiveGeneratorCards() {
     container.appendChild(createGeneratorCard(gen));
   });
 }
+
+const mockLines = [
+  { from_bus: 38, to_bus: 37, flow: 900, rate_a: 1000 },
+  { from_bus: 95, to_bus: 96, flow: 700, rate_a: 1000 },
+  { from_bus: 96, to_bus: 97, flow: 500, rate_a: 900 },
+  { from_bus: 77, to_bus: 82, flow: 300, rate_a: 700 },
+  { from_bus: 82, to_bus: 96, flow: 950, rate_a: 1000 },
+  { from_bus: 94, to_bus: 95, flow: 850, rate_a: 950 },
+  { from_bus: 93, to_bus: 94, flow: 620, rate_a: 900 },
+  { from_bus: 94, to_bus: 100, flow: 880, rate_a: 1000 },
+  { from_bus: 92, to_bus: 94, flow: 790, rate_a: 1000 },
+  { from_bus: 92, to_bus: 100, flow: 640, rate_a: 1000 },
+  { from_bus: 100, to_bus: 104, flow: 540, rate_a: 1000 },
+  { from_bus: 104, to_bus: 105, flow: 490, rate_a: 900 },
+  { from_bus: 105, to_bus: 106, flow: 520, rate_a: 950 },
+  { from_bus: 106, to_bus: 108, flow: 310, rate_a: 800 },
+  { from_bus: 108, to_bus: 109, flow: 150, rate_a: 500 },
+  { from_bus: 109, to_bus: 110, flow: 450, rate_a: 1000 },
+  { from_bus: 110, to_bus: 112, flow: 300, rate_a: 700 },
+  { from_bus: 112, to_bus: 113, flow: 250, rate_a: 600 },
+  { from_bus: 113, to_bus: 115, flow: 730, rate_a: 900 },
+  { from_bus: 115, to_bus: 116, flow: 910, rate_a: 950 }
+];
+
+function getLineId(line) {
+  const a = Math.min(line.from_bus, line.to_bus);
+  const b = Math.max(line.from_bus, line.to_bus);
+  return `Line_Bus${a}_Bus${b}`;
+}
+
+function getLoadColor(pct) {
+  return d3.interpolateYlOrRd(pct);  // 0.0 → yellow, 1.0 → red
+}
+
+function renderLineCards(lines) {
+  const container = document.getElementById("line-scroll");
+  container.innerHTML = "";
+
+  lines.forEach(line => {
+    const pct = line.rate_a > 0 ? line.flow / line.rate_a : 0;
+    const color = getLoadColor(pct);
+    const card = document.createElement("div");
+
+    card.className = "line-card";
+    card.style.background = color;
+    card.style.margin = "4px";
+    card.style.padding = "6px";
+    card.style.borderRadius = "6px";
+    card.style.color = pct > 0.6 ? "white" : "black";
+    card.style.cursor = "pointer";
+
+    card.innerHTML = `Line ${line.from_bus} → ${line.to_bus}<br>${Math.round(pct * 100)}% load`;
+
+    card.addEventListener("mouseenter", () => {
+  const id = getLineId(line);
+  d3.select(`#${CSS.escape(id)}`).classed("hovered", true);
+  d3.select(`#load-${CSS.escape(id)}`).classed("hovered", true);
+});
+
+card.addEventListener("mouseleave", () => {
+  const id = getLineId(line);
+  d3.select(`#${CSS.escape(id)}`).classed("hovered", false);
+  d3.select(`#load-${CSS.escape(id)}`).classed("hovered", false);
+});
+
+
+    container.appendChild(card);
+  });
+}
+
 
 function createGeneratorCard(gen) {
   const genId = `Gen${gen.bus}`;
@@ -183,17 +272,83 @@ mapContainer.call(zoomBehavior.transform, initialZoom);
     fetch("/new-tests/full_nodes.json").then(res => res.json()),
     fetch("/new-tests/full_lines.json").then(res => res.json())
   ]).then(([nodes, lines]) => {
+    
+    
     // Draw lines first
-    zoomGroup.selectAll("path.line")
-      .data(lines)
-      .enter()
-      .append("path")
-      .attr("class", "map-line")
-      .attr("id", d => d.id)
-      .attr("d", d => d.d)
-      .attr("stroke", "#999")
-      .attr("stroke-width", 2)
-      .attr("fill", "none");
+   zoomGroup.selectAll("path.line")
+  .data(lines)
+  .enter()
+  .append("path")
+  .attr("class", "map-line")
+  .attr("id", d => d.id)
+  .attr("d", d => d.d)
+  .attr("stroke", "black")
+  .attr("stroke-width", 2)
+  .attr("fill", "none");
+
+  // Overlay load indicators (rectangles)
+zoomGroup.selectAll("rect.line-load")
+  .data(lines)
+  .enter()
+  .append("rect")
+  .attr("class", "line-load-indicator")
+  .attr("id", d => `load-${d.id}`)
+  .attr("width", 50)
+  .attr("height", 50)
+  .attr("fill", d => {
+    const match = mockLines.find(l => getLineId(l) === d.id);
+    const pct = match ? match.flow / match.rate_a : 0;
+    return getLoadColor(pct);
+  })
+  .attr("x", d => {
+    const bbox = document.getElementById(d.id)?.getBBox();
+    return bbox ? bbox.x + bbox.width / 2 - 2.5 : 0;
+  })
+  .attr("y", d => {
+    const bbox = document.getElementById(d.id)?.getBBox();
+    return bbox ? bbox.y + bbox.height / 2 - 2.5 : 0;
+  });
+
+// After drawing paths, add colored loading rectangles at midpoint
+setTimeout(() => {
+  const lineRects = zoomGroup.selectAll("rect.line-load-indicator")
+    .data(lines, d => d.id);  // ensure unique match
+
+  lineRects.enter()
+    .append("rect")
+    .attr("class", "line-load-indicator")
+    .attr("id", d => `load-${d.id}`)
+    .attr("width", 6)
+    .attr("height", 6)
+    .attr("fill", d => {
+      const match = currentLines.find(l => getLineId(l) === d.id);
+      const pct = match ? match.flow / match.rate_a : 0;
+      return getLoadColor(pct);
+    })
+    .attr("stroke", "black")
+    .attr("stroke-width", 0.5)
+    .attr("x", d => {
+      const path = document.getElementById(d.id);
+      return path ? path.getPointAtLength(path.getTotalLength() / 2).x - 3 : 0;
+    })
+    .attr("y", d => {
+      const path = document.getElementById(d.id);
+      return path ? path.getPointAtLength(path.getTotalLength() / 2).y - 3 : 0;
+    });
+
+  lineRects.exit().remove(); // Just in case
+}, 0);
+
+console.group("🧵 Line Matching Debug");
+console.log("Map line IDs from full_lines.json:");
+lines.slice(0, 10).forEach(l => console.log("→", l.id));
+
+console.log("Mock line IDs:");
+mockLines.slice(0, 10).forEach(l => console.log("→", getLineId(l)));
+
+console.groupEnd();
+
+
 
     // Draw nodes
    // ========== Generators (Circles) ==========
@@ -269,6 +424,7 @@ zoomGroup.selectAll("rect.bus")
 // Call after DOM and map are ready
 window.addEventListener("DOMContentLoaded", () => {
   renderInactiveGeneratorCards();
+  renderLineCards(mockLines);
 });
 
 card.addEventListener("mouseenter", () => {
@@ -280,6 +436,7 @@ card.addEventListener("mouseenter", () => {
 card.addEventListener("mouseleave", () => {
   d3.selectAll(".map-gen").classed("hovered", false);
 });
+
 </script>
 
 
