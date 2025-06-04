@@ -26,7 +26,7 @@
 
     #map-panel {
       width: 35%;
-      background-color: #b30000; /* red */
+      background-color: #ffffff; /* red */
       color: white;
       display: flex;
       align-items: center;
@@ -60,5 +60,84 @@
     </div>
     <div id="map-panel">map</div>
   </div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+  const svgWidth = 600;
+  const svgHeight = 600;
+
+  const mapContainer = d3.select("#map-panel")
+    .html("") // clear placeholder text
+    .append("svg")
+    .attr("width", "100%")
+    .attr("height", "100%")
+    .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const zoomGroup = mapContainer.append("g").attr("id", "zoom-group");
+
+  // Enable zooming
+ const zoomBehavior = d3.zoom()
+  .scaleExtent([0.2, 5])
+  .on("zoom", (event) => {
+    zoomGroup.attr("transform", event.transform);
+  });
+
+mapContainer.call(zoomBehavior);
+
+// Set initial zoom OUT
+const initialZoom = d3.zoomIdentity
+  .translate(svgWidth * 0.2, svgHeight * 0.2)  // shift toward top-left
+  .scale(0.4);                                // zoomed way out
+
+mapContainer.call(zoomBehavior.transform, initialZoom);
+
+  Promise.all([
+    fetch("/new-tests/full_nodes.json").then(res => res.json()),
+    fetch("/new-tests/full_lines.json").then(res => res.json())
+  ]).then(([nodes, lines]) => {
+    // Draw lines first
+    zoomGroup.selectAll("path.line")
+      .data(lines)
+      .enter()
+      .append("path")
+      .attr("class", "map-line")
+      .attr("id", d => d.id)
+      .attr("d", d => d.d)
+      .attr("stroke", "#999")
+      .attr("stroke-width", 2)
+      .attr("fill", "none");
+
+    // Draw nodes
+    zoomGroup.selectAll("circle.node")
+      .data(nodes)
+      .enter()
+      .append("circle")
+      .attr("class", "map-gen")
+      .attr("id", d => d.id)
+      .attr("cx", d => d.cx)
+      .attr("cy", d => d.cy)
+      .attr("r", 5)
+      .attr("fill", d => {
+        if (d.id.includes("Gen")) return "green";
+        if (d.id.includes("Load")) return "blue";
+        return "gray";
+      })
+      .attr("stroke", "black")
+      .attr("stroke-width", 0.5);
+
+      zoomGroup.selectAll("text.label")
+  .data(nodes)
+  .enter()
+  .append("text")
+  .attr("x", d => d.cx + 7)
+  .attr("y", d => d.cy + 3)
+  .text(d => d.id.includes("Gen") ? d.id : "")
+  .attr("font-size", "6px")
+  .attr("fill", "#222");
+  });
+</script>
+
+
 </body>
 </html>
