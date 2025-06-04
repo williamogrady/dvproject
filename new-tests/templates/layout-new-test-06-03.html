@@ -12,6 +12,11 @@
       font-family: sans-serif;
     }
 
+    .map-gen.selected {
+  stroke: #00f;
+  stroke-width: 4px;
+}
+
     #main-layout {
       display: flex;
       height: 100vh;
@@ -44,6 +49,11 @@
       color: white;
     }
 
+    .map-gen.hovered {
+  stroke: yellow;
+  stroke-width: 4px;
+}
+
     #row-1 { background-color: #336699; height: 30%; }  /* dark blue */
     #row-2 { background-color: #4d88cc; height: 10%; }  /* medium blue */
     #row-3 { background-color: #80b3ff; height: 50%; }  /* lighter blue */
@@ -55,7 +65,11 @@
     <div id="listView-container">
       <div class="row" id="row-1">overview: power, cost, emissions, line loading</div>
       <div class="row" id="row-2">scenario</div>
-      <div class="row" id="row-3">generators</div>
+      <div class="row" id="row-3">
+      <div id="inactive-container" style="flex: 1; overflow-y: auto; padding: 8px;">
+        <div class="generator-body" id="generator-list"></div>
+      </div>
+    </div>
       <div class="row" id="row-4">admin controls & submit</div>
     </div>
     <div id="map-panel">map</div>
@@ -65,7 +79,80 @@
 <script>
   const svgWidth = 600;
   const svgHeight = 600;
+  let selectedGeneratorId = null;
 
+  const mockGenerators = [
+  { bus: 24, pg: 0, pmax: 400, cost_per_mw: 3.5, emissions_per_mw: 0.6, fuel_type: "Coal", station_name: "Gen24", index: 0, user_active: false },
+  { bus: 72, pg: 0, pmax: 300, cost_per_mw: 2.8, emissions_per_mw: 0.4, fuel_type: "Gas", station_name: "Gen72", index: 1, user_active: false },
+  { bus: 73, pg: 0, pmax: 250, cost_per_mw: 3.2, emissions_per_mw: 0.5, fuel_type: "Hydro", station_name: "Gen73", index: 2, user_active: false }
+];
+
+function fetchAllScenarios() {
+  console.log("Using mock generators for demo");
+  currentGenerators = mockGenerators;
+  renderGenerators(mockGenerators);
+}
+
+function renderInactiveGeneratorCards() {
+  const container = document.getElementById("generator-list");
+  container.innerHTML = "";
+  mockGenerators.forEach(gen => {
+    container.appendChild(createGeneratorCard(gen));
+  });
+}
+
+function createGeneratorCard(gen) {
+  const genId = `Gen${gen.bus}`;
+  const card = document.createElement("div");
+  card.className = "generator-card";
+  card.textContent = `${gen.station_name} (Bus ${gen.bus}) — ${gen.pmax} MW`;
+  card.style.padding = "6px";
+  card.style.margin = "4px";
+  card.style.border = "1px solid #ccc";
+  card.style.borderRadius = "6px";
+  card.style.background = "#fff";
+  card.style.color = "#000";
+  card.style.cursor = "pointer";
+
+  function updateCardStyle() {
+    if (selectedGeneratorId === genId) {
+      card.style.border = "2px solid #00f";
+      card.style.background = "#ddeeff";
+    } else {
+      card.style.border = "1px solid #ccc";
+      card.style.background = "#fff";
+    }
+  }
+
+  card.addEventListener("mouseenter", () => {
+    d3.selectAll(".map-gen").classed("hovered", d => d.id === genId);
+  });
+
+  card.addEventListener("mouseleave", () => {
+    d3.selectAll(".map-gen").classed("hovered", false);
+  });
+
+  card.addEventListener("click", () => {
+    selectedGeneratorId = selectedGeneratorId === genId ? null : genId;
+    renderInactiveGeneratorCards(); // re-render to refresh styles
+    d3.selectAll(".map-gen").classed("selected", d => d.id === selectedGeneratorId);
+  });
+
+  updateCardStyle();
+  return card;
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  renderInactiveGeneratorCards();
+});
+
+function renderInactiveGeneratorCards() {
+  const container = document.getElementById("generator-list");
+  container.innerHTML = "";
+  mockGenerators.forEach(gen => {
+    container.appendChild(createGeneratorCard(gen));
+  });
+}
   const mapContainer = d3.select("#map-panel")
     .html("") // clear placeholder text
     .append("svg")
@@ -109,33 +196,90 @@ mapContainer.call(zoomBehavior.transform, initialZoom);
       .attr("fill", "none");
 
     // Draw nodes
-    zoomGroup.selectAll("circle.node")
-      .data(nodes)
-      .enter()
-      .append("circle")
-      .attr("class", "map-gen")
-      .attr("id", d => d.id)
-      .attr("cx", d => d.cx)
-      .attr("cy", d => d.cy)
-      .attr("r", 5)
-      .attr("fill", d => {
-        if (d.id.includes("Gen")) return "green";
-        if (d.id.includes("Load")) return "blue";
-        return "gray";
-      })
-      .attr("stroke", "black")
-      .attr("stroke-width", 0.5);
+   // ========== Generators (Circles) ==========
+zoomGroup.selectAll("circle.generator")
+  .data(nodes.filter(d => d.type === "generator"))
+  .enter()
+  .append("circle")
+  .attr("class", "map-gen")
+  .attr("id", d => d.id)
+  .attr("cx", d => d.x)
+  .attr("cy", d => d.y)
+  .attr("r", 20)
+  .attr("fill", "green")
+  .attr("stroke", "black")
+  .attr("stroke-width", 0.5);
+
+// ========== Loads (Triangles) ==========
+zoomGroup.selectAll("path.load")
+  .data(nodes.filter(d => d.type === "load"))
+  .enter()
+  .append("path")
+  .attr("class", "map-load")
+  .attr("id", d => d.id)
+  .attr("d", d => {
+    const size = 10;
+    const x = d.x, y = d.y;
+    return `M ${x},${y - size} L ${x - size},${y + size} L ${x + size},${y + size} Z`;
+  })
+  .attr("fill", "blue")
+  .attr("stroke", "black")
+  .attr("stroke-width", 0.5);
+
+// ========== Buses (Rotated Rectangles) ==========
+zoomGroup.selectAll("rect.bus")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("rect")
+  .attr("class", "map-bus")
+  .attr("id", d => d.id)
+  .attr("x", d => d.x)
+  .attr("y", d => d.y)
+  .attr("width", d => d.width)
+  .attr("height", d => d.height)
+  .attr("fill", "gray")
+  .attr("stroke", "black")
+  .attr("stroke-width", 0.5)
+  .attr("transform", d => {
+    // Only apply transform if there's a rotation
+    if (typeof d.rotate === "number" && d.rotate !== 0 && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+
+
+
 
       zoomGroup.selectAll("text.label")
   .data(nodes)
   .enter()
   .append("text")
-  .attr("x", d => d.cx + 7)
-  .attr("y", d => d.cy + 3)
+  .attr("x", d => d.x + 7)
+  .attr("y", d => d.y + 3)
   .text(d => d.id.includes("Gen") ? d.id : "")
   .attr("font-size", "6px")
   .attr("fill", "#222");
   });
+
+
+
+  
+// Call after DOM and map are ready
+window.addEventListener("DOMContentLoaded", () => {
+  renderInactiveGeneratorCards();
+});
+
+card.addEventListener("mouseenter", () => {
+  const id = `Gen${gen.bus}`;
+  d3.selectAll(".map-gen")
+    .classed("hovered", d => d.id === id);
+});
+
+card.addEventListener("mouseleave", () => {
+  d3.selectAll(".map-gen").classed("hovered", false);
+});
 </script>
 
 
