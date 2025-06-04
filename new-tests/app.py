@@ -50,8 +50,11 @@ def set_generation(gen_id):
     try:
         data = request.get_json()
         percent = data.get('percent', 0)
+        user_active = data.get('user_active', None)  # ✅ Optional override
 
-        grid.generators[gen_id].set_percent(percent)
+        # ✅ Updated set_percent to take both values
+        grid.generators[gen_id].set_percent(percent, user_active)
+
         success = grid.run_power_flow()
 
         return jsonify({
@@ -65,6 +68,7 @@ def set_generation(gen_id):
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
     
 
 @app.route('/api/scenario/<scenario_id>')

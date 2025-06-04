@@ -338,10 +338,8 @@ function renderGenerators(gens) {
 
   const lockedGens = gens.filter(g => g.locked);
   const disabledGens = gens.filter(g => g.disabled);
-  const activeGens = gens.filter(g => g.pg > 0 && !g.locked && !g.disabled);
-  const inactiveGens = gens.filter(g =>
-    (g.pg === 0 && !g.locked) || g.disabled
-  );
+  const activeGens = gens.filter(g => g.user_active && !g.locked && !g.disabled);
+  const inactiveGens = gens.filter(g => !g.user_active || g.disabled);
 
   // ✅ Save for future sorting
   activeGenerators = [...lockedGens, ...activeGens];
@@ -367,7 +365,13 @@ function renderColumn(type, gens) {
   });
 }
 
-
+function markUserActiveStatus(gens) {
+  gens.forEach(g => {
+    if (g.user_active === undefined) {
+      g.user_active = g.pg > 0;  // infer on first load
+    }
+  });
+}
 
 function getSortFunction(key, order) {
   const dir = order === 'asc' ? 1 : -1;
@@ -379,56 +383,38 @@ function getSortFunction(key, order) {
 
 
 function createGeneratorCard(gen, maxPmax) {
-  
   const genId = `Gen${gen.bus}`;
   const locked = currentScenarioData?.locked_generators?.includes(genId);
   const disabled = currentScenarioData?.disabled_generators?.includes(genId);
+  const status = gen.user_active ? "active" : "inactive";
 
-  // Determine whether it's currently producing power
-  const status = gen.pg === 0 ? "inactive" : "active";
-
-  // Create the main generator card container with dynamic classes
   const card = document.createElement("div");
   card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
-  // Debugging output: print generator status info in dev tools
   console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
-  console.log("  → Bus:", gen.bus);
-  console.log("  → pg:", gen.pg);
-  console.log("  → In scenario disabled list:", currentScenarioData?.disabled_generators?.includes(gen.station_name));
-  console.log("  → In scenario locked list:", currentScenarioData?.locked_generators?.includes(gen.station_name));
-  console.log("  → Final styling:");
-  console.log("     ⮡", disabled ? "DISABLED" : locked ? "LOCKED" : status.toUpperCase());
+  console.log("→ pg:", gen.pg, "→ user_active:", gen.user_active);
   console.groupEnd();
 
-  // Color-coded debug log for visual confirmation
-  const label = disabled ? "DISABLED" : locked ? "LOCKED" : status.toUpperCase();
-  const color = disabled ? "gray" : locked ? "goldenrod" : status === "active" ? "green" : "blue";
-  console.log(`%c⮡ Applying: ${label}`, `color: ${color}; font-weight: bold`);
-
-  // Helper functions to color cost/emissions indicators
   function getCostColor(cost) {
-    if (cost < 2) return 'green';
-    if (cost < 5) return 'yellow';
-    if (cost < 7) return 'orange';
-    return 'red';
-  }
-  function getEmissionColor(emissions) {
-    if (emissions < 0.5) return 'green';
-    if (emissions < 1.0) return '#88cc88';
-    if (emissions < 1.5) return '#bbbb88';
-    return 'gray';
-  }
+  if (cost < 2) return 'green';
+  if (cost < 5) return 'yellow';
+  if (cost < 7) return 'orange';
+  return 'red';
+}
+
+function getEmissionColor(emissions) {
+  if (emissions < 0.5) return 'green';
+  if (emissions < 1.0) return '#88cc88';
+  if (emissions < 1.5) return '#bbbb88';
+  return 'gray';
+}
+
 
   // ========== LEFT SECTION ==========
   const left = document.createElement("div");
   const fuelColors = {
-    'coal': '#614732',
-    'gas': '#4a7838',
-    'hydro': '#4faad1',
-    'combined': '#ad7a37',
+    coal: '#614732', gas: '#4a7838', hydro: '#4faad1', combined: '#ad7a37',
   };
-  // Set background color based on fuel type
   left.style.backgroundColor = fuelColors[gen.fuel_type.toLowerCase()] || 'var(--bg-soft)';
   left.className = "gen-section left";
   left.innerHTML = `
@@ -440,9 +426,7 @@ function createGeneratorCard(gen, maxPmax) {
   const center = document.createElement("div");
   center.className = "gen-section center";
   center.innerHTML = `
-    <div class="gen-power">
-      <div class="power-label">Power</div>
-    </div>
+    <div class="gen-power"><div class="power-label">Power</div></div>
     <div class="gen-impact-row">
       <div class="gen-cost impact-wrapper">
         <div class="impact-box" style="background:${getCostColor(gen.cost_per_mw)};">💲</div>
@@ -452,46 +436,32 @@ function createGeneratorCard(gen, maxPmax) {
         <div class="impact-box" style="background:${getEmissionColor(gen.emissions_per_mw)};">☁️</div>
         <div class="impact-label">${gen.emissions_per_mw.toFixed(1)} / MW</div>
       </div>
-    </div>
-  `;
+    </div>`;
 
-// === Power block row ===
-const powerContainer = center.querySelector(".gen-power");
-const blockRow = document.createElement("div");
-blockRow.className = "power-block-row";
-powerContainer.appendChild(blockRow);  // 🔧 FIXED: append early!
+  // === Power block row ===
+  const powerContainer = center.querySelector(".gen-power");
+  const blockRow = document.createElement("div");
+  blockRow.className = "power-block-row";
+  powerContainer.appendChild(blockRow);
 
-// Build block levels
-let levels = [];
-let current = 0;
+  // Add "off" block if pg > 0
+  if (gen.pg > 0 && gen.user_active && !disabled && !locked) {
+    const offBlock = document.createElement("div");
+    offBlock.className = "power-block off-toggle";
+    offBlock.textContent = "off";
+    offBlock.style = `
+      background: #444; color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 2px 6px; font-size: 0.7rem;
+      border-radius: 4px; cursor: pointer;
+    `;
+    offBlock.title = "Turn off generator but keep it active";
 
-while (current + 100 <= gen.pmax) {
-  current += 100;
-  levels.push(current);
-}
-if (current < gen.pmax) {
-  current = gen.pmax; // Final remainder block
-  levels.push(current);
-}
-
-function createBlock(level, isHalf = false) {
-  const block = document.createElement("div");
-  block.className = "power-block";
-  block.style.width = isHalf ? `10px` : `20px`;
-  block.style.height = "20px";
-  block.style.borderRadius = "4px";
-  block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
-  block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
-  block.title = `${level} MW`;
-
-  if (!disabled && !locked) {
-    block.style.cursor = "pointer";
-    block.addEventListener("mousedown", () => {
-      const percent = (level === 100 && gen.pg === 100) ? 0 : Math.min(100, Math.round((level / gen.pmax) * 100));
+    offBlock.addEventListener("click", () => {
       fetch(`/api/set_generation/${gen.index}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ percent })
+        body: JSON.stringify({ percent: 0, user_active: true })
       })
         .then(res => res.json())
         .then(data => {
@@ -501,33 +471,69 @@ function createBlock(level, isHalf = false) {
           renderOverview(data.generators, data.lines, data.total_cost, data.solved);
         });
     });
+
+    blockRow.appendChild(offBlock);
   }
 
-  return block;
-}
+  // Build blocks
+  let levels = [];
+  let current = 0;
+  while (current + 100 <= gen.pmax) {
+    current += 100;
+    levels.push(current);
+  }
+  if (current < gen.pmax) levels.push(gen.pmax);
 
-// Append blocks to the row
-levels.forEach((level, i) => {
-  const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
-  const isHalf = isRemainder && (gen.pmax % 100 <= 50);
-  blockRow.appendChild(createBlock(level, isHalf));
-});
+  function createBlock(level, isHalf = false) {
+    const block = document.createElement("div");
+    block.className = "power-block";
+    block.style.width = isHalf ? `10px` : `20px`;
+    block.style.height = "20px";
+    block.style.borderRadius = "4px";
+    block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
+    block.title = `${level} MW`;
 
-// Add max capacity label
-const maxLabel = document.createElement("span");
-maxLabel.style.marginLeft = "8px";
-maxLabel.style.fontSize = "0.75rem";
-maxLabel.style.color = "var(--text-light)";
-maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
-blockRow.appendChild(maxLabel);
+    if (gen.user_active && !disabled && !locked) {
+      block.style.cursor = "pointer";
+      block.addEventListener("mousedown", () => {
+        const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+        fetch(`/api/set_generation/${gen.index}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ percent, user_active: true })
+        })
+          .then(res => res.json())
+          .then(data => {
+            currentGenerators = data.generators;
+            renderGenerators(currentGenerators);
+            renderLines(data.lines, data.solved !== false);
+            renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+          });
+      });
+    }
 
+    return block;
+  }
+
+  levels.forEach((level, i) => {
+    const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+    const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+    blockRow.appendChild(createBlock(level, isHalf));
+  });
+
+  const maxLabel = document.createElement("span");
+  maxLabel.style.marginLeft = "8px";
+  maxLabel.style.fontSize = "0.75rem";
+  maxLabel.style.color = "var(--text-light)";
+  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
+  blockRow.appendChild(maxLabel);
 
   // ========== RIGHT SECTION ==========
   const right = document.createElement("div");
   right.className = "gen-section right";
   const toggle = document.createElement("div");
 
-  // Determine what the right-hand button should do and look like
   if (locked) {
     toggle.className = "minus-button";
     toggle.textContent = "🔒";
@@ -539,14 +545,17 @@ blockRow.appendChild(maxLabel);
     toggle.title = "Disabled in this scenario";
     toggle.style.cursor = "not-allowed";
   } else {
-    toggle.className = gen.pg === 0 ? "plus-button" : "minus-button";
-    toggle.textContent = gen.pg === 0 ? "+" : "−";
+    toggle.className = gen.user_active ? "minus-button" : "plus-button";
+    toggle.textContent = gen.user_active ? "−" : "+";
     toggle.onclick = async () => {
-      const percent = gen.pg === 0 ? 100 : 0;
+      const activating = !gen.user_active;
+      const percent = 0;
+      const user_active = activating;
+
       const res = await fetch(`/api/set_generation/${gen.index}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ percent })
+        body: JSON.stringify({ percent, user_active })
       });
 
       const data = await res.json();
@@ -557,7 +566,7 @@ blockRow.appendChild(maxLabel);
     };
   }
 
-  // Assemble the full card
+  // Assemble full card
   right.appendChild(toggle);
   card.appendChild(left);
   card.appendChild(center);
@@ -565,6 +574,7 @@ blockRow.appendChild(maxLabel);
 
   return card;
 }
+
 
 
 

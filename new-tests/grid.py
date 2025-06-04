@@ -41,6 +41,7 @@ class Generator:
         
         self.pmax = float(row[8])
         self.pg = 0
+        self.user_active = False  # Track user choice independently from pg
         self.locked = False  # New attribute to track if generator is locked
         self.disabled = False
 
@@ -57,12 +58,17 @@ class Generator:
             'emissions_per_mw': self.emissions_per_mw,
             'station_name': GENERATOR_NAMES.get(self.bus, f"Gen {self.bus}"),
             'disabled': getattr(self, 'disabled', False),
-            'locked': getattr(self, 'locked', False)
+            'locked': getattr(self, 'locked', False),
+            'user_active': self.user_active  # ✅ New line
         }
     
-    def set_percent(self, percent):
+    def set_percent(self, percent, user_active=None):
         percent = max(0, min(100, percent))
         self.pg = (percent / 100.0) * self.pmax
+        if user_active is not None:
+            self.user_active = bool(user_active)
+        else:
+            self.user_active = percent > 0
 
 
 class Branch:
@@ -175,6 +181,7 @@ class Grid:
             gen.disabled = gen.bus in disabled_gens
             gen.locked = gen.bus in locked_gens
             gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
+            gen.user_active = gen.pg > 0  # ✅ initialize user_active properly
 
         for b in self.branches:
             print(f"{b.from_bus} → {b.to_bus} = {b.flow:.2f}")
