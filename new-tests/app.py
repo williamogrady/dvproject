@@ -12,6 +12,11 @@ grid = Grid()
 def index():
     return render_template('listview-prototype-week22.html')
 
+@app.route('/new-tests/<path:filename>')
+def serve_json_from_same_folder(filename):
+    directory = os.path.dirname(os.path.abspath(__file__))  # points to /new-tests/
+    return send_from_directory(directory, filename)
+
 
 @app.route('/api/generators')
 def get_generators():

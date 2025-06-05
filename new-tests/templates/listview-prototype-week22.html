@@ -100,7 +100,20 @@
   </div>
 </div>
     </div>
-    <div id="map-panel">Map</div>
+    <div id="map-panel" style="flex: 1; display: flex; flex-direction: column; position: relative;">
+
+  <!-- Filter Row -->
+  <div id="map-filters" style="padding: 6px 12px; background: #1f105f; display: flex; gap: 12px; font-size: 13px; border-bottom: 1px solid #ccc;">
+    <label><input type="checkbox" class="layer-toggle" data-target="map-gen" checked> Generators</label>
+    <label><input type="checkbox" class="layer-toggle" data-target="map-line" checked> Lines</label>
+    <label><input type="checkbox" class="layer-toggle" data-target="map-load" checked> Loads</label>
+    <label><input type="checkbox" class="layer-toggle" data-target="map-bus" checked> Buses</label>
+    <label><input type="checkbox" class="layer-toggle" data-target="line-load-indicator" checked> Line Loads</label>
+  </div>
+
+  <!-- Zoomable SVG Map Wrapper -->
+  <div id="map-wrapper" style="flex: 1; position: relative;"></div>
+</div>
   </div>
 
   <script> 
@@ -116,6 +129,10 @@
     let previousLineFlows = {};  // keyed by `from_bus-to_bus`
     let activeGenerators = [];
     let inactiveGenerators = [];
+    // SVG Map Rendering
+const svgWidth = 600;
+const svgHeight = 600;
+let selectedGeneratorId = null;
 
     async function fetchAllScenarios() {
       const res = await fetch("/api/scenarios");
@@ -618,6 +635,106 @@ function updateSortButtonStyles() {
     });
   });
 }
+
+
+// SVG 
+
+// Add SVG container with zoom
+const mapContainer = d3.select("#map-wrapper")
+  .append("svg")
+  .attr("width", "100%")
+  .attr("height", "100%")
+  .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const zoomGroup = mapContainer.append("g").attr("id", "zoom-group");
+
+const zoomBehavior = d3.zoom()
+  .scaleExtent([0.2, 5])
+  .on("zoom", (event) => {
+    zoomGroup.attr("transform", event.transform);
+  });
+
+mapContainer.call(zoomBehavior);
+
+const initialZoom = d3.zoomIdentity.translate(svgWidth * 0.2, svgHeight * 0.2).scale(0.4);
+mapContainer.call(zoomBehavior.transform, initialZoom);
+
+// === Fetch and Draw Map ===
+Promise.all([
+  fetch("/new-tests/full_nodes.json").then(res => res.json()),
+  fetch("/new-tests/full_lines.json").then(res => res.json())
+]).then(([nodes, lines]) => {
+  // Lines
+  zoomGroup.selectAll("path.map-line")
+    .data(lines)
+    .enter()
+    .append("path")
+    .attr("class", "map-line")
+    .attr("id", d => d.id)
+    .attr("d", d => d.d)
+    .attr("stroke", "#888")
+    .attr("stroke-width", 1.5)
+    .attr("fill", "none");
+
+  // Generators
+  zoomGroup.selectAll("circle.map-gen")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("circle")
+    .attr("class", "map-gen")
+    .attr("id", d => d.id)
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y)
+    .attr("r", 40)
+    .attr("fill", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return match && match.pg > 0 ? "green" : "white";
+    })
+    .attr("stroke", "black")
+    .attr("stroke-width", 1.2);
+
+  // === Hover & Selection Sync
+  d3.selectAll(".map-gen")
+    .on("mouseenter", function (event, d) {
+      d3.select(this).classed("hovered", true);
+    })
+    .on("mouseleave", function () {
+      d3.select(this).classed("hovered", false);
+    });
+
+  // Optional: add generator label
+  zoomGroup.selectAll("text.map-gen-label")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("text")
+    .attr("x", d => d.x + 6)
+    .attr("y", d => d.y + 3)
+    .attr("font-size", "6px")
+    .text(d => d.id);
+});
+
+// === Update generator colors on scenario load ===
+function updateMapGeneratorsFromScenario() {
+  d3.selectAll(".map-gen")
+    .attr("fill", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return match && match.pg > 0 ? "green" : "white";
+    })
+    .attr("stroke", d => d.id === selectedGeneratorId ? "blue" : "black")
+    .attr("stroke-width", d => d.id === selectedGeneratorId ? 2.5 : 1.2);
+}
+
+// Hook into your scenario load
+const oldLoadScenario = loadScenario;
+loadScenario = async function (scenarioId) {
+  await oldLoadScenario(scenarioId);
+  updateMapGeneratorsFromScenario();
+};
+
+
+
+
 
 
 document.getElementById("theme-toggle").addEventListener("click", () => {
