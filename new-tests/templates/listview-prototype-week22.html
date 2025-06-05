@@ -103,7 +103,7 @@
     <div id="map-panel" style="flex: 1; display: flex; flex-direction: column; position: relative;">
 
   <!-- Filter Row -->
-  <div id="map-filters" style="padding: 6px 12px; background: #1f105f; display: flex; gap: 12px; font-size: 13px; border-bottom: 1px solid #ccc;">
+  <div id="map-filters" style="padding: 6px 12px; display: flex; gap: 12px; font-size: 13px; border-bottom: 1px solid #ccc;">
     <label><input type="checkbox" class="layer-toggle" data-target="map-gen" checked> Generators</label>
     <label><input type="checkbox" class="layer-toggle" data-target="map-line" checked> Lines</label>
     <label><input type="checkbox" class="layer-toggle" data-target="map-load" checked> Loads</label>
@@ -623,14 +623,6 @@ function getEmissionColor(emissions) {
     };
   }
 
-  card.addEventListener("mouseenter", () => {
-  d3.select(`#${CSS.escape(genId)}`).classed("hovered", true);
-});
-
-card.addEventListener("mouseleave", () => {
-  d3.select(`#${CSS.escape(genId)}`).classed("hovered", false);
-});
-
   // Assemble full card
   right.appendChild(toggle);
   card.appendChild(left);
@@ -744,13 +736,56 @@ Promise.all([
     .attr("id", d => d.id)
     .attr("cx", d => d.x)
     .attr("cy", d => d.y)
-    .attr("r", 40)
+    .attr("r", 30)
     .attr("fill", d => {
         const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
         return match && match.pg > 0 ? "green" : "white";
       })
     .attr("stroke", "black")
     .attr("stroke-width", 1.2);
+
+zoomGroup.selectAll("rect.map-bus")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("rect")
+  .attr("class", "map-bus")
+  .attr("id", d => d.id)
+  .attr("x", d => d.x - d.width / 2)
+  .attr("y", d => d.y - d.height / 2)
+  .attr("width", d => d.width)
+  .attr("height", d => d.height)
+  .attr("fill", "#666")
+  .attr("stroke", "#000")
+  .attr("stroke-width", 0.8)
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+zoomGroup.selectAll("path.map-load")
+  .data(nodes.filter(d => d.type === "load"))
+  .enter()
+  .append("path")
+  .attr("class", "map-load")
+  .attr("id", d => d.id)
+  .attr("d", d => {
+    const size = 10;
+    const x = d.x;
+    const y = d.y;
+    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
+  })
+  .attr("fill", "#0074D9")
+  .attr("stroke", "#fff")
+  .attr("stroke-width", 1.2)
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
 
   // === Hover & Selection Sync
   d3.selectAll(".map-gen")
@@ -762,6 +797,7 @@ Promise.all([
     });
 
   // Optional: add generator label
+  /*
   zoomGroup.selectAll("text.map-gen-label")
     .data(nodes.filter(d => d.type === "generator"))
     .enter()
@@ -769,7 +805,7 @@ Promise.all([
     .attr("x", d => d.x + 6)
     .attr("y", d => d.y + 3)
     .attr("font-size", "6px")
-    .text(d => d.id);
+    .text(d => d.id); */
 });
 
 // === Update generator colors on scenario load ===
@@ -810,7 +846,6 @@ function updateMapGeneratorsFromScenario() {
 }
 
 
-
 // Hook into your scenario load
 const oldLoadScenario = loadScenario;
 loadScenario = async function (scenarioId) {
@@ -820,7 +855,14 @@ loadScenario = async function (scenarioId) {
 
 
 
+document.querySelectorAll(".layer-toggle").forEach(checkbox => {
+  checkbox.addEventListener("change", (e) => {
+    const className = e.target.dataset.target;
+    const isVisible = e.target.checked;
 
+    d3.selectAll(`.${className}`).style("display", isVisible ? null : "none");
+  });
+});
 
 
 document.getElementById("theme-toggle").addEventListener("click", () => {
