@@ -103,13 +103,16 @@
     <div id="map-panel" style="flex: 1; display: flex; flex-direction: column; position: relative;">
 
   <!-- Filter Row -->
-  <div id="map-filters" style="padding: 6px 12px; display: flex; gap: 12px; font-size: 13px; border-bottom: 1px solid #ccc;">
+  <div id="map-filters">
+  <div class="map-filters-title">Map Filters</div>
+  <div class="map-filters-options">
     <label><input type="checkbox" class="layer-toggle" data-target="map-gen" checked> Generators</label>
     <label><input type="checkbox" class="layer-toggle" data-target="map-line" checked> Lines</label>
     <label><input type="checkbox" class="layer-toggle" data-target="map-load" checked> Loads</label>
     <label><input type="checkbox" class="layer-toggle" data-target="map-bus" checked> Buses</label>
     <label><input type="checkbox" class="layer-toggle" data-target="line-load-indicator" checked> Line Loads</label>
   </div>
+</div>
 
   <!-- Zoomable SVG Map Wrapper -->
   <div id="map-wrapper" style="flex: 1; position: relative;"></div>
@@ -771,7 +774,7 @@ zoomGroup.selectAll("path.map-load")
   .attr("class", "map-load")
   .attr("id", d => d.id)
   .attr("d", d => {
-    const size = 10;
+    const size = 20;
     const x = d.x;
     const y = d.y;
     return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;

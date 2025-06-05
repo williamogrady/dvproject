@@ -128,25 +128,39 @@ body {
 }
 
 #map-filters {
-  padding: 6px 12px;
-  background: #1f105f;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-dark);
+  color: var(--text);
   display: flex;
+  flex-direction: column;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  gap: 6px;
+}
+
+.map-filters-title {
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.map-filters-options {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  font-size: 13px;
-  border-bottom: 1px solid #ccc;
-  color: white;
   align-items: center;
 }
 
 #map-filters label {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
 }
 
 #map-filters input[type="checkbox"] {
-  accent-color: #00ccff;
+  accent-color: var(--accent);
   transform: scale(1.2);
 }
 
