@@ -178,9 +178,9 @@ let selectedGeneratorId = null;
         currentGenerators = data.generators;
 
         renderGenerators(currentGenerators);
-        updateMapGeneratorsFromScenario();
         renderLines(data.lines, data.solved !== false);
         renderOverview(currentGenerators, data.lines, data.total_cost, data.solved);
+        updateMapGeneratorsFromScenario();
         console.log("🧪 Solved status?", data.solved);
       }
 
@@ -345,8 +345,43 @@ function renderLines(lines, solved = true) {
       `;
     }
 
+
+
     container.appendChild(card);
   });
+
+   if (solved) {
+      renderMapLineLoads(lines);
+    }
+}
+
+function renderMapLineLoads(lines) {
+  d3.selectAll(".line-load-indicator").remove();
+
+  setTimeout(() => {
+    const group = d3.select("#zoom-group");
+
+    lines.forEach(line => {
+      const path = document.getElementById(`Line_Bus${Math.min(line.from_bus, line.to_bus)}_Bus${Math.max(line.from_bus, line.to_bus)}`);
+      if (!path) return;
+
+      const mid = path.getPointAtLength(path.getTotalLength() / 2);
+
+      group.append("rect")
+        .attr("class", "line-load-indicator")
+        .attr("x", mid.x - 3)
+        .attr("y", mid.y - 3)
+        .attr("width", 20)
+        .attr("height", 20)
+        .attr("fill", getLoadColor(getLineLoadPct(line)))
+        .attr("stroke", "black")
+        .attr("stroke-width", 0.5);
+    });
+  }, 0);
+}
+
+function getLoadColor(pct) {
+  return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
 }
 
 
@@ -485,10 +520,10 @@ function getEmissionColor(emissions) {
         .then(res => res.json())
         .then(data => {
           currentGenerators = data.generators;
-          updateMapGeneratorsFromScenario();
           renderGenerators(currentGenerators);
           renderLines(data.lines, data.solved !== false);
           renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+          updateMapGeneratorsFromScenario();
         });
     });
 
@@ -526,10 +561,10 @@ function getEmissionColor(emissions) {
           .then(res => res.json())
           .then(data => {
             currentGenerators = data.generators;
-            updateMapGeneratorsFromScenario(); // ✅ Reflect state change on map
             renderGenerators(currentGenerators);
             renderLines(data.lines, data.solved !== false);
             renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+            updateMapGeneratorsFromScenario(); // ✅ Reflect state change on map
           });
       });
     }
@@ -581,10 +616,10 @@ function getEmissionColor(emissions) {
 
       const data = await res.json();
       currentGenerators = data.generators;
-      updateMapGeneratorsFromScenario();
       renderGenerators(currentGenerators);
       renderLines(data.lines, data.solved !== false);
       renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      updateMapGeneratorsFromScenario();
     };
   }
 
@@ -606,12 +641,13 @@ card.addEventListener("mouseleave", () => {
     card.classList.add("selected");
   }
 
-  return card;
-
-  card.addEventListener("click", () => {
+    card.addEventListener("click", () => {
   selectedGeneratorId = genId;
   updateMapGeneratorsFromScenario();  // update stroke styling
 });
+
+  return card;
+
 }
 
 
@@ -710,9 +746,9 @@ Promise.all([
     .attr("cy", d => d.y)
     .attr("r", 40)
     .attr("fill", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return match && match.pg > 0 ? "green" : "white";
-    })
+        const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+        return match && match.pg > 0 ? "green" : "white";
+      })
     .attr("stroke", "black")
     .attr("stroke-width", 1.2);
 
@@ -738,15 +774,19 @@ Promise.all([
 
 // === Update generator colors on scenario load ===
 function updateMapGeneratorsFromScenario() {
-  d3.selectAll(".map-gen")
-    .attr("fill", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return match && match.pg > 0 ? "green" : "white";
-    })
-    .attr("stroke", d => d.id === selectedGeneratorId ? "#00f" : "black")
-    .attr("stroke-width", d => d.id === selectedGeneratorId ? 2 : 1);
+  const genNodes = d3.selectAll(".map-gen");
 
-  // Draw glowing outer highlight ring
+  genNodes.each(function(d) {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const isOn = match && match.pg > 0;
+    const isSelected = d.id === selectedGeneratorId;
+
+    d3.select(this)
+      .attr("fill", isOn ? "green" : "white")
+      .attr("stroke", isSelected ? "blue" : "black")
+      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+  });
+
   d3.selectAll(".map-gen-highlight").remove();
 
   if (selectedGeneratorId) {
@@ -768,6 +808,7 @@ function updateMapGeneratorsFromScenario() {
     }
   }
 }
+
 
 
 // Hook into your scenario load
