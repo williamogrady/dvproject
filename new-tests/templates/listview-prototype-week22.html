@@ -408,6 +408,7 @@ function createGeneratorCard(gen, maxPmax) {
   const card = document.createElement("div");
   card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
+
   console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
   console.log("→ pg:", gen.pg, "→ user_active:", gen.user_active);
   console.groupEnd();
@@ -523,6 +524,7 @@ function getEmissionColor(emissions) {
           .then(res => res.json())
           .then(data => {
             currentGenerators = data.generators;
+            updateMapGeneratorsFromScenario(); // ✅ Reflect state change on map
             renderGenerators(currentGenerators);
             renderLines(data.lines, data.solved !== false);
             renderOverview(data.generators, data.lines, data.total_cost, data.solved);
@@ -583,13 +585,30 @@ function getEmissionColor(emissions) {
     };
   }
 
+  card.addEventListener("mouseenter", () => {
+  d3.select(`#${CSS.escape(genId)}`).classed("hovered", true);
+});
+
+card.addEventListener("mouseleave", () => {
+  d3.select(`#${CSS.escape(genId)}`).classed("hovered", false);
+});
+
   // Assemble full card
   right.appendChild(toggle);
   card.appendChild(left);
   card.appendChild(center);
   card.appendChild(right);
 
+  if (selectedGeneratorId === genId) {
+    card.classList.add("selected");
+  }
+
   return card;
+
+  card.addEventListener("click", () => {
+  selectedGeneratorId = genId;
+  updateMapGeneratorsFromScenario();  // update stroke styling
+});
 }
 
 
@@ -721,9 +740,32 @@ function updateMapGeneratorsFromScenario() {
       const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
       return match && match.pg > 0 ? "green" : "white";
     })
-    .attr("stroke", d => d.id === selectedGeneratorId ? "blue" : "black")
-    .attr("stroke-width", d => d.id === selectedGeneratorId ? 2.5 : 1.2);
+    .attr("stroke", d => d.id === selectedGeneratorId ? "#00f" : "black")
+    .attr("stroke-width", d => d.id === selectedGeneratorId ? 2 : 1);
+
+  // Draw glowing outer highlight ring
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (selectedGeneratorId) {
+    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+    if (!selected.empty()) {
+      const { cx, cy } = selected.node();
+      const r = +selected.attr("r");
+
+      d3.select("#zoom-group")
+        .append("circle")
+        .attr("class", "map-gen-highlight")
+        .attr("cx", cx.baseVal.value)
+        .attr("cy", cy.baseVal.value)
+        .attr("r", r + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#00f")
+        .attr("stroke-width", 3)
+        .attr("pointer-events", "none");
+    }
+  }
 }
+
 
 // Hook into your scenario load
 const oldLoadScenario = loadScenario;
