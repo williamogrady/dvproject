@@ -8,7 +8,7 @@
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <link rel="stylesheet" href="/css/listview-core.css">
 </head>
-<body class="dark-theme">
+<body class="light-theme">
   <div id="main-layout">
     <div id="listView-container">
       <!-- Row 1: Overview -->
@@ -93,7 +93,7 @@
     <label for="scenario-select">Load Scenario:</label>
     <select id="scenario-select"></select>
     <button id="reset-button">🔁 Reset</button>
-    <button id="theme-toggle" class="theme-button">🌞 Light Mode</button>
+    <button id="theme-toggle" class="theme-button">🌙 Dark Mode</button>
   </div>
   <div class="controls-right">
     <button class="submit-button">Submit</button>
@@ -779,9 +779,6 @@ zoomGroup.selectAll("path.map-load")
     const y = d.y;
     return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
   })
-  .attr("fill", "#0074D9")
-  .attr("stroke", "#fff")
-  .attr("stroke-width", 1.2)
   .attr("transform", d => {
     if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
       return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
