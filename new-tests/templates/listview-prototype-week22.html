@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>listview prototype week22</title>
+  <title>ListView Prototype (5/6)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
@@ -178,6 +178,7 @@ let selectedGeneratorId = null;
         currentGenerators = data.generators;
 
         renderGenerators(currentGenerators);
+        updateMapGeneratorsFromScenario();
         renderLines(data.lines, data.solved !== false);
         renderOverview(currentGenerators, data.lines, data.total_cost, data.solved);
         console.log("🧪 Solved status?", data.solved);
@@ -484,6 +485,7 @@ function getEmissionColor(emissions) {
         .then(res => res.json())
         .then(data => {
           currentGenerators = data.generators;
+          updateMapGeneratorsFromScenario();
           renderGenerators(currentGenerators);
           renderLines(data.lines, data.solved !== false);
           renderOverview(data.generators, data.lines, data.total_cost, data.solved);
@@ -579,6 +581,7 @@ function getEmissionColor(emissions) {
 
       const data = await res.json();
       currentGenerators = data.generators;
+      updateMapGeneratorsFromScenario();
       renderGenerators(currentGenerators);
       renderLines(data.lines, data.solved !== false);
       renderOverview(data.generators, data.lines, data.total_cost, data.solved);
