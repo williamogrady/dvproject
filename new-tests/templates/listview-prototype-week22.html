@@ -641,8 +641,30 @@ function getEmissionColor(emissions) {
   updateMapGeneratorsFromScenario();  // update stroke styling
 });
 
-  return card;
+    card.addEventListener("mouseenter", () => {
+      const genId = `Gen${gen.bus}`;
+      const mapCircle = document.getElementById(genId);
+      if (mapCircle) {
+        const cx = parseFloat(mapCircle.getAttribute("cx"));
+        const cy = parseFloat(mapCircle.getAttribute("cy"));
 
+        d3.select(`#${CSS.escape(genId)}`).classed("hovered", true);
+
+        tooltipText
+          .text(gen.station_name)
+          .attr("x", cx + 8)
+          .attr("y", cy - 8)
+          .style("display", "block");
+      }
+    });
+
+    card.addEventListener("mouseleave", () => {
+      d3.select(`#Gen${gen.bus}`).classed("hovered", false);
+      tooltipText.style("display", "none");
+    });
+
+
+  return card;
 }
 
 
@@ -702,6 +724,14 @@ const mapContainer = d3.select("#map-wrapper")
 
 const zoomGroup = mapContainer.append("g").attr("id", "zoom-group");
 
+const tooltipText = zoomGroup.append("text")
+  .attr("id", "map-tooltip")
+  .attr("text-anchor", "start")
+  .attr("font-size", "10px")
+  .attr("fill", "#fff")
+  .style("pointer-events", "none")
+  .style("display", "none");
+
 const zoomBehavior = d3.zoom()
   .scaleExtent([0.2, 5])
   .on("zoom", (event) => {
@@ -741,8 +771,8 @@ Promise.all([
     .attr("cy", d => d.y)
     .attr("r", 30)
     .attr("fill", d => {
-        const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-        return match && match.pg > 0 ? "green" : "white";
+        const match = currentGenerators.find(g => `Gen${g.bus}` === d.id); // TODO : NOT WORKING
+        return match && match.pg > 0 ? "#4caf50" : "ffffff";        // TODO : css
       })
     .attr("stroke", "black")
     .attr("stroke-width", 1.2);
@@ -818,7 +848,7 @@ function updateMapGeneratorsFromScenario() {
     const isSelected = d.id === selectedGeneratorId;
 
     d3.select(this)
-      .attr("fill", isOn ? "green" : "white")
+      .attr("fill", isOn ? "#4caf50" : "white")
       .attr("stroke", isSelected ? "blue" : "black")
       .attr("stroke-width", isSelected ? 2.5 : 1.2);
   });
