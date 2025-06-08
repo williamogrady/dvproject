@@ -10,7 +10,7 @@ grid = Grid()
 
 @app.route('/')
 def index():
-    return render_template('listview-prototype-week22.html')
+    return render_template('listView-prototype.html')
 
 @app.route('/new-tests/<path:filename>')
 def serve_json_from_same_folder(filename):

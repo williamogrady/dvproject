@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>mapView gen mapping test 8/6</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f0f0f0;
+    }
+    #svg-container {
+      margin: 20px;
+    }
+    svg {
+      border: 1px solid #ccc;
+      background: white;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .panel {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 200px;
+    }
+    .panel h4 {
+      margin-top: 0;
+    }
+    .panel label {
+      display: block;
+      font-size: 0.9em;
+      margin: 6px 0 2px;
+    }
+    .save-load {
+      margin-top: 20px;
+      width: 80%;
+      max-width: 800px;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      margin: 10px 0;
+      font-family: monospace;
+    }
+    button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>how do i map the generators?</h2>
+<div id="svg-container">
+  <svg id="circle-svg" width="600" height="300"></svg>
+</div>
+<div class="controls" id="controls-container"></div>
+
+<div class="save-load">
+  <button id="save-btn">💾 Save Configuration</button>
+  <button id="load-btn">📂 Load Configuration</button>
+  <textarea id="config-text" placeholder="Paste or view configuration JSON here..."></textarea>
+</div>
+
+<script>
+  const svg = document.getElementById('circle-svg');
+  const controlsContainer = document.getElementById('controls-container');
+  const configText = document.getElementById('config-text');
+  const saveBtn = document.getElementById('save-btn');
+  const loadBtn = document.getElementById('load-btn');
+
+  const numCircles = 10;
+  const circles = [];
+
+  for (let i = 0; i < numCircles; i++) {
+    const cx = 60 + (i % 5) * 110;
+    const cy = 80 + Math.floor(i / 5) * 140;
+
+    // Ring (stroke)
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ring.setAttribute("cx", cx);
+    ring.setAttribute("cy", cy);
+    ring.setAttribute("r", 30);
+    ring.setAttribute("stroke", "black");
+    ring.setAttribute("stroke-width", 4);
+    ring.setAttribute("fill", "none");
+    svg.appendChild(ring);
+
+    // Inner Circle
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", cx);
+    circle.setAttribute("cy", cy);
+    circle.setAttribute("r", 20);
+    circle.setAttribute("fill", "hsl(200, 100%, 50%)");
+    svg.appendChild(circle);
+
+    const panel = document.createElement("div");
+    panel.className = "panel";
+    panel.innerHTML = `
+      <h4>Circle ${i + 1}</h4>
+
+      <label>Hue</label>
+      <input type="range" min="0" max="360" value="200" class="hue-slider">
+
+      <label>Saturation</label>
+      <input type="range" min="0" max="100" value="100" class="sat-slider">
+
+      <label>Stroke Width</label>
+      <input type="range" min="0" max="20" value="4" class="stroke-slider">
+
+      <label>Radius</label>
+      <input type="range" min="5" max="50" value="20" class="radius-slider">
+    `;
+    controlsContainer.appendChild(panel);
+
+    const hueSlider = panel.querySelector(".hue-slider");
+    const satSlider = panel.querySelector(".sat-slider");
+    const strokeSlider = panel.querySelector(".stroke-slider");
+    const radiusSlider = panel.querySelector(".radius-slider");
+
+    const update = () => {
+      const hue = +hueSlider.value;
+      const sat = +satSlider.value;
+      const radius = +radiusSlider.value;
+      const strokeW = +strokeSlider.value;
+
+      circle.setAttribute("r", radius);
+      circle.setAttribute("fill", `hsl(${hue}, ${sat}%, 50%)`);
+
+      ring.setAttribute("r", radius + strokeW / 2);
+      ring.setAttribute("stroke-width", strokeW);
+    };
+
+    [hueSlider, satSlider, strokeSlider, radiusSlider].forEach(slider =>
+      slider.addEventListener("input", update)
+    );
+
+    // Initial update
+    update();
+
+    circles.push({
+      circle,
+      ring,
+      controls: {
+        hueSlider,
+        satSlider,
+        strokeSlider,
+        radiusSlider
+      }
+    });
+  }
+
+  saveBtn.addEventListener("click", () => {
+    const config = circles.map(({ controls }) => ({
+      hue: +controls.hueSlider.value,
+      sat: +controls.satSlider.value,
+      stroke: +controls.strokeSlider.value,
+      radius: +controls.radiusSlider.value
+    }));
+    configText.value = JSON.stringify(config, null, 2);
+  });
+
+  loadBtn.addEventListener("click", () => {
+    try {
+      const config = JSON.parse(configText.value);
+      config.forEach((c, i) => {
+        const { controls } = circles[i];
+        controls.hueSlider.value = c.hue;
+        controls.satSlider.value = c.sat;
+        controls.strokeSlider.value = c.stroke;
+        controls.radiusSlider.value = c.radius;
+        controls.hueSlider.dispatchEvent(new Event("input"));
+      });
+    } catch (err) {
+      alert("❌ Failed to load configuration. Make sure it's valid JSON.");
+    }
+  });
+</script>
+
+</body>
+</html>

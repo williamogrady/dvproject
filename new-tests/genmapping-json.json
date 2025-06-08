@@ -1,0 +1,62 @@
+[
+  {
+    "hue": 129,
+    "sat": 100,
+    "stroke": 4,
+    "radius": 20
+  },
+  {
+    "hue": 119,
+    "sat": 40,
+    "stroke": 20,
+    "radius": 20
+  },
+  {
+    "hue": 119,
+    "sat": 76,
+    "stroke": 5,
+    "radius": 20
+  },
+  {
+    "hue": 119,
+    "sat": 23,
+    "stroke": 17,
+    "radius": 20
+  },
+  {
+    "hue": 116,
+    "sat": 100,
+    "stroke": 4,
+    "radius": 49
+  },
+  {
+    "hue": 126,
+    "sat": 51,
+    "stroke": 4,
+    "radius": 12
+  },
+  {
+    "hue": 100,
+    "sat": 100,
+    "stroke": 4,
+    "radius": 46
+  },
+  {
+    "hue": 91,
+    "sat": 100,
+    "stroke": 5,
+    "radius": 20
+  },
+  {
+    "hue": 97,
+    "sat": 26,
+    "stroke": 4,
+    "radius": 24
+  },
+  {
+    "hue": 107,
+    "sat": 3,
+    "stroke": 20,
+    "radius": 45
+  }
+]
