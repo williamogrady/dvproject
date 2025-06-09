@@ -48,9 +48,15 @@
     <div class="bubble" id="bubble"></div>
 
     <div id="admin-controls">
-      <div class="label">Admin Controls</div>
-      <button id="theme-toggle" class="theme-button">🌙 Dark Mode</button>
-    </div>
+  <div class="label">Admin Controls</div>
+
+  <label for="scenario-select" style="font-size: 0.8rem;">Load Scenario:</label>
+  <select id="scenario-select" style="margin-bottom: 6px; width: 100%;"></select>
+  <button id="reset-button">🔁 Reset</button>
+
+  <button id="theme-toggle" class="theme-button" style="margin-top: 8px;">🌙 Dark Mode</button>
+</div>
+
   </div>
 
   <script>
@@ -61,7 +67,57 @@ let selectedGen = null;
 let selectedGenData = null;
 
 let currentGenerators = [];
-let currentScenarioData = {};
+let currentScenarioId = "";
+let availableScenarios = [];
+
+async function fetchAllScenarios() {
+  const res = await fetch("/api/scenarios");
+  const data = await res.json();
+
+  availableScenarios = data;
+
+  // Pick default
+  const defaultScenario = data.find(s => s.scenario_id === "clean_north_power") || data[0];
+
+  if (defaultScenario) {
+    currentScenarioId = defaultScenario.scenario_id;
+    populateScenarioDropdown(data, currentScenarioId);
+    await loadScenario(currentScenarioId);
+  }
+}
+
+function populateScenarioDropdown(scenarios, selectedId) {
+  const select = document.getElementById("scenario-select");
+  select.innerHTML = "";
+
+  scenarios.forEach(s => {
+    const option = document.createElement("option");
+    option.value = s.scenario_id;
+    option.textContent = s.title || s.scenario_id;
+    if (s.scenario_id === selectedId) option.selected = true;
+    select.appendChild(option);
+  });
+}
+
+async function loadScenario(scenarioId) {
+  const res = await fetch(`/api/scenario/${scenarioId}`);
+  const data = await res.json();
+  currentScenarioId = scenarioId;
+  currentScenarioData = data;
+  currentGenerators = data.generators;
+
+  renderOverview(currentGenerators);
+  updateMapGeneratorsFromScenario();
+
+  // Update scenario title in overview
+  document.getElementById("overview-scenario").textContent = currentScenarioData?.title || currentScenarioId;
+
+  if (selectedGenData) {
+    const updated = currentGenerators.find(g => g.index === selectedGenData.index);
+    const newCard = createGeneratorCard(updated, updated.pmax);
+    bubble.html("").node().appendChild(newCard);
+  }
+}
 
 let selectedGeneratorId = null;
 
@@ -84,82 +140,87 @@ const centerY = window.innerHeight / 2;
 const mapCenterX = 1400;
 const mapCenterY = 1100;
 
-fetch("/api/scenario/clean_north_power")
-  .then(res => res.json())
-  .then(data => {
-    currentGenerators = data.generators;
-    currentScenarioData = data;
+Promise.all([
+  fetch("/api/scenario/clean_north_power").then(res => res.json()),
+  fetch("/new-tests/full_nodes.json").then(res => res.json())
+]).then(([scenarioData, nodeData]) => {
+  currentGenerators = scenarioData.generators;
+  currentScenarioId = "clean_north_power";
 
-            currentGenerators = data.generators;
-        renderOverview(currentGenerators);
-        updateMapGeneratorsFromScenario();
+  const gens = nodeData.filter(d => d.type === "generator");
 
-        // Re-render the card inside the bubble
-        const updated = currentGenerators.find(g => g.index === gen.index);
-        const newCard = createGeneratorCard(updated, updated.pmax);
-        bubble.html("").node().appendChild(newCard);
+  // ✅ Recalculate sizeScale now that currentGenerators is ready
+  const sizeScale = d3.scaleSqrt()
+    .domain(d3.extent(currentGenerators, g => g.pmax))
+    .range([10, 100]);
+
+  console.log("🧪 currentGenerators sample:", currentGenerators.slice(0, 3));
+  const extent = d3.extent(currentGenerators, g => g.pmax);
+  console.log("🧪 size extent:", extent);
+
+  currentGenerators.forEach(g => {
+    if (g.pmax == null || isNaN(g.pmax)) {
+      console.warn("⚠️ Bad pmax value for:", g);
+    }
   });
 
-svg.call(
-  zoom.transform,
-  d3.zoomIdentity.translate(centerX, centerY).scale(0.3).translate(-mapCenterX, -mapCenterY)
-);
+  zoomLayer.selectAll("circle.generator")
+    .data(gens)
+    .enter()
+    .append("circle")
+    .attr("class", "generator map-gen")
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y)
+    .attr("r", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      if (!match) return 10;
+      console.log("🔍 Gen", match.name, "pmax =", match.pmax, "size =", sizeScale(match.pmax));
+      return sizeScale(match.pmax);
+    })
+    .attr("fill", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return match && match.pg > 0 ? "#4caf50" : "white";
+    })
+    .attr("stroke", "white")
+    .attr("stroke-width", 2)
+    .on("click", function(event, d) {
+      event.stopPropagation();
 
-fetch("/new-tests/full_nodes.json")
-  .then(res => res.json())
-  .then(data => {
-    const gens = data.filter(d => d.type === "generator");
+      d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
+      d3.select(this).attr("stroke", "#42a5f5").attr("stroke-width", 4);
 
-    zoomLayer.selectAll("circle.generator")
-      .data(gens)
-      .enter()
-      .append("circle")
-      .attr("class", "generator")
-      .attr("cx", d => d.x)
-      .attr("cy", d => d.y)
-      .attr("r", 20)
-      .attr("fill", "#888")
-      .attr("stroke", "white")
-      .attr("stroke-width", 2)
-      .on("click", function(event, d) {
-        event.stopPropagation();
-        d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
-        d3.select(this).attr("stroke", "#42a5f5").attr("stroke-width", 4);
-        selectedGen = d3.select(this);
-        selectedGenData = d;
+      selectedGen = d;
+      selectedGenData = d;
 
-        // Position bubble
-        const bubbleX = event.pageX + 10;
-        const bubbleY = event.pageY - 20;
-const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-const card = match ? createGeneratorCard(match, match.pmax) : document.createTextNode("⚠️ Generator not found");
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      if (!match) return;
 
-bubble
-  .style("display", "block")
-  .style("left", `${bubbleX}px`)
-  .style("top", `${bubbleY}px`)
-  .html("") // clear bubble
-  .node().appendChild(card);
+      const card = createGeneratorCard(match, match.pmax);
+      const bubbleX = event.pageX + 10;
+      const bubbleY = event.pageY - 20;
 
-        updateConnector();
-      });
+      bubble
+        .style("display", "block")
+        .style("left", `${bubbleX}px`)
+        .style("top", `${bubbleY}px`)
+        .html("")
+        .node().appendChild(card);
 
-    svg.on("click", function(event) {
-      if (event.target.tagName === "svg") {
-        d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
-        const maxPmax = 1000; // or dynamically: Math.max(...currentGenerators.map(g => g.pmax))
-
-bubble
-  .style("display", "block")
-  .style("left", `${bubbleX}px`)
-  .style("top", `${bubbleY}px`)
-  .html("") // clear old content
-  .node().appendChild(card); // inject the card node directly
-        connectorLine.style("display", "none");
-        selectedGen = null;
-      }
+      updateConnector();
     });
-  });
+});
+
+
+// ✅ Outside the generator .on("click")
+svg.on("click", function(event) {
+  if (event.target.tagName === "svg") {
+    d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
+    bubble.style("display", "none").html("");
+    connectorLine.style("display", "none");
+    selectedGen = null;
+  }
+});
+
 
   function renderOverview(gens) {
   const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
@@ -175,10 +236,9 @@ function createGeneratorCard(gen, maxPmax) {
   const genId = `Gen${gen.bus}`;
   const locked = currentScenarioData?.locked_generators?.includes(genId);
   const disabled = currentScenarioData?.disabled_generators?.includes(genId);
-  const status = gen.user_active ? "active" : "inactive";
 
   const card = document.createElement("div");
-  card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
+  card.className = `generator-card ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
 
     function getCostColor(cost) {
@@ -313,13 +373,18 @@ function updateMapGeneratorsFromScenario() {
       const { cx, cy } = selected.node();
       const r = +selected.attr("r");
 
+      const sizeScale = d3.scaleSqrt()
+      .domain(d3.extent(currentGenerators, g => g[sizeAttr]))
+      .range([10, 100]);
+      console.log("🧪 currentGenerators sample:", currentGenerators.slice(0, 3));
+
       d3.select("#zoom-group")
         .append("circle")
         .attr("class", "map-gen-highlight")
         .attr("cx", cx.baseVal.value)
         .attr("cy", cy.baseVal.value)
-        .attr("r", r + 6)
-        .attr("fill", "none")
+        .attr("r", g => sizeScale(g.pmax))
+        .attr("fill", isOn ? "#4caf50" : "white")
         .attr("stroke", "#00f")
         .attr("stroke-width", 3)
         .attr("pointer-events", "none");
@@ -347,8 +412,17 @@ function updateConnector() {
     .style("display", "block");
 }
 
-//renderOverview(currentGenerators);
-//updateMapGeneratorsFromScenario();
+document.getElementById("scenario-select").addEventListener("change", (e) => {
+  loadScenario(e.target.value);
+});
+
+document.getElementById("reset-button").addEventListener("click", () => {
+  loadScenario(currentScenarioId);
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  fetchAllScenarios();
+});
 
   </script>
 </body>
