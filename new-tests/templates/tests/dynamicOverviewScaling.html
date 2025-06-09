@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Overview Bar with Full Map</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    #map-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    svg#map {
+      width: 100%;
+      height: 100%;
+      background: #111;
+    }
+
+    #overview {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      background: #2c2c2c;
+      padding: 10px 16px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      z-index: 10;
+    }
+
+    .overview-card {
+      background: #1f1f1f;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .overview-card:hover {
+      background: #3c3c3c;
+    }
+
+    .overview-label {
+      font-size: 12px;
+      color: #bbb;
+      margin-bottom: 4px;
+    }
+
+    .overview-value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="map-container">
+    <svg id="map">
+      <g id="zoom-layer"></g>
+    </svg>
+
+    <div id="overview">
+      <div class="overview-card" id="power-box">
+        <div class="overview-label">Power</div>
+        <div class="overview-value" id="overview-power">–</div>
+      </div>
+      <div class="overview-card" id="emissions-box">
+        <div class="overview-label">Emissions</div>
+        <div class="overview-value" id="overview-emissions">–</div>
+      </div>
+      <div class="overview-card" id="cost-box">
+        <div class="overview-label">Cost</div>
+        <div class="overview-value" id="overview-cost">–</div>
+      </div>
+      <div class="overview-card" id="scenario-box">
+        <div class="overview-label">Scenario</div>
+        <div class="overview-value" id="overview-scenario">–</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const svg = d3.select("#map");
+    const zoomLayer = svg.select("#zoom-layer");
+
+const zoomBehavior = d3.zoom()
+  .scaleExtent([0.2, 5])
+  .on("zoom", (event) => {
+    zoomGroup.attr("transform", event.transform);
+  });
+
+svg.call(zoomBehavior);
+
+
+
+const zoomGroup = svg.append("g").attr("id", "zoom-group");
+
+let currentGenerators = [];
+
+   // === Fetch and Draw Map ===
+Promise.all([
+  fetch("/new-tests/full_nodes.json").then(res => res.json()),
+  fetch("/new-tests/full_lines.json").then(res => res.json())
+]).then(([nodes, lines]) => {
+  // Lines
+  zoomGroup.selectAll("path.map-line")
+    .data(lines)
+    .enter()
+    .append("path")
+    .attr("class", "map-line")
+    .attr("id", d => d.id)
+    .attr("d", d => d.d)
+    .attr("stroke", "#888")
+    .attr("stroke-width", 1.5)
+    .attr("fill", "none");
+
+  // Generators
+  zoomGroup.selectAll("circle.map-gen")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("circle")
+    .attr("class", "map-gen")
+    .attr("id", d => d.id)
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y)
+    .attr("r", 30)
+    .attr("fill", d => {
+        const match = currentGenerators.find(g => `Gen${g.bus}` === d.id); // TODO : NOT WORKING
+        return match && match.pg > 0 ? "#4caf50" : "ffffff";        // TODO : css
+      })
+    .attr("stroke", "black")
+    .attr("stroke-width", 1.2);
+
+zoomGroup.selectAll("rect.map-bus")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("rect")
+  .attr("class", "map-bus")
+  .attr("id", d => d.id)
+  .attr("x", d => d.x - d.width / 2)
+  .attr("y", d => d.y - d.height / 2)
+  .attr("width", d => d.width)
+  .attr("height", d => d.height)
+  .attr("fill", "#666")
+  .attr("stroke", "#000")
+  .attr("stroke-width", 0.8)
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+zoomGroup.selectAll("path.map-load")
+  .data(nodes.filter(d => d.type === "load"))
+  .enter()
+  .append("path")
+  .attr("class", "map-load")
+  .attr("id", d => d.id)
+  .attr("d", d => {
+    const size = 20;
+    const x = d.x;
+    const y = d.y;
+    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
+  })
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+
+  // === Hover & Selection Sync
+  d3.selectAll(".map-gen")
+    .on("mouseenter", function (event, d) {
+      d3.select(this).classed("hovered", true);
+    })
+    .on("mouseleave", function () {
+      d3.select(this).classed("hovered", false);
+    });
+
+  // Optional: add generator label
+  /*
+  zoomGroup.selectAll("text.map-gen-label")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("text")
+    .attr("x", d => d.x + 6)
+    .attr("y", d => d.y + 3)
+    .attr("font-size", "6px")
+    .text(d => d.id); */
+});
+
+// === Update generator colors on scenario load ===
+function updateMapGeneratorsFromScenario() {
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const isOn = match && match.pg > 0;
+    const isSelected = d.id === selectedGeneratorId;
+
+    d3.select(this)
+      .attr("fill", isOn ? "#4caf50" : "white")
+      .attr("stroke", isSelected ? "blue" : "black")
+      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+  });
+
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (selectedGeneratorId) {
+    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+    if (!selected.empty()) {
+      const { cx, cy } = selected.node();
+      const r = +selected.attr("r");
+
+      d3.select("#zoom-group")
+        .append("circle")
+        .attr("class", "map-gen-highlight")
+        .attr("cx", cx.baseVal.value)
+        .attr("cy", cy.baseVal.value)
+        .attr("r", r + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#00f")
+        .attr("stroke-width", 3)
+        .attr("pointer-events", "none");
+    }
+  }
+}
+
+  </script>
+</body>
+</html>
