@@ -2,31 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>genMapping attributes</title>
+  <title>Generator Visual Mapping Showcase (No Hue)</title>
   <style>
     body {
       font-family: sans-serif;
-      padding: 20px;
-    }
-    svg {
-      border: 1px solid #ccc;
-      background: #f8f8f8;
+      margin: 20px;
     }
     .controls {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+      min-width: 400px;
+    }
+    #showcase-grid {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    svg {
+      border: 1px solid #ccc;
+      background: #fafafa;
+    }
+    h2 {
+      margin: 0.8em 0 0.3em;
     }
   </style>
 </head>
 <body>
 
-<h2>genMapping attributes test</h2>
+<h1>Generator Attribute Showcase (No Hue)</h1>
 
 <div class="controls">
-  <div>
-    <label>Size represents:</label>
+  <div><label>Size:</label>
     <select id="map-size">
       <option value="maxPW">Max Power</option>
       <option value="currentPW">Current Power</option>
@@ -34,17 +49,7 @@
       <option value="emissions">Emissions</option>
     </select>
   </div>
-  <div>
-    <label>Hue represents:</label>
-    <select id="map-hue">
-      <option value="cost">Cost</option>
-      <option value="maxPW">Max Power</option>
-      <option value="currentPW">Current Power</option>
-      <option value="emissions">Emissions</option>
-    </select>
-  </div>
-  <div>
-    <label>Saturation represents:</label>
+  <div><label>Saturation:</label>
     <select id="map-saturation">
       <option value="emissions">Emissions</option>
       <option value="cost">Cost</option>
@@ -53,115 +58,146 @@
     </select>
   </div>
   <div>
-    <label>Stroke width represents:</label>
-    <select id="map-stroke">
-      <option value="currentPW">Current Power</option>
-      <option value="emissions">Emissions</option>
-      <option value="cost">Cost</option>
-      <option value="maxPW">Max Power</option>
-    </select>
+  <label>Stroke Width:</label>
+  <select id="map-stroke">
+    <option value="cost">Cost</option>
+    <option value="emissions">Emissions</option>
+    <option value="maxPW">Max Power</option>
+    <option value="currentPW">Current Power</option>
+  </select>
+</div>
+  <div><label>Fuel Color: Coal</label>
+    <input type="color" id="color-coal" value="#444444">
+  </div>
+  <div><label>Fuel Color: Gas</label>
+    <input type="color" id="color-gas" value="#cc5500">
+  </div>
+  <div><label>Fuel Color: Combined</label>
+    <input type="color" id="color-combined" value="#999900">
+  </div>
+  <div><label>Fuel Color: Hydro</label>
+    <input type="color" id="color-hydro" value="#3399ff">
   </div>
 </div>
 
-<svg id="viz" width="900" height="300"></svg>
+<div id="showcase-grid">
+  <div class="column">
+    <h2>Cost (Low, Medium, High)</h2>
+    <svg id="cost-showcase" width="400" height="100"></svg>
+
+    <h2>Max Power (Small, Medium, Large)</h2>
+    <svg id="maxpw-showcase" width="400" height="100"></svg>
+
+    <h2>Current Power (Low, Medium, High)</h2>
+    <svg id="currentpw-showcase" width="400" height="100"></svg>
+  </div>
+
+  <div class="column">
+    <h2>Emissions (Low, Medium, High)</h2>
+    <svg id="emissions-showcase" width="400" height="100"></svg>
+
+    <h2>Fuel Type (Coal, Gas, Combined, Hydro)</h2>
+    <svg id="fueltype-showcase" width="400" height="100"></svg>
+  </div>
+</div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-  const generators = [
-    { id: "Gen1", x: 115, y: 143, maxPW: 360, currentPW: 317, cost: 90.39, emissions: 1.69, fillLevel: 0.5 },
-    { id: "Gen2", x: 184, y: 150, maxPW: 325, currentPW: 96, cost: 42.53, emissions: 1.93, fillLevel: 0.5 },
-    { id: "Gen3", x: 234, y: 110, maxPW: 279, currentPW: 244, cost: 96.02, emissions: 1.59, fillLevel: 0.5 },
-    { id: "Gen4", x: 296, y: 103, maxPW: 420, currentPW: 43, cost: 35.97, emissions: 0.82, fillLevel: 0.5 },
-    { id: "Gen5", x: 384, y: 67, maxPW: 460, currentPW: 391, cost: 16.22, emissions: 0.75, fillLevel: 0.5 },
-    { id: "Gen6", x: 466, y: 70, maxPW: 197, currentPW: 14, cost: 12.94, emissions: 1.25, fillLevel: 0.5 },
-    { id: "Gen7", x: 509, y: 70, maxPW: 315, currentPW: 205, cost: 46.29, emissions: 0.57, fillLevel: 0.5 },
-    { id: "Gen8", x: 576, y: 130, maxPW: 482, currentPW: 343, cost: 49.78, emissions: 1.51, fillLevel: 0.5 },
-    { id: "Gen9", x: 673, y: 96, maxPW: 493, currentPW: 198, cost: 48.56, emissions: 1.9, fillLevel: 0.5 },
-    { id: "Gen10", x: 734, y: 77, maxPW: 102, currentPW: 43, cost: 99.63, emissions: 0.76, fillLevel: 0.5 }
-  ];
+const sharedGenerators = [
+  { cost: 10, maxPW: 100, currentPW: 10, emissions: 0.1, fuel: "coal" },
+  { cost: 40, maxPW: 400, currentPW: 150, emissions: 1.0, fuel: "gas" },
+  { cost: 75, maxPW: 600, currentPW: 250, emissions: 2.0, fuel: "combined" },
+  { cost: 90, maxPW: 700, currentPW: 300, emissions: 3.0, fuel: "hydro" },
+  { cost: 110, maxPW: 800, currentPW: 400, emissions: 4.0, fuel: "coal" },
+  { cost: 130, maxPW: 900, currentPW: 500, emissions: 5.0, fuel: "gas" },
+  { cost: 150, maxPW: 1000, currentPW: 700, emissions: 6.0, fuel: "combined" }
+];
 
-  const svg = d3.select("#viz");
-  const defs = svg.append("defs");
+const costData = sharedGenerators.slice(0, 3);
+const maxPWData = sharedGenerators.slice(2, 5);
+const currentPWData = sharedGenerators.slice(1, 4);
+const emissionsData = sharedGenerators.slice(3, 6);
+const fuelTypeData = sharedGenerators.slice(0, 4);
 
+const allSections = {
+  "#cost-showcase": costData,
+  "#maxpw-showcase": maxPWData,
+  "#currentpw-showcase": currentPWData,
+  "#emissions-showcase": emissionsData,
+  "#fueltype-showcase": fuelTypeData
+};
+
+function drawCircles(svgId, data) {
+  const svg = d3.select(svgId);
+  const spacing = 400 / (data.length + 1);
   const group = svg.selectAll("g")
-    .data(generators)
+    .data(data)
     .enter()
     .append("g")
-    .attr("transform", d => `translate(${d.x},${d.y})`)
-    .style("cursor", "ns-resize")
-    .call(d3.drag()
-      .on("drag", function (event, d) {
-        d.fillLevel -= event.dy / 60;
-        d.fillLevel = Math.max(0, Math.min(1, d.fillLevel));
-        updateFill(d);
-      }));
+    .attr("transform", (_, i) => `translate(${spacing * (i + 1)}, 50)`);
 
-  defs.selectAll("clipPath")
-    .data(generators)
-    .enter()
-    .append("clipPath")
-    .attr("id", d => `clip-${d.id}`)
-    .append("circle")
-    .attr("cx", 0)
-    .attr("cy", d => 30 - 30 * d.fillLevel)
-    .attr("r", d => 30 * d.fillLevel);
+  group.append("circle").attr("class", "gen-circle");
+}
 
-  group.append("circle")
-    .attr("class", "outer-ring")
-    .attr("r", 30)
-    .attr("fill", "none")
-    .attr("stroke", "#000");
+for (let id in allSections) drawCircles(id, allSections[id]);
 
-  group.append("circle")
-    .attr("class", "fill-circle")
-    .attr("clip-path", d => `url(#clip-${d.id})`);
+function darken(hex, percent) {
+  const c = d3.color(hex);
+  if (!c) return "#000";
+  c.l = Math.max(0, c.l - percent);
+  return c.formatHex();
+}
 
-  function updateFill(d) {
-    defs.select(`#clip-${d.id} circle`)
-      .attr("cy", 30 - 30 * d.fillLevel)
-      .attr("r", 30 * d.fillLevel);
-  }
+function updateVisuals() {
+  const sizeAttr = document.getElementById("map-size").value;
+  const satAttr = document.getElementById("map-saturation").value;
 
-  function updateVisuals() {
-    const sizeAttr = document.getElementById("map-size").value;
-    const hueAttr = document.getElementById("map-hue").value;
-    const satAttr = document.getElementById("map-saturation").value;
-    const strokeAttr = document.getElementById("map-stroke").value;
+  const fuelColors = {
+    coal: document.getElementById("color-coal").value,
+    gas: document.getElementById("color-gas").value,
+    combined: document.getElementById("color-combined").value,
+    hydro: document.getElementById("color-hydro").value
+  };
 
-    const sizeScale = d3.scaleLinear()
-      .domain(d3.extent(generators, d => d[sizeAttr]))
-      .range([15, 40]);
+  const allData = Object.values(allSections).flat();
 
-    const hueScale = d3.scaleLinear()
-      .domain(d3.extent(generators, d => d[hueAttr]))
-      .range([0, 360]);
+  const sizeScale = d3.scaleLinear()
+    .domain(d3.extent(allData, d => d[sizeAttr]))
+    .range([10, 30]);
 
-    const satScale = d3.scaleLinear()
-      .domain(d3.extent(generators, d => d[satAttr]))
-      .range([40, 100]);
+  const satScale = d3.scaleLinear()
+    .domain(d3.extent(allData, d => d[satAttr]))
+    .range([30, 100]);
 
-    const strokeScale = d3.scaleLinear()
-      .domain(d3.extent(generators, d => d[strokeAttr]))
-      .range([1, 8]);
-
-    group.selectAll(".fill-circle")
-      .data(generators)
+  for (let id in allSections) {
+    d3.select(id)
+      .selectAll(".gen-circle")
+      .data(allSections[id])
       .attr("r", d => sizeScale(d[sizeAttr]))
-      .attr("fill", d => `hsl(${hueScale(d[hueAttr])}, ${satScale(d[satAttr])}%, 50%)`);
-
-    group.selectAll(".outer-ring")
-      .data(generators)
-      .attr("r", d => sizeScale(d[sizeAttr]))
-      .attr("stroke-width", d => strokeScale(d[strokeAttr]));
-
-    defs.selectAll("clipPath circle")
-      .data(generators)
-      .attr("r", d => sizeScale(d[sizeAttr]) * d.fillLevel)
-      .attr("cy", d => sizeScale(d[sizeAttr]) - sizeScale(d[sizeAttr]) * d.fillLevel);
+      .attr("fill", d => {
+  const base = d3.color(fuelColors[d.fuel]);
+  const s = satScale(d[satAttr]);
+  const hsl = d3.hsl(base);
+  hsl.s = s / 100;
+  hsl.l = 0.5;
+  const fillColor = hsl.formatHex();
+  d._fill = fillColor;  // Save if needed elsewhere
+  return fillColor;
+})
+.attr("stroke", d => {
+  const base = d3.color(fuelColors[d.fuel]);
+  const s = satScale(d[satAttr]);
+  const hsl = d3.hsl(base);
+  hsl.s = s / 100;
+  hsl.l = 0.3; // Slightly darker than fill
+  return hsl.formatHex();
+})
+      .attr("stroke-width", 2);
   }
+}
 
-  updateVisuals();
-  d3.selectAll("select").on("change", updateVisuals);
+updateVisuals();
+d3.selectAll("select, input[type=range], input[type=color]").on("input", updateVisuals);
 </script>
 
 </body>
