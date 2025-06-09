@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MapView Prototype (9/6)</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <link rel="stylesheet" href="/css/listview-core.css" /> <!-- Reuse listView styling -->
+  <link rel="stylesheet" href="/css/mapview-core.css" /> 
+ <style>
+    .overview-card {
+      width: 60%;
+    }
+    #admin-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 15;
+      background: var(--bg-card);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    #theme-toggle {
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body class="dark-theme">
+  <div id="map-container">
+    <svg id="map">
+      <g id="zoom-layer"></g>
+    </svg>
+
+    <div class="overview-card" id="overview">
+      <div class="label">Power</div>
+      <div id="overview-power">–</div>
+      <div class="label">Emissions</div>
+      <div id="overview-emissions">–</div>
+      <div class="label">Cost</div>
+      <div id="overview-cost">–</div>
+      <div class="label">Scenario</div>
+        <div id="overview-scenario">–</div>
+      <button onclick="window.location.href='/'">Switch to List View</button>
+    </div>
+
+    <div class="bubble" id="bubble"></div>
+
+    <div id="admin-controls">
+      <div class="label">Admin Controls</div>
+      <button id="theme-toggle" class="theme-button">🌙 Dark Mode</button>
+    </div>
+  </div>
+
+  <script>
+  const svg = d3.select("#map");
+const zoomLayer = svg.select("#zoom-layer");
+const bubble = d3.select("#bubble");
+let selectedGen = null;
+let selectedGenData = null;
+
+let currentGenerators = [];
+let currentScenarioData = {};
+
+let selectedGeneratorId = null;
+
+const connectorLine = svg.append("line")
+  .attr("class", "connector-line")
+  .style("display", "none");
+
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 5])
+  .on("zoom", (event) => {
+    zoomLayer.attr("transform", event.transform);
+    updateConnector();  // <- redraw line during zoom/pan
+  });
+
+svg.call(zoom);
+
+// Initial zoom transform
+const centerX = window.innerWidth / 2;
+const centerY = window.innerHeight / 2;
+const mapCenterX = 1400;
+const mapCenterY = 1100;
+
+fetch("/api/scenario/clean_north_power")
+  .then(res => res.json())
+  .then(data => {
+    currentGenerators = data.generators;
+    currentScenarioData = data;
+
+            currentGenerators = data.generators;
+        renderOverview(currentGenerators);
+        updateMapGeneratorsFromScenario();
+
+        // Re-render the card inside the bubble
+        const updated = currentGenerators.find(g => g.index === gen.index);
+        const newCard = createGeneratorCard(updated, updated.pmax);
+        bubble.html("").node().appendChild(newCard);
+  });
+
+svg.call(
+  zoom.transform,
+  d3.zoomIdentity.translate(centerX, centerY).scale(0.3).translate(-mapCenterX, -mapCenterY)
+);
+
+fetch("/new-tests/full_nodes.json")
+  .then(res => res.json())
+  .then(data => {
+    const gens = data.filter(d => d.type === "generator");
+
+    zoomLayer.selectAll("circle.generator")
+      .data(gens)
+      .enter()
+      .append("circle")
+      .attr("class", "generator")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", 20)
+      .attr("fill", "#888")
+      .attr("stroke", "white")
+      .attr("stroke-width", 2)
+      .on("click", function(event, d) {
+        event.stopPropagation();
+        d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
+        d3.select(this).attr("stroke", "#42a5f5").attr("stroke-width", 4);
+        selectedGen = d3.select(this);
+        selectedGenData = d;
+
+        // Position bubble
+        const bubbleX = event.pageX + 10;
+        const bubbleY = event.pageY - 20;
+const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+const card = match ? createGeneratorCard(match, match.pmax) : document.createTextNode("⚠️ Generator not found");
+
+bubble
+  .style("display", "block")
+  .style("left", `${bubbleX}px`)
+  .style("top", `${bubbleY}px`)
+  .html("") // clear bubble
+  .node().appendChild(card);
+
+        updateConnector();
+      });
+
+    svg.on("click", function(event) {
+      if (event.target.tagName === "svg") {
+        d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
+        const maxPmax = 1000; // or dynamically: Math.max(...currentGenerators.map(g => g.pmax))
+
+bubble
+  .style("display", "block")
+  .style("left", `${bubbleX}px`)
+  .style("top", `${bubbleY}px`)
+  .html("") // clear old content
+  .node().appendChild(card); // inject the card node directly
+        connectorLine.style("display", "none");
+        selectedGen = null;
+      }
+    });
+  });
+
+  function renderOverview(gens) {
+  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+
+  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
+  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
+  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+}
+
+function createGeneratorCard(gen, maxPmax) {
+  const genId = `Gen${gen.bus}`;
+  const locked = currentScenarioData?.locked_generators?.includes(genId);
+  const disabled = currentScenarioData?.disabled_generators?.includes(genId);
+  const status = gen.user_active ? "active" : "inactive";
+
+  const card = document.createElement("div");
+  card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
+
+
+    function getCostColor(cost) {
+  if (cost < 2) return 'green';
+  if (cost < 5) return 'yellow';
+  if (cost < 7) return 'orange';
+  return 'red';
+}
+
+function getEmissionColor(emissions) {
+  if (emissions < 0.5) return 'green';
+  if (emissions < 1.0) return '#88cc88';
+  if (emissions < 1.5) return '#bbbb88';
+  return 'gray';
+}
+
+  // LEFT SECTION
+  const left = document.createElement("div");
+  const fuelColors = {
+    coal: '#614732', gas: '#4a7838', hydro: '#4faad1', combined: '#ad7a37',
+  };
+  left.style.backgroundColor = fuelColors[gen.fuel_type.toLowerCase()] || 'var(--bg-soft)';
+  left.className = "gen-section left";
+  left.innerHTML = `
+    <div class="gen-name">${gen.station_name}</div>
+    <div class="gen-number">Bus ${gen.bus}</div>
+    <div class="gen-type">${gen.fuel_type}</div>`;
+
+  // CENTER SECTION
+  const center = document.createElement("div");
+  center.className = "gen-section center";
+  center.innerHTML = `
+    <div class="gen-power"><div class="power-label">Power</div></div>
+    <div class="gen-impact-row">
+      <div class="gen-cost impact-wrapper">
+        <div class="impact-box" style="background:${getCostColor(gen.cost_per_mw)};">💲</div>
+        <div class="impact-label">${gen.cost_per_mw.toFixed(1)} / MW</div>
+      </div>
+      <div class="gen-emissions impact-wrapper">
+        <div class="impact-box" style="background:${getEmissionColor(gen.emissions_per_mw)};">☁️</div>
+        <div class="impact-label">${gen.emissions_per_mw.toFixed(1)} / MW</div>
+      </div>
+    </div>`;
+
+  const powerContainer = center.querySelector(".gen-power");
+  const blockRow = document.createElement("div");
+  blockRow.className = "power-block-row";
+  powerContainer.appendChild(blockRow);
+
+  // BUILD BLOCKS
+  let levels = [];
+  let current = 0;
+  while (current + 100 <= gen.pmax) {
+    current += 100;
+    levels.push(current);
+  }
+  if (current < gen.pmax) levels.push(gen.pmax);
+
+  function createBlock(level, isHalf = false) {
+    const block = document.createElement("div");
+    block.className = "power-block";
+    block.style.width = isHalf ? `10px` : `20px`;
+    block.style.height = "20px";
+    block.style.borderRadius = "4px";
+    block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
+    block.title = `${level} MW`;
+
+    if (!locked && !disabled) {
+      block.style.cursor = "pointer";
+      block.addEventListener("mousedown", () => {
+        const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+        fetch(`/api/set_generation/${gen.index}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ percent, user_active: true })
+        })
+          .then(res => res.json())
+          .then(data => {
+            currentGenerators = data.generators;
+            renderOverview(currentGenerators);
+            updateMapGeneratorsFromScenario();
+          });
+      });
+    }
+
+    return block;
+  }
+
+  levels.forEach((level, i) => {
+    const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+    const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+    blockRow.appendChild(createBlock(level, isHalf));
+  });
+
+  const maxLabel = document.createElement("span");
+  maxLabel.style.marginLeft = "8px";
+  maxLabel.style.fontSize = "0.75rem";
+  maxLabel.style.color = "var(--text-light)";
+  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
+  blockRow.appendChild(maxLabel);
+
+  // RIGHT SECTION (empty — no + / - buttons)
+  const right = document.createElement("div");
+  right.className = "gen-section right";
+  card.appendChild(left);
+  card.appendChild(center);
+  card.appendChild(right);
+
+  return card;
+}
+
+function updateMapGeneratorsFromScenario() {
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const isOn = match && match.pg > 0;
+    const isSelected = d.id === selectedGeneratorId;
+
+    d3.select(this)
+      .attr("fill", isOn ? "#4caf50" : "white")
+      .attr("stroke", isSelected ? "blue" : "black")
+      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+  });
+
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (selectedGeneratorId) {
+    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+    if (!selected.empty()) {
+      const { cx, cy } = selected.node();
+      const r = +selected.attr("r");
+
+      d3.select("#zoom-group")
+        .append("circle")
+        .attr("class", "map-gen-highlight")
+        .attr("cx", cx.baseVal.value)
+        .attr("cy", cy.baseVal.value)
+        .attr("r", r + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#00f")
+        .attr("stroke-width", 3)
+        .attr("pointer-events", "none");
+    }
+  }
+}
+
+
+function updateConnector() {
+  if (!selectedGen || !selectedGenData) return;
+
+  const transform = d3.zoomTransform(svg.node());
+  const bubbleRect = bubble.node().getBoundingClientRect();
+
+  const genX = transform.applyX(selectedGenData.x);
+  const genY = transform.applyY(selectedGenData.y);
+  const bubbleX = bubbleRect.left + bubbleRect.width / 2;
+  const bubbleY = bubbleRect.top + bubbleRect.height / 2;
+
+  connectorLine
+    .attr("x1", genX)
+    .attr("y1", genY)
+    .attr("x2", bubbleX)
+    .attr("y2", bubbleY)
+    .style("display", "block");
+}
+
+//renderOverview(currentGenerators);
+//updateMapGeneratorsFromScenario();
+
+  </script>
+</body>
+</html>
+

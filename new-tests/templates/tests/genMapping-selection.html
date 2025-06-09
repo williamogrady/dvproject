@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MAPVIEW SELECTION TEST</title>
+  <style>
+    body {
+      margin: 0;
+      background: #1c1c1c;
+      color: #eee;
+      font-family: sans-serif;
+    }
+    svg {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background: #111;
+    }
+
+    .generator {
+      cursor: pointer;
+      stroke: white;
+      stroke-width: 2px;
+    }
+
+    .selected {
+      stroke: #42a5f5;
+      stroke-width: 4px;
+    }
+
+    .bubble {
+      position: absolute;
+      background: #333;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px #000;
+      display: none;
+
+      border: 5px solid #42a5f5;
+    }
+
+    .bubble button {
+      margin: 4px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .red    { background-color: #c62828; }
+    .yellow { background-color: #f9a825; }
+    .green  { background-color: #2e7d32; }
+  </style>
+</head>
+<body>
+  <svg id="map">
+    <g id="zoom-layer"></g>
+  </svg>
+
+  <div class="bubble" id="bubble">
+    <button class="red">Red</button>
+    <button class="yellow">Yellow</button>
+    <button class="green">Green</button>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const svg = d3.select("#map");
+const zoomLayer = svg.select("#zoom-layer");
+const bubble = d3.select("#bubble");
+let selectedGen = null;
+let selectedGenData = null;
+
+const connectorLine = svg.append("line")
+  .attr("stroke", "#42a5f5")
+  .attr("stroke-width", 2)
+  .attr("pointer-events", "none")
+  .style("display", "none");
+
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 5])
+  .on("zoom", (event) => {
+    zoomLayer.attr("transform", event.transform);
+    updateConnector();  // update the line on zoom
+  });
+
+svg.call(zoom);
+
+// Same initial zoom logic
+const initialScale = 0.3;
+const centerX = window.innerWidth / 2;
+const centerY = window.innerHeight / 2;
+const mapCenterX = 1400;
+const mapCenterY = 1100;
+
+svg.call(
+  zoom.transform,
+  d3.zoomIdentity
+    .translate(centerX, centerY)
+    .scale(initialScale)
+    .translate(-mapCenterX, -mapCenterY)
+);
+
+// Load generators
+fetch("/new-tests/full_nodes.json")
+  .then(res => res.json())
+  .then(data => {
+    const gens = data.filter(d => d.type === "generator");
+
+    zoomLayer.selectAll("circle.generator")
+      .data(gens)
+      .enter()
+      .append("circle")
+      .attr("class", "generator")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", 20)
+      .attr("fill", "#888")
+      .on("click", function(event, d) {
+        event.stopPropagation();
+
+        d3.selectAll(".generator").classed("selected", false);
+        d3.select(this).classed("selected", true);
+        selectedGen = d3.select(this);
+        selectedGenData = d;
+
+        const bubbleX = event.pageX + 10;
+        const bubbleY = event.pageY - 20;
+
+        bubble
+          .style("display", "block")
+          .style("left", `${bubbleX}px`)
+          .style("top", `${bubbleY}px`);
+
+        updateConnector();
+      });
+  });
+
+// Color buttons
+d3.select(".red").on("click", () => selectedGen?.attr("fill", "#c62828"));
+d3.select(".yellow").on("click", () => selectedGen?.attr("fill", "#f9a825"));
+d3.select(".green").on("click", () => selectedGen?.attr("fill", "#2e7d32"));
+
+// Dismiss bubble
+svg.on("click", function(event) {
+  if (event.target.tagName === "svg") {
+    d3.selectAll(".generator").classed("selected", false);
+    bubble.style("display", "none");
+    connectorLine.style("display", "none");
+    selectedGen = null;
+  }
+});
+
+function updateConnector() {
+  if (!selectedGen || !selectedGenData) return;
+
+  const transform = d3.zoomTransform(svg.node());
+  const bubbleRect = bubble.node().getBoundingClientRect();
+
+  const genX = transform.applyX(selectedGenData.x);
+  const genY = transform.applyY(selectedGenData.y);
+  const bubbleX = bubbleRect.left + bubbleRect.width / 2;
+  const bubbleY = bubbleRect.top + bubbleRect.height / 2;
+
+  connectorLine
+    .attr("x1", genX)
+    .attr("y1", genY)
+    .attr("x2", bubbleX)
+    .attr("y2", bubbleY)
+    .style("display", "block");
+}
+
+  </script>
+</body>
+</html>

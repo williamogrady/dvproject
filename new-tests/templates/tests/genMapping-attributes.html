@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Generator Visual Mapping Showcase (No Hue)</title>
+  <title>Gen Mapping Test 2</title>
   <style>
     body {
       font-family: sans-serif;
@@ -38,7 +38,7 @@
 </head>
 <body>
 
-<h1>Generator Attribute Showcase (No Hue)</h1>
+<h1>Gen Mapping Test 2</h1>
 
 <div class="controls">
   <div><label>Size:</label>
@@ -99,25 +99,59 @@
     <h2>Fuel Type (Coal, Gas, Combined, Hydro)</h2>
     <svg id="fueltype-showcase" width="400" height="100"></svg>
   </div>
+
+  <div>
+  <label><input type="checkbox" id="reverse-size"> Reverse Size</label>
+</div>
+<div>
+  <label><input type="checkbox" id="reverse-sat"> Reverse Saturation</label>
+</div>
+<div>
+  <label><input type="checkbox" id="reverse-stroke"> Reverse Stroke</label>
+</div>
 </div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-const sharedGenerators = [
-  { cost: 10, maxPW: 100, currentPW: 10, emissions: 0.1, fuel: "coal" },
-  { cost: 40, maxPW: 400, currentPW: 150, emissions: 1.0, fuel: "gas" },
-  { cost: 75, maxPW: 600, currentPW: 250, emissions: 2.0, fuel: "combined" },
-  { cost: 90, maxPW: 700, currentPW: 300, emissions: 3.0, fuel: "hydro" },
-  { cost: 110, maxPW: 800, currentPW: 400, emissions: 4.0, fuel: "coal" },
-  { cost: 130, maxPW: 900, currentPW: 500, emissions: 5.0, fuel: "gas" },
-  { cost: 150, maxPW: 1000, currentPW: 700, emissions: 6.0, fuel: "combined" }
+
+const baseGen = {
+  cost: 100,
+  maxPW: 500,
+  currentPW: 250,
+  emissions: 4.0,
+  fuel: "hydro"
+};
+
+const costData = [
+  { ...baseGen, cost: 20 },
+  { ...baseGen, cost: 100 },
+  { ...baseGen, cost: 200 }
 ];
 
-const costData = sharedGenerators.slice(0, 3);
-const maxPWData = sharedGenerators.slice(2, 5);
-const currentPWData = sharedGenerators.slice(1, 4);
-const emissionsData = sharedGenerators.slice(3, 6);
-const fuelTypeData = sharedGenerators.slice(0, 4);
+const maxPWData = [
+  { ...baseGen, maxPW: 100 },
+  { ...baseGen, maxPW: 500 },
+  { ...baseGen, maxPW: 1000 }
+];
+
+const currentPWData = [
+  { ...baseGen, currentPW: 50 },
+  { ...baseGen, currentPW: 250 },
+  { ...baseGen, currentPW: 500 }
+];
+
+const emissionsData = [
+  { ...baseGen, emissions: 0.5 },
+  { ...baseGen, emissions: 4.0 },
+  { ...baseGen, emissions: 8.0 }
+];
+
+const fuelTypeData = [
+  { ...baseGen, fuel: "coal" },
+  { ...baseGen, fuel: "gas" },
+  { ...baseGen, fuel: "combined" },
+  { ...baseGen, fuel: "hydro" }
+];
 
 const allSections = {
   "#cost-showcase": costData,
@@ -141,16 +175,13 @@ function drawCircles(svgId, data) {
 
 for (let id in allSections) drawCircles(id, allSections[id]);
 
-function darken(hex, percent) {
-  const c = d3.color(hex);
-  if (!c) return "#000";
-  c.l = Math.max(0, c.l - percent);
-  return c.formatHex();
-}
-
 function updateVisuals() {
   const sizeAttr = document.getElementById("map-size").value;
   const satAttr = document.getElementById("map-saturation").value;
+  const strokeAttr = document.getElementById("map-stroke").value;
+  const reverseSize = document.getElementById("reverse-size").checked;
+  const reverseSat = document.getElementById("reverse-sat").checked;
+  const reverseStroke = document.getElementById("reverse-stroke").checked;
 
   const fuelColors = {
     coal: document.getElementById("color-coal").value,
@@ -161,43 +192,63 @@ function updateVisuals() {
 
   const allData = Object.values(allSections).flat();
 
-  const sizeScale = d3.scaleLinear()
-    .domain(d3.extent(allData, d => d[sizeAttr]))
-    .range([10, 30]);
+  // Size Scale
+  let sizeScale = d => 15;
+  if (sizeAttr) {
+    let extent = d3.extent(allData, d => d[sizeAttr]);
+    if (reverseSize) extent.reverse();
+    sizeScale = d3.scaleLinear().domain(extent).range([10, 30]);
+  }
 
-  const satScale = d3.scaleLinear()
-    .domain(d3.extent(allData, d => d[satAttr]))
-    .range([30, 100]);
+  // Saturation Scale
+  let satScale = d => 70;
+  if (satAttr) {
+    let extent = d3.extent(allData, d => d[satAttr]);
+    if (reverseSat) extent.reverse();
+    satScale = d3.scaleLinear().domain(extent).range([10, 100]);
+  }
+
+  // Stroke Width Scale
+  let strokeScale = d => 0;
+  if (strokeAttr) {
+    let extent = d3.extent(allData, d => d[strokeAttr]);
+    if (reverseStroke) extent.reverse();
+    strokeScale = d3.scaleLinear().domain(extent).range([2, 20]);
+  }
 
   for (let id in allSections) {
     d3.select(id)
       .selectAll(".gen-circle")
       .data(allSections[id])
-      .attr("r", d => sizeScale(d[sizeAttr]))
-      .attr("fill", d => {
+      .attr("r", d => sizeAttr ? sizeScale(d[sizeAttr]) : 15)
+
+.attr("fill", d => {
   const base = d3.color(fuelColors[d.fuel]);
-  const s = satScale(d[satAttr]);
+  const s = satAttr ? satScale(d[satAttr]) : 70;
   const hsl = d3.hsl(base);
   hsl.s = s / 100;
   hsl.l = 0.5;
   const fillColor = hsl.formatHex();
-  d._fill = fillColor;  // Save if needed elsewhere
+  d._fill = fillColor;
   return fillColor;
 })
+
 .attr("stroke", d => {
   const base = d3.color(fuelColors[d.fuel]);
-  const s = satScale(d[satAttr]);
+  const s = satAttr ? satScale(d[satAttr]) : 70;
   const hsl = d3.hsl(base);
   hsl.s = s / 100;
-  hsl.l = 0.3; // Slightly darker than fill
+  hsl.l = 0.3;
   return hsl.formatHex();
 })
-      .attr("stroke-width", 2);
+
+.attr("stroke-width", d => strokeAttr ? strokeScale(d[strokeAttr]) : 0);
+
   }
 }
 
 updateVisuals();
-d3.selectAll("select, input[type=range], input[type=color]").on("input", updateVisuals);
+d3.selectAll("select, input[type=color], input[type=checkbox]").on("input", updateVisuals);
 </script>
 
 </body>
