@@ -8,17 +8,13 @@ import os
 app = Flask(__name__, static_folder='css', static_url_path='/css')
 grid = Grid()
 
-@app.route("/")
+@app.route("/list")
 def list_view():
     return render_template("listView-prototype.html")
 
 @app.route("/map")
 def map_view():
     return render_template("mapView-prototype.html")
-
-@app.route("/scaling")
-def scaling():
-    return render_template("/tests/dynamicOverviewScaling.html")
 
 @app.route('/new-tests/<path:filename>')
 def serve_json_from_same_folder(filename):

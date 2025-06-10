@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generator Mapping with Power Blocks</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      overflow: hidden;
+      background: #1c1c1c;
+      color: #eee;
+    }
+
+    svg {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .generator {
+      fill: white;
+      stroke: black;
+      stroke-width: 1.5px;
+      cursor: pointer;
+    }
+
+    .generator.selected {
+      stroke: #42a5f5;
+      stroke-width: 3px;
+    }
+
+    .bubble {
+      position: absolute;
+      background: rgba(30, 30, 30, 0.95);
+      border: 1px solid #555;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 10;
+      min-width: 150px;
+    }
+
+    .block-row {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .power-block {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+      background: #444;
+      border: 1px solid #666;
+      cursor: pointer;
+    }
+
+    .power-block.active {
+      background: #4caf50;
+    }
+  </style>
+</head>
+<body>
+  <svg id="map"></svg>
+  <div class="bubble" id="bubble">
+    <div id="bubble-id" style="font-weight: bold;"></div>
+    <div id="bubble-blocks" class="block-row"></div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const svg = d3.select("#map");
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const generators = [
+      { id: "Gen1", x: 150, y: 150, pg: 0 },
+      { id: "Gen2", x: 300, y: 220, pg: 0 },
+      { id: "Gen3", x: 450, y: 160, pg: 0 }
+    ];
+
+    let selectedGen = null;
+
+    const genGroups = svg.selectAll("g.generator-group")
+      .data(generators)
+      .enter()
+      .append("g")
+      .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+    genGroups.append("circle")
+      .attr("class", "generator")
+      .attr("r", 25)
+      .on("click", function(event, d) {
+        event.stopPropagation();
+
+        d3.selectAll(".generator").classed("selected", false);
+        d3.select(this).classed("selected", true);
+        selectedGen = d3.select(this);
+
+        const bubbleEl = document.getElementById("bubble");
+        bubbleEl.style.display = "block";
+        bubbleEl.style.left = `${event.pageX + 10}px`;
+        bubbleEl.style.top = `${event.pageY - 20}px`;
+
+        document.getElementById("bubble-id").textContent = d.id;
+        renderPowerBlocks(d, 400);
+      });
+
+    function renderPowerBlocks(gen, max = 400) {
+      const blockContainer = document.getElementById("bubble-blocks");
+      blockContainer.innerHTML = "";
+
+      const currentPower = gen.pg || 0;
+      const levels = [];
+      for (let i = 50; i <= max; i += 50) levels.push(i);
+
+      levels.forEach(level => {
+        const block = document.createElement("div");
+        block.className = "power-block";
+        if (level <= currentPower) block.classList.add("active");
+
+        block.title = `${level} MW`;
+        block.onclick = () => {
+          gen.pg = level;
+          renderPowerBlocks(gen, max);
+          selectedGen.attr("fill", "#4caf50");
+        };
+
+        blockContainer.appendChild(block);
+      });
+    }
+
+    // Deselect on background click
+    svg.on("click", () => {
+      d3.selectAll(".generator").classed("selected", false);
+      selectedGen = null;
+      document.getElementById("bubble").style.display = "none";
+    });
+  </script>
+</body>
+</html>

@@ -2,43 +2,159 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MapView Prototype (9/6)</title>
+  <title>mapView prototype, June 10th</title>
+  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
-  <link rel="stylesheet" href="/css/listview-core.css" /> <!-- Reuse listView styling -->
-  <link rel="stylesheet" href="/css/mapview-core.css" /> 
- <style>
-.overview-bar {
+  <style>
+
+    .power-block-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.power-block {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--gen-off, #444);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+
+:root {
+  --gen-on: #4caf50;
+  --gen-off: #333;
+}
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    #map-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    svg#map {
+      width: 100%;
+      height: 100%;
+      background: #dfcfcf;
+    }
+
+#overview {
   position: absolute;
-  top: 10px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 12px;
-  background: var(--bg-card);
-  padding: 10px 16px;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+  padding: 10px 20px;
+  background: rgba(40, 40, 40, 0.85); /* translucent wrapper */
   border-radius: 16px;
-  z-index: 10;
-  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
+
+#overview-top {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#overview-bottom {
+  margin-top: 10px;
+}
+
 .overview-card {
-  background: var(--bg-gencard);
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  min-width: 100px;
+  background: rgba(20, 20, 20, 0.95); /* darker than container */
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  min-width: 120px;
   text-align: center;
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  transition: background 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
 }
+
 .overview-card:hover {
-  background: #3c3c3c;
+  background: rgba(60, 60, 60, 0.95);
+  transform: translateY(-2px);
 }
+
+.overview-label {
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.overview-value {
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+.overview-status {
+  font-size: 0.7rem;
+  color: var(--text-light);
+}
+
+#overview-bottom {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+
+#overview-scenario {
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.scenario-label {
+  font-weight: 500;
+  color: var(--text-light);
+}
+
+.scenario-name {
+  font-weight: bold;
+}
+
+
 .overview-card.selected {
-  border: 2px solid white;
+  border: 2px solid #42a5f5; /* fallback if no class added */
 }
-.overview-card.scale-power.selected { border-color: #4caf50; }
-.overview-card.scale-cost.selected { border-color: #f9a825; }
-.overview-card.scale-emissions.selected { border-color: #c62828; }
+
+.overview-card.scale-power.selected {
+  border-color: #4caf50;
+}
+
+.overview-card.scale-cost.selected {
+  border-color: #f9a825;
+}
+
+.overview-card.scale-emissions.selected {
+  border-color: #c62828;
+}
 
     #admin-controls {
       position: absolute;
@@ -50,410 +166,194 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
-    #theme-toggle {
-      margin-top: 5px;
-    }
+
+    .bubble {
+  position: absolute;
+  background: #333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  pointer-events: none;
+  border: 2px solid #42a5f5;
+  display: none;
+  z-index: 20;
+}
 
   </style>
 </head>
-
-<body class="dark-theme">
+<body>
   <div id="map-container">
     <svg id="map">
       <g id="zoom-layer"></g>
     </svg>
 
-    <div class="overview-card" id="overview">
-      <div class="label">Power</div>
-      <div id="overview-power">–</div>
-      <div class="label">Emissions</div>
-      <div id="overview-emissions">–</div>
-      <div class="label">Cost</div>
-      <div id="overview-cost">–</div>
-      <div class="label">Scenario</div>
-        <div id="overview-scenario">–</div>
-      <button onclick="window.location.href='/'">Switch to List View</button>
+<div id="overview">
+  <div id="overview-top">
+    <div class="overview-card" id="scale-power">
+      <div class="overview-label">Power</div>
+      <div class="overview-value" id="overview-power">–</div>
+      <div class="overview-status" id="status-power">Click to scale</div>
     </div>
+    <div class="overview-card" id="scale-cost">
+      <div class="overview-label">Cost</div>
+      <div class="overview-value" id="overview-cost">–</div>
+      <div class="overview-status" id="status-cost">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-emissions">
+      <div class="overview-label">Emissions</div>
+      <div class="overview-value" id="overview-emissions">–</div>
+      <div class="overview-status" id="status-emissions">Click to scale</div>
+    </div>
+    <div class="overview-card" id="mode-full">
+  <div class="overview-label">Overloaded Lines</div>
+  <div class="overview-value" id="overview-lines">–</div>
+  <div class="overview-status">Click to show full layout</div>
+</div>
+  </div>
 
-    <div class="bubble" id="bubble"></div>
+  <div id="overview-bottom">
+    <div id="overview-scenario">
+      <span class="scenario-label">Current Scenario:</span>
+      <span class="scenario-name" id="overview-scenario-name">–</span>
+    </div>
+  </div>
+  
+</div>
 
-    <div id="admin-controls">
+
+<div class="bubble" id="bubble"></div>
+
+<div id="admin-controls">
   <div class="label">Admin Controls</div>
 
   <label for="scenario-select" style="font-size: 0.8rem;">Load Scenario:</label>
   <select id="scenario-select" style="margin-bottom: 6px; width: 100%;"></select>
   <button id="reset-button">🔁 Reset</button>
+  <button onclick="window.location.href='/list'"> Switch to List View</button>
 
   <button id="theme-toggle" class="theme-button" style="margin-top: 8px;">🌙 Dark Mode</button>
 </div>
+
   <script>
-  const svg = d3.select("#map");
+const svg = d3.select("#map");
+const svgElement = svg.node();
 const zoomLayer = svg.select("#zoom-layer");
+const zoomGroup = svg.append("g").attr("id", "zoom-group");
+
 const bubble = d3.select("#bubble");
-let selectedGen = null;
-let selectedGenData = null;
+let selectedGeneratorId = null;
 
-let currentGenerators = [];
-let currentScenarioId = "";
-let availableScenarios = [];
 let currentScaleMode = null;
+let currentGenerators = [];
 
-function scaleGeneratorsBy(metric) {
-  currentScaleMode = metric;
+let currentScenarioId = "";
+let currentScenarioData = null;
+let availableScenarios = [];
 
-  const values = currentGenerators.map(g => g[metric]);
-  const scale = d3.scaleLinear()
-    .domain([0, d3.max(values)])
-    .range([10, 100]);
+// Define zoom behavior — same as before
+const zoomBehavior = d3.zoom()
+  .scaleExtent([0.2, 2.0])  // Allow good zoom range
+  .on("zoom", (event) => {
+  zoomGroup.attr("transform", event.transform);
+  updateConnector();
+});
 
-  const color = {
-    pmax: "#4caf50", // green
-    cost_per_mw: "#f9a825", // yellow
-    emissions_per_mw: "#c62828" // red
-  }[metric];
+svg.call(zoomBehavior);
 
-  console.log(`🎯 Drawing generators with fill color: ${color} for metric: ${metric}`);
+window.addEventListener("load", () => {
+  const initialScale = 0.3;
+  const centerX = svgElement.clientWidth / 2;
+  const centerY = svgElement.clientHeight / 2;
 
-  d3.selectAll(".map-gen")
-    .transition()
-    .duration(500)
-    .attr("r", d => {
-      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return gen ? scale(gen[metric]) : 10;
-    })
-    .attr("fill", color);
+  svg.call(
+    zoomBehavior.transform,
+    d3.zoomIdentity
+      .translate(centerX - 200, centerY - 150)
+      .scale(initialScale)
+      .translate(-centerX, -centerY)
+  );
 
-  highlightButton(metric);
-}
-
-function resetGeneratorSizes() {
-  currentScaleMode = null;
-
-  d3.selectAll(".map-gen")
-    .transition()
-    .duration(500)
-    .attr("r", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      const sizeScale = d3.scaleSqrt()
-        .domain(d3.extent(currentGenerators, g => g.pmax))
-        .range([10, 100]);
-      return match ? sizeScale(match.pmax) : 10;
-    })
-    .attr("fill", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return match && match.pg > 0 ? "#4caf50" : "white";
-    });
-
-  highlightButton(null);
-}
-
-function highlightButton(mode) {
-  const buttons = {
-    pmax: "scale-power",
-    cost_per_mw: "scale-cost",
-    emissions_per_mw: "scale-emissions"
-  };
-
-  document.querySelectorAll(".overview-card").forEach(btn => {
-    btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions");
-  });
-
-  if (mode && buttons[mode]) {
-    const id = buttons[mode];
-    const btn = document.getElementById(id);
-    btn.classList.add("selected");
-
-    if (mode === "pmax") btn.classList.add("scale-power");
-    if (mode === "cost_per_mw") btn.classList.add("scale-cost");
-    if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
-  }
-}
+  // ✅ FIX: call fetchAllScenarios here
+  fetchAllScenarios();
+});
 
 
 async function fetchAllScenarios() {
-  const res = await fetch("/api/scenarios");
-  const data = await res.json();
+  console.log("fetchAllScenarios")
+      const res = await fetch("/api/scenarios");
+      const data = await res.json();
 
-  availableScenarios = data;
+      availableScenarios = data;
 
-  // Pick default
-  const defaultScenario = data.find(s => s.scenario_id === "clean_north_power") || data[0];
+      // Find default scenario
+      const defaultScenario = data.find(s => s.scenario_id === "clean_north_power");
 
-  if (defaultScenario) {
+        if (defaultScenario) {
     currentScenarioId = defaultScenario.scenario_id;
-    populateScenarioDropdown(data, currentScenarioId);
-    await loadScenario(currentScenarioId);
-  }
+    currentScenarioData = defaultScenario;
+
+        populateScenarioDropdown(data, currentScenarioId);
+        loadScenario(currentScenarioId);
+      } else {
+        console.error("No scenario with ID 'default' found.");
+      }
+    }
+
+function renderOverview(gens, scenarioData = {}) {
+  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+
+  const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
+
+  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
+  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
+  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  document.getElementById("overview-lines").textContent = overloaded;
+  document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
 }
 
-function populateScenarioDropdown(scenarios, selectedId) {
-  const select = document.getElementById("scenario-select");
-  select.innerHTML = "";
-
-  scenarios.forEach(s => {
-    const option = document.createElement("option");
-    option.value = s.scenario_id;
-    option.textContent = s.title || s.scenario_id;
-    if (s.scenario_id === selectedId) option.selected = true;
-    select.appendChild(option);
-  });
-}
-
-async function loadScenario(scenarioId) {
+ async function loadScenario(scenarioId) {
+  console.log("loadScenario")
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
   currentScenarioId = scenarioId;
   currentScenarioData = data;
   currentGenerators = data.generators;
+  let currentMapMode = "full";
 
-  renderOverview(currentGenerators);
-  updateMapGeneratorsFromScenario();
 
-  // Update scenario title in overview
-  document.getElementById("overview-scenario").textContent = currentScenarioData?.title || currentScenarioId;
 
-  if (selectedGenData) {
-    const updated = currentGenerators.find(g => g.index === selectedGenData.index);
-    const newCard = createGeneratorCard(updated, updated.pmax);
-    bubble.html("").node().appendChild(newCard);
-  }
+  renderOverview(currentGenerators, currentScenarioData || {});
+  updateMapGeneratorsFromScenario(); // Make sure this is called too
 }
 
-let selectedGeneratorId = null;
+    function populateScenarioDropdown(scenarios, selectedId) {
+        const select = document.getElementById("scenario-select");
+        select.innerHTML = "";
 
-const connectorLine = svg.append("line")
-  .attr("class", "connector-line")
-  .style("display", "none");
+        scenarios.forEach(s => {
+          const option = document.createElement("option");
+          option.value = s.scenario_id;
+          option.textContent = s.title || s.scenario_id;
+          if (s.scenario_id === selectedId) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      }
 
-const zoom = d3.zoom()
-  .scaleExtent([0.3, 5])
-  .on("zoom", (event) => {
-    zoomLayer.attr("transform", event.transform);
-    updateConnector();  // <- redraw line during zoom/pan
-  });
-
-svg.call(zoom);
-
-// Initial zoom transform
-const centerX = window.innerWidth / 2;
-const centerY = window.innerHeight / 2;
-const mapCenterX = 1400;
-const mapCenterY = 1100;
-
-Promise.all([
-  fetch("/api/scenario/clean_north_power").then(res => res.json()),
-  fetch("/new-tests/full_nodes.json").then(res => res.json())
-]).then(([scenarioData, nodeData]) => {
-  currentGenerators = scenarioData.generators;
-  currentScenarioId = "clean_north_power";
-
-  const gens = nodeData.filter(d => d.type === "generator");
-
-  // ✅ Recalculate sizeScale now that currentGenerators is ready
-  const sizeScale = d3.scaleSqrt()
-    .domain(d3.extent(currentGenerators, g => g.pmax))
-    .range([10, 100]);
-
-  console.log("🧪 currentGenerators sample:", currentGenerators.slice(0, 3));
-  const extent = d3.extent(currentGenerators, g => g.pmax);
-  console.log("🧪 size extent:", extent);
-
-  currentGenerators.forEach(g => {
-    if (g.pmax == null || isNaN(g.pmax)) {
-      console.warn("⚠️ Bad pmax value for:", g);
-    }
-  });
-
-  zoomLayer.selectAll("circle.generator")
-    .data(gens)
-    .enter()
-    .append("circle")
-    .attr("class", "generator map-gen")
-    .attr("cx", d => d.x)
-    .attr("cy", d => d.y)
-    .attr("r", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      if (!match) return 10;
-      console.log("🔍 Gen", match.name, "pmax =", match.pmax, "size =", sizeScale(match.pmax));
-      return sizeScale(match.pmax);
-    })
-    .attr("fill", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return match && match.pg > 0 ? "#4caf50" : "white";
-    })
-    .attr("stroke", "white")
-    .attr("stroke-width", 2)
-    .on("click", function(event, d) {
-      event.stopPropagation();
-
-      d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
-      d3.select(this).attr("stroke", "#42a5f5").attr("stroke-width", 4);
-
-      selectedGen = d;
-      selectedGenData = d;
-
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      if (!match) return;
-
-      const card = createGeneratorCard(match, match.pmax);
-      const bubbleX = event.pageX + 10;
-      const bubbleY = event.pageY - 20;
-
-      bubble
-        .style("display", "block")
-        .style("left", `${bubbleX}px`)
-        .style("top", `${bubbleY}px`)
-        .html("")
-        .node().appendChild(card);
-
-      document.getElementById("scale-power").onclick = () => scaleGeneratorsBy("pmax");
-      document.getElementById("scale-cost").onclick = () => scaleGeneratorsBy("cost_per_mw");
-      document.getElementById("scale-emissions").onclick = () => scaleGeneratorsBy("emissions_per_mw");
-      document.getElementById("scale-reset").onclick = resetGeneratorSizes;
-      updateConnector();
+document.getElementById("scenario-select").addEventListener("change", (e) => {
+    previousLineFlows = {}; // reset previous flows
+    loadScenario(e.target.value);
     });
-});
 
+    document.getElementById("reset-button").addEventListener("click", () => {
+      previousLineFlows = {}; // reset previous flows
+      loadScenario(currentScenarioId); // reload current scenario
+    });
 
-// ✅ Outside the generator .on("click")
-svg.on("click", function(event) {
-  if (event.target.tagName === "svg") {
-    d3.selectAll(".generator").attr("stroke", "white").attr("stroke-width", 2);
-    bubble.style("display", "none").html("");
-    connectorLine.style("display", "none");
-    selectedGen = null;
-  }
-});
-
-
-  function renderOverview(gens) {
-  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
-  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
-  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
-
-  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
-  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
-  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
-}
-
-function createGeneratorCard(gen, maxPmax) {
-  const genId = `Gen${gen.bus}`;
-  const locked = currentScenarioData?.locked_generators?.includes(genId);
-  const disabled = currentScenarioData?.disabled_generators?.includes(genId);
-
-  const card = document.createElement("div");
-  card.className = `generator-card ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
-
-
-    function getCostColor(cost) {
-  if (cost < 2) return 'green';
-  if (cost < 5) return 'yellow';
-  if (cost < 7) return 'orange';
-  return 'red';
-}
-
-function getEmissionColor(emissions) {
-  if (emissions < 0.5) return 'green';
-  if (emissions < 1.0) return '#88cc88';
-  if (emissions < 1.5) return '#bbbb88';
-  return 'gray';
-}
-
-  // LEFT SECTION
-  const left = document.createElement("div");
-  const fuelColors = {
-    coal: '#614732', gas: '#4a7838', hydro: '#4faad1', combined: '#ad7a37',
-  };
-  left.style.backgroundColor = fuelColors[gen.fuel_type.toLowerCase()] || 'var(--bg-soft)';
-  left.className = "gen-section left";
-  left.innerHTML = `
-    <div class="gen-name">${gen.station_name}</div>
-    <div class="gen-number">Bus ${gen.bus}</div>
-    <div class="gen-type">${gen.fuel_type}</div>`;
-
-  // CENTER SECTION
-  const center = document.createElement("div");
-  center.className = "gen-section center";
-  center.innerHTML = `
-    <div class="gen-power"><div class="power-label">Power</div></div>
-    <div class="gen-impact-row">
-      <div class="gen-cost impact-wrapper">
-        <div class="impact-box" style="background:${getCostColor(gen.cost_per_mw)};">💲</div>
-        <div class="impact-label">${gen.cost_per_mw.toFixed(1)} / MW</div>
-      </div>
-      <div class="gen-emissions impact-wrapper">
-        <div class="impact-box" style="background:${getEmissionColor(gen.emissions_per_mw)};">☁️</div>
-        <div class="impact-label">${gen.emissions_per_mw.toFixed(1)} / MW</div>
-      </div>
-    </div>`;
-
-  const powerContainer = center.querySelector(".gen-power");
-  const blockRow = document.createElement("div");
-  blockRow.className = "power-block-row";
-  powerContainer.appendChild(blockRow);
-
-  // BUILD BLOCKS
-  let levels = [];
-  let current = 0;
-  while (current + 100 <= gen.pmax) {
-    current += 100;
-    levels.push(current);
-  }
-  if (current < gen.pmax) levels.push(gen.pmax);
-
-  function createBlock(level, isHalf = false) {
-    const block = document.createElement("div");
-    block.className = "power-block";
-    block.style.width = isHalf ? `10px` : `20px`;
-    block.style.height = "20px";
-    block.style.borderRadius = "4px";
-    block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
-    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
-    block.title = `${level} MW`;
-
-    if (!locked && !disabled) {
-      block.style.cursor = "pointer";
-      block.addEventListener("mousedown", () => {
-        const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
-        fetch(`/api/set_generation/${gen.index}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ percent, user_active: true })
-        })
-          .then(res => res.json())
-          .then(data => {
-            currentGenerators = data.generators;
-            renderOverview(currentGenerators);
-            updateMapGeneratorsFromScenario();
-          });
-      });
-    }
-
-    return block;
-  }
-
-  levels.forEach((level, i) => {
-    const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
-    const isHalf = isRemainder && (gen.pmax % 100 <= 50);
-    blockRow.appendChild(createBlock(level, isHalf));
-  });
-
-  const maxLabel = document.createElement("span");
-  maxLabel.style.marginLeft = "8px";
-  maxLabel.style.fontSize = "0.75rem";
-  maxLabel.style.color = "var(--text-light)";
-  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
-  blockRow.appendChild(maxLabel);
-
-  // RIGHT SECTION (empty — no + / - buttons)
-  const right = document.createElement("div");
-  right.className = "gen-section right";
-  card.appendChild(left);
-  card.appendChild(center);
-  card.appendChild(right);
-
-  return card;
-}
 function updateMapGeneratorsFromScenario() {
   // If a scale mode is active, use it
   if (currentScaleMode) {
@@ -469,7 +369,7 @@ function updateMapGeneratorsFromScenario() {
     const isSelected = d.id === selectedGeneratorId;
     d3.select(this)
       .attr("stroke", isSelected ? "blue" : "black")
-      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+      .attr("stroke-width", 5);
   });
 
   d3.selectAll(".map-gen-highlight").remove();
@@ -496,14 +396,369 @@ function updateMapGeneratorsFromScenario() {
 
 
 
+   // === Fetch and Draw Map ===
+Promise.all([
+  fetch("/new-tests/full_nodes.json").then(res => res.json()),
+  fetch("/new-tests/full_lines.json").then(res => res.json()),
+  fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
+]).then(([nodes, lines, generatorData]) => {
+  currentGenerators = generatorData;
+
+ 
+  zoomGroup.selectAll("path.map-line")
+    .data(lines)
+    .enter()
+    .append("path")
+    .attr("class", "map-line")
+    .attr("id", d => d.id)
+    .attr("d", d => d.d)
+    .attr("stroke", "#888")
+    .attr("stroke-width", 1.5)
+    .attr("fill", "none");
+
+zoomGroup.selectAll("rect.map-bus")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("rect")
+  .attr("class", "map-bus")
+  .attr("id", d => d.id)
+  .attr("x", d => d.x - d.width / 2)
+  .attr("y", d => d.y - d.height / 2)
+  .attr("width", d => d.width)
+  .attr("height", d => d.height)
+  .attr("fill", "#666")
+  .attr("stroke", "#000")
+  .attr("stroke-width", 0.8)
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+zoomGroup.selectAll("path.map-load")
+  .data(nodes.filter(d => d.type === "load"))
+  .enter()
+  .append("path")
+  .attr("class", "map-load")
+  .attr("id", d => d.id)
+  .attr("d", d => {
+    const size = 20;
+    const x = d.x;
+    const y = d.y;
+    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
+  })
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+    // Generators - drawn last to ensure they are on top
+
+const generatorNodes = nodes.filter(d => d.type === "generator");
+
+const genGroups = zoomGroup.selectAll("g.map-gen-group")
+  .data(generatorNodes)
+  .enter()
+  .append("g")
+  .attr("class", "map-gen-group")
+  .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+// HALO (blue, padded, initially hidden)
+genGroups.append("circle")
+  .attr("class", "map-gen-halo")
+  .attr("r", 40)
+  .attr("fill", "none")
+  .attr("stroke", "#42a5f5")
+  .attr("stroke-width", 3)
+  .attr("opacity", 0)
+  .style("pointer-events", "none");  // ensure it doesn't block clicks
+
+// GENERATOR CIRCLE (foreground)
+genGroups.append("circle")
+  .attr("class", "map-gen")
+  .attr("id", d => d.id)
+  .attr("r", 30)
+  .attr("fill", d => {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    return match && match.pg > 0 ? "#4caf50" : "#ffffff";
+  })
+  .on("mouseover", function(event, d) {
+  const generator = d3.select(this);
+  const halo = d3.select(this.parentNode).select(".map-gen-halo");
+
+  const currentR = +generator.attr("r");
+  const haloR = currentR + 6;
+
+  halo
+    .transition()
+    .duration(150)
+    .attr("opacity", 0.6)
+    .attr("r", haloR);
+})
+.on("mouseout", function(event, d) {
+  const halo = d3.select(this.parentNode).select(".map-gen-halo");
+  if (d.id !== selectedGeneratorId) {
+    halo
+      .transition()
+      .duration(150)
+      .attr("opacity", 0)
+      .attr("r", function() {
+        const gen = d3.select(this.parentNode).select(".map-gen");
+        return +gen.attr("r") + 6;
+      });
+  }
+})
+  .on("click", function(event, d) {
+    event.stopPropagation();
+    selectedGeneratorId = d.id;
+    updateGeneratorStrokes();
+    updateGeneratorHalos();
+
+    // Show the bubble
+    const bubbleX = event.pageX + 10;
+    const bubbleY = event.pageY - 20;
+    const bubbleEl = document.getElementById("bubble");
+bubbleEl.style.display = "block";
+bubbleEl.style.left = `${bubbleX}px`;
+bubbleEl.style.top = `${bubbleY}px`;
+bubbleEl.innerHTML = ""; // clear previous content
+
+// Header with ID
+const header = document.createElement("div");
+header.textContent = d.id;
+header.style.fontWeight = "bold";
+header.style.marginBottom = "6px";
+bubbleEl.appendChild(header);
+
+// Block container
+const blockRow = document.createElement("div");
+blockRow.className = "power-block-row";
+bubbleEl.appendChild(blockRow);
+
+// Find matching generator
+const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+if (!match) return;
+
+// Build block levels
+let levels = [];
+let current = 0;
+while (current + 100 <= match.pmax) {
+  current += 100;
+  levels.push(current);
+}
+if (current < match.pmax) levels.push(match.pmax);
+
+levels.forEach((level, i) => {
+  const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+  const isHalf = isRemainder && (match.pmax % 100 <= 50);
+  blockRow.appendChild(createBlock(level, isHalf, match));
+});
+
+// Footer with pmax label
+const maxLabel = document.createElement("div");
+maxLabel.style.marginTop = "4px";
+maxLabel.style.fontSize = "0.75rem";
+maxLabel.style.color = "#aaa";
+maxLabel.textContent = `${match.pmax.toFixed(0)} MW max`;
+bubbleEl.appendChild(maxLabel);
+
+
+    updateConnector();
+  });
+
+
+function setMapMode(mode) {
+  currentMapMode = mode;
+
+  const fadeOpacity = mode === "full" ? 1 : 0.2;
+
+  d3.selectAll(".map-line")
+    .transition().duration(300)
+    .attr("opacity", fadeOpacity);
+
+  d3.selectAll(".map-load")
+    .transition().duration(300)
+    .attr("opacity", fadeOpacity);
+
+  d3.selectAll(".map-bus")
+    .transition().duration(300)
+    .attr("opacity", fadeOpacity);
+
+  if (mode === "full") {
+    resetGeneratorSizes();
+  } else {
+    scaleGeneratorsBy(mode);
+  }
+
+  highlightButton(mode);
+}
+function scaleGeneratorsBy(metric) {
+  currentScaleMode = metric;
+
+  const baseSize = 30;  // normal radius
+  const values = currentGenerators.map(g => g[metric]);
+  const max = d3.max(values);
+
+  const sizeScale = d3.scaleLinear()
+    .domain([0, max])
+    .range([baseSize, baseSize * 2.5]);
+
+  const color = {
+    pmax: "#9ccc65",          // lighter lime green
+    cost_per_mw: "#f9a825",   // bright yellow
+    emissions_per_mw: "#ef5350" // soft red
+  }[metric];
+
+  d3.selectAll(".map-gen")
+    .transition()
+    .duration(500)
+    .attr("r", d => {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return gen ? sizeScale(gen[metric]) : baseSize;
+    })
+    .attr("stroke", d => {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return gen ? color : "black";
+    })
+    .attr("stroke-width", d => {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return gen ? 5 : 3;
+    });
+    
+    d3.selectAll(".map-gen-halo")
+  .transition()
+  .duration(500)
+  .attr("r", function(d) {
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    return gen ? sizeScale(gen[metric]) + 6 : 36;  // always slightly larger than gen
+  });
+    
+  updateGeneratorStrokes();
+  highlightButton(metric);
+}
+
+svg.on("click", function(event) {
+  if (event.target.tagName === "svg") {
+    selectedGeneratorId = null;
+    updateGeneratorStrokes();
+    bubble.style("display", "none").html("");
+    connectorLine.style("display", "none");
+  }
+});
+
+
+
+function resetGeneratorSizes() {
+  currentScaleMode = null;
+
+  d3.selectAll(".map-gen")
+    .transition()
+    .duration(500)
+    .attr("r", 30)
+    .attr("fill", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return match && match.pg > 0 ? "#4caf50" : "#ffffff";
+    })
+
+  d3.selectAll(".map-gen-halo")
+  .transition()
+  .duration(500)
+  .attr("r", 36) // base size slightly larger than 30
+  .attr("opacity", d => d.id === selectedGeneratorId ? 1 : 0);
+
+  highlightButton(null);
+  updateGeneratorStrokes();
+
+}
+
+
+function highlightButton(mode) {
+  const modes = ["pmax", "cost_per_mw", "emissions_per_mw"];
+  const buttonIds = {
+    pmax: "scale-power",
+    cost_per_mw: "scale-cost",
+    emissions_per_mw: "scale-emissions"
+  };
+  const statusIds = {
+    pmax: "status-power",
+    cost_per_mw: "status-cost",
+    emissions_per_mw: "status-emissions"
+  };
+
+  // Clear all button states and reset texts
+  modes.forEach(m => {
+    const btn = document.getElementById(buttonIds[m]);
+    const status = document.getElementById(statusIds[m]);
+    btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions");
+    if (status) status.textContent = "Click to scale";
+  });
+
+  if (mode && buttonIds[mode]) {
+    const btn = document.getElementById(buttonIds[mode]);
+    const status = document.getElementById(statusIds[mode]);
+    btn.classList.add("selected");
+    if (mode === "pmax") btn.classList.add("scale-power");
+    if (mode === "cost_per_mw") btn.classList.add("scale-cost");
+    if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
+    if (status) status.textContent = "Currently scaling";
+  }
+  const fullCard = document.getElementById("mode-full");
+const fullStatus = fullCard?.querySelector(".overview-status");
+if (fullStatus) {
+  fullStatus.textContent = (mode === "full") ? "Currently showing full layout" : "Click to show full layout";
+}
+}
+
+
+  // === Hover & Selection Sync
+  d3.selectAll(".map-gen")
+    .on("mouseenter", function (event, d) {
+      d3.select(this).classed("hovered", true);
+    })
+    .on("mouseleave", function () {
+      d3.select(this).classed("hovered", false);
+    });
+
+  // Optional: add generator label
+  /*
+  zoomGroup.selectAll("text.map-gen-label")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("text")
+    .attr("x", d => d.x + 6)
+    .attr("y", d => d.y + 3)
+    .attr("font-size", "6px")
+    .text(d => d.id); */
+
+
+                document.getElementById("scale-power").onclick = () => setMapMode("pmax");
+        document.getElementById("scale-cost").onclick = () => setMapMode("cost_per_mw");
+        document.getElementById("scale-emissions").onclick = () => setMapMode("emissions_per_mw");
+        document.getElementById("mode-full").onclick = () => setMapMode("full");
+});
+
+
+const connectorLine = svg.append("line")
+  .attr("class", "connector-line")
+  .attr("stroke", "#42a5f5")
+  .attr("stroke-width", 2)
+  .attr("pointer-events", "none")
+  .style("display", "none");
+
 function updateConnector() {
-  if (!selectedGen || !selectedGenData) return;
+  if (!selectedGeneratorId) return;
+
+  const d = d3.select(`#${CSS.escape(selectedGeneratorId)}`).datum();
+  if (!d) return;
 
   const transform = d3.zoomTransform(svg.node());
   const bubbleRect = bubble.node().getBoundingClientRect();
 
-  const genX = transform.applyX(selectedGenData.x);
-  const genY = transform.applyY(selectedGenData.y);
+  const genX = transform.applyX(d.x);
+  const genY = transform.applyY(d.y);
   const bubbleX = bubbleRect.left + bubbleRect.width / 2;
   const bubbleY = bubbleRect.top + bubbleRect.height / 2;
 
@@ -514,20 +769,112 @@ function updateConnector() {
     .attr("y2", bubbleY)
     .style("display", "block");
 }
+  
+function updateGeneratorStrokes() {
+  d3.selectAll(".map-gen").each(function(d) {
+    const el = d3.select(this);
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
 
-document.getElementById("scenario-select").addEventListener("change", (e) => {
-  loadScenario(e.target.value);
-});
+    let strokeColor = "none";
+    let strokeWidth = 0;
 
-document.getElementById("reset-button").addEventListener("click", () => {
-  loadScenario(currentScenarioId);
-});
+    if (d.id === selectedGeneratorId) {
+      strokeColor = "#42a5f5"; // Blue if selected
+      strokeWidth = 4;
+    } else if (currentScaleMode && gen) {
+      if (currentScaleMode === "pmax") strokeColor = "#9ccc65";
+      else if (currentScaleMode === "cost_per_mw") strokeColor = "#f9a825";
+      else if (currentScaleMode === "emissions_per_mw") strokeColor = "#ef5350";
+      strokeWidth = 3;
+    }
 
-window.addEventListener("DOMContentLoaded", () => {
-  fetchAllScenarios();
-});
+    el.attr("stroke", strokeColor).attr("stroke-width", strokeWidth);
+  });
+}
 
+function updateGeneratorHalos() {
+  d3.selectAll(".map-gen-halo")
+    .transition()
+    .duration(300)
+    .attr("opacity", function(d) {
+      return d.id === selectedGeneratorId ? 1 : 0;
+    })
+    .attr("r", function(d) {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      const genRadius = gen ? d3.select(`#${CSS.escape(d.id)}`).attr("r") : 30;
+      return d.id === selectedGeneratorId ? +genRadius + 6 : +genRadius + 6;
+    });
+}
+
+function createBlock(level, isHalf, gen) {
+  const block = document.createElement("div");
+  block.className = "power-block";
+  block.style.width = isHalf ? `10px` : `20px`;
+  block.style.height = "20px";
+  block.style.borderRadius = "4px";
+  block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+  block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
+  block.title = `${level} MW`;
+
+  block.style.cursor = "pointer";
+  block.addEventListener("mousedown", () => {
+    const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+    fetch(`/api/set_generation/${gen.index}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ percent, user_active: true })
+    })
+      .then(res => res.json())
+      .then(data => {
+        currentGenerators = data.generators;
+        renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+        updateMapGeneratorsFromScenario();
+        updateGeneratorHalos();
+      });
+  });
+
+  return block;
+}
+
+
+// === Update generator colors on scenario load ===
+function updateMapGeneratorsFromScenario() {
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const isOn = match && match.pg > 0;
+    const isSelected = d.id === selectedGeneratorId;
+
+    d3.select(this)
+    .attr("fill", isOn ? "#4caf50" : "white");
+    
+  });
+
+  updateGeneratorStrokes();
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (selectedGeneratorId) {
+    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+    if (!selected.empty()) {
+      const { cx, cy } = selected.node();
+      const r = +selected.attr("r");
+
+      d3.select("#zoom-group")
+        .append("circle")
+        .attr("class", "map-gen-highlight")
+        .attr("cx", cx.baseVal.value)
+        .attr("cy", cy.baseVal.value)
+        .attr("r", r + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#00f")
+        .attr("stroke-width", 3)
+        .attr("pointer-events", "none");
+    }
+  }
+  
+  
+}
   </script>
 </body>
 </html>
-
