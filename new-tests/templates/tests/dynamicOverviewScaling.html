@@ -47,7 +47,7 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background 0.2s ease;
-      min-width: 100px;
+      min-width: 120px;
       text-align: center;
     }
 
@@ -83,6 +83,30 @@
   border-color: #c62828;
 }
 
+    #admin-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 15;
+      background: var(--bg-card);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    .bubble {
+  position: absolute;
+  background: #333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  pointer-events: none;
+  border: 2px solid #42a5f5;
+  display: none;
+  z-index: 20;
+}
+
   </style>
 </head>
 <body>
@@ -93,41 +117,180 @@
 
 <div id="overview">
   <div class="overview-card" id="scale-power">
-    <div class="overview-label">Scale</div>
-    <div class="overview-value">Power</div>
+    <div class="overview-label">Power</div>
+    <div class="overview-value" id="overview-power">–</div>
   </div>
   <div class="overview-card" id="scale-cost">
-    <div class="overview-label">Scale</div>
-    <div class="overview-value">Cost</div>
+    <div class="overview-label">Cost</div>
+    <div class="overview-value" id="overview-cost">–</div>
   </div>
   <div class="overview-card" id="scale-emissions">
-    <div class="overview-label">Scale</div>
-    <div class="overview-value">Emissions</div>
+    <div class="overview-label">Emissions</div>
+    <div class="overview-value" id="overview-emissions">–</div>
   </div>
   <div class="overview-card" id="scale-reset">
     <div class="overview-label">Reset</div>
     <div class="overview-value">Normal</div>
   </div>
+  <div class="overview-card" id="overview-scenario">
+    <div class="overview-label">Scenario</div>
+    <div class="overview-value" id="overview-scenario-name">–</div>
+  </div>
+</div>
+
+
+<div class="bubble" id="bubble"></div>
+
+<div id="admin-controls">
+  <div class="label">Admin Controls</div>
+
+  <label for="scenario-select" style="font-size: 0.8rem;">Load Scenario:</label>
+  <select id="scenario-select" style="margin-bottom: 6px; width: 100%;"></select>
+  <button id="reset-button">🔁 Reset</button>
+
+  <button id="theme-toggle" class="theme-button" style="margin-top: 8px;">🌙 Dark Mode</button>
 </div>
 
   <script>
-    const svg = d3.select("#map");
-    const zoomLayer = svg.select("#zoom-layer");
-    let currentScaleMode = null;
+const svg = d3.select("#map");
+const svgElement = svg.node();
+const zoomLayer = svg.select("#zoom-layer");
+const zoomGroup = svg.append("g").attr("id", "zoom-group");
 
+const bubble = d3.select("#bubble");
+let selectedGeneratorId = null;
+
+let currentScaleMode = null;
+let currentGenerators = [];
+
+let currentScenarioId = "";
+let currentScenarioData = null;
+let availableScenarios = [];
+
+// Define zoom behavior — same as before
 const zoomBehavior = d3.zoom()
-  .scaleExtent([0.2, 5])
+  .scaleExtent([0.2, 2.0])  // Allow good zoom range
   .on("zoom", (event) => {
-    zoomGroup.attr("transform", event.transform);
-  });
+  zoomGroup.attr("transform", event.transform);
+  updateConnector();
+});
 
 svg.call(zoomBehavior);
 
+// Initial zoom out and center — 🧪 use this instead of bbox math
+window.addEventListener("load", () => {
+  const initialScale = 0.3;  // 👁️ Zoomed-out start
+  const centerX = svgElement.clientWidth / 2;
+  const centerY = svgElement.clientHeight / 2;
+
+  svg.call(
+    zoomBehavior.transform,
+    d3.zoomIdentity
+      .translate(centerX - 200, centerY - 150)
+      .scale(initialScale)
+      .translate(-centerX, -centerY)
+  );
+});
 
 
-const zoomGroup = svg.append("g").attr("id", "zoom-group");
+    async function fetchAllScenarios() {
+      const res = await fetch("/api/scenarios");
+      const data = await res.json();
 
-let currentGenerators = [];
+      availableScenarios = data;
+
+      // Find default scenario
+      const defaultScenario = data.find(s => s.scenario_id === "clean_north_power");
+
+        if (defaultScenario) {
+    currentScenarioId = defaultScenario.scenario_id;
+    currentScenarioData = defaultScenario;
+
+        populateScenarioDropdown(data, currentScenarioId);
+        loadScenario(currentScenarioId);
+      } else {
+        console.error("No scenario with ID 'default' found.");
+      }
+    }
+
+
+ async function loadScenario(scenarioId) {
+  const res = await fetch(`/api/scenario/${scenarioId}`);
+  const data = await res.json();
+  currentScenarioId = scenarioId;
+  currentScenarioData = data;
+  currentGenerators = data.generators;
+
+  renderOverview(currentGenerators, currentScenarioData || {});
+  updateMapGeneratorsFromScenario(); // Make sure this is called too
+}
+
+    function populateScenarioDropdown(scenarios, selectedId) {
+        const select = document.getElementById("scenario-select");
+        select.innerHTML = "";
+
+        scenarios.forEach(s => {
+          const option = document.createElement("option");
+          option.value = s.scenario_id;
+          option.textContent = s.title || s.scenario_id;
+          if (s.scenario_id === selectedId) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      }
+
+document.getElementById("scenario-select").addEventListener("change", (e) => {
+    previousLineFlows = {}; // reset previous flows
+    loadScenario(e.target.value);
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+      previousLineFlows = {}; // reset previous flows
+      loadScenario(currentScenarioId); // reload current scenario
+    });
+
+function updateMapGeneratorsFromScenario() {
+  // If a scale mode is active, use it
+  if (currentScaleMode) {
+    scaleGeneratorsBy(currentScaleMode);
+  } else {
+    resetGeneratorSizes();
+  }
+
+  // Also reapply stroke and highlight logic
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const isSelected = d.id === selectedGeneratorId;
+    d3.select(this)
+      .attr("stroke", isSelected ? "blue" : "black")
+      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+  });
+
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (selectedGeneratorId) {
+    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+    if (!selected.empty()) {
+      const { cx, cy } = selected.node();
+      const r = +selected.attr("r");
+
+      d3.select("#zoom-layer")
+        .append("circle")
+        .attr("class", "map-gen-highlight")
+        .attr("cx", cx.baseVal.value)
+        .attr("cy", cy.baseVal.value)
+        .attr("r", r + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#00f")
+        .attr("stroke-width", 3)
+        .attr("pointer-events", "none");
+    }
+  }
+}
+
+
 
    // === Fetch and Draw Map ===
 Promise.all([
@@ -136,7 +299,8 @@ Promise.all([
   fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
 ]).then(([nodes, lines, generatorData]) => {
   currentGenerators = generatorData;
-  
+
+ 
   zoomGroup.selectAll("path.map-line")
     .data(lines)
     .enter()
@@ -197,43 +361,104 @@ zoomGroup.selectAll("path.map-load")
     .attr("cx", d => d.x)
     .attr("cy", d => d.y)
     .attr("r", 30)
-      .attr("fill", d => {
+    .attr("stroke", "black")
+    .attr("stroke-width", 3)
+    .attr("fill", d => {
   const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-  return match && match.pg > 0 ? "#4caf50" : "#000000";
+  return match && match.pg > 0 ? "#4caf50" : "#ffffff";
     console.log("🚀 Drawing generators on startup with conditional fill: green if pg > 0, else white"); 
 })
+.on("click", function(event, d) {
+  event.stopPropagation();
+
+  selectedGeneratorId = d.id;
+
+  // Update stroke logic
+  updateGeneratorStrokes();
+
+  // Show bubble
+  const bubbleX = event.pageX + 10;
+  const bubbleY = event.pageY - 20;
+
+  bubble
+    .style("display", "block")
+    .style("left", `${bubbleX}px`)
+    .style("top", `${bubbleY}px`)
+    .html(`<div>${d.id}</div>`);
+
+  updateConnector();
+
+});
+
 
 
 function scaleGeneratorsBy(metric) {
   currentScaleMode = metric;
 
+  const baseSize = 30;  // normal radius
   const values = currentGenerators.map(g => g[metric]);
-  const scale = d3.scaleLinear()
-    .domain([0, d3.max(values)])
-    .range([5, 50]);
+  const max = d3.max(values);
+
+  const sizeScale = d3.scaleLinear()
+    .domain([0, max])
+    .range([baseSize, baseSize * 2.5]);
 
   const color = {
-    pmax: "#4caf50",          // green
-    cost_per_mw: "#f9a825", // yellow
-    emissions_per_mw: "#c62828" // red
+    pmax: "#9ccc65",          // lighter lime green
+    cost_per_mw: "#f9a825",   // bright yellow
+    emissions_per_mw: "#ef5350" // soft red
   }[metric];
-
-  console.log(`🎯 Drawing generators with fill color: ${color} for metric: ${metric}`);
 
   d3.selectAll(".map-gen")
     .transition()
     .duration(500)
     .attr("r", d => {
       const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return gen ? scale(gen[metric]) : 10;
+      return gen ? sizeScale(gen[metric]) : baseSize;
     })
-    .attr("fill", color);
-
+    .attr("stroke", d => {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return gen ? color : "black";
+    })
+    .attr("stroke-width", d => {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return gen ? 5 : 3;
+    });
+    
+    
+  updateGeneratorStrokes();
   highlightButton(metric);
 }
 
+svg.on("click", function(event) {
+  if (event.target.tagName === "svg") {
+    selectedGeneratorId = null;
+    updateGeneratorStrokes();
+    bubble.style("display", "none").html("");
+    connectorLine.style("display", "none");
+  }
+});
 
+function updateGeneratorStrokes() {
+  d3.selectAll(".map-gen").each(function(d) {
+    const el = d3.select(this);
+    const isSelected = d.id === selectedGeneratorId;
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
 
+    // Determine base stroke color by scaling
+    let stroke = "black";
+    if (currentScaleMode === "pmax") stroke = "#9ccc65";
+    else if (currentScaleMode === "cost_per_mw") stroke = "#f9a825";
+    else if (currentScaleMode === "emissions_per_mw") stroke = "#ef5350";
+
+    // If selected, override with blue
+    if (isSelected) stroke = "#42a5f5";
+
+    const width = isSelected ? 4 : 3;
+
+    el.attr("stroke", stroke).attr("stroke-width", width);
+  });
+}
 
 function resetGeneratorSizes() {
   currentScaleMode = null;
@@ -242,9 +467,33 @@ function resetGeneratorSizes() {
     .transition()
     .duration(500)
     .attr("r", 30)
-    .attr("fill", "black");
+    .attr("fill", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return match && match.pg > 0 ? "#4caf50" : "#ffffff";
+    })
+    .attr("stroke", "black")
+    .attr("stroke-width", 3);
 
   highlightButton(null);
+  updateGeneratorStrokes();
+
+}
+
+
+
+
+
+
+
+function renderOverview(gens, scenarioData = {}) {
+  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+
+  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
+  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
+  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
 }
 
 function highlightButton(mode) {
@@ -270,8 +519,6 @@ function highlightButton(mode) {
     if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
   }
 }
-
-
 
 
   // === Hover & Selection Sync
@@ -300,6 +547,38 @@ document.getElementById("scale-cost").onclick = () => scaleGeneratorsBy("cost_pe
 document.getElementById("scale-emissions").onclick = () => scaleGeneratorsBy("emissions_per_mw");
 document.getElementById("scale-reset").onclick = resetGeneratorSizes;
 });
+
+
+const connectorLine = svg.append("line")
+  .attr("class", "connector-line")
+  .attr("stroke", "#42a5f5")
+  .attr("stroke-width", 2)
+  .attr("pointer-events", "none")
+  .style("display", "none");
+
+function updateConnector() {
+  if (!selectedGeneratorId) return;
+
+  const d = d3.select(`#${CSS.escape(selectedGeneratorId)}`).datum();
+  if (!d) return;
+
+  const transform = d3.zoomTransform(svg.node());
+  const bubbleRect = bubble.node().getBoundingClientRect();
+
+  const genX = transform.applyX(d.x);
+  const genY = transform.applyY(d.y);
+  const bubbleX = bubbleRect.left + bubbleRect.width / 2;
+  const bubbleY = bubbleRect.top + bubbleRect.height / 2;
+
+  connectorLine
+    .attr("x1", genX)
+    .attr("y1", genY)
+    .attr("x2", bubbleX)
+    .attr("y2", bubbleY)
+    .style("display", "block");
+}
+  
+
 
 // === Update generator colors on scenario load ===
 function updateMapGeneratorsFromScenario() {
@@ -337,9 +616,19 @@ function updateMapGeneratorsFromScenario() {
     }
   }
   
+document.getElementById("scenario-select").addEventListener("change", (e) => {
+  loadScenario(e.target.value);
+});
+
+document.getElementById("reset-button").addEventListener("click", () => {
+  loadScenario(currentScenarioId);
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  fetchAllScenarios();
+});
+
 }
-
-
   </script>
 </body>
 </html>
