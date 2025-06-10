@@ -16,6 +16,10 @@ def list_view():
 def map_view():
     return render_template("mapView-prototype.html")
 
+@app.route("/scaling")
+def scaling():
+    return render_template("/tests/dynamicOverviewScaling.html")
+
 @app.route('/new-tests/<path:filename>')
 def serve_json_from_same_folder(filename):
     directory = os.path.dirname(os.path.abspath(__file__))  # points to /new-tests/

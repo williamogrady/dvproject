@@ -24,7 +24,7 @@
     svg#map {
       width: 100%;
       height: 100%;
-      background: #111;
+      background: #dfcfcf;
     }
 
     #overview {
@@ -66,6 +66,23 @@
       font-weight: bold;
       color: #fff;
     }
+
+.overview-card.selected {
+  border: 2px solid white; /* fallback if no class added */
+}
+
+.overview-card.scale-power.selected {
+  border-color: #4caf50;
+}
+
+.overview-card.scale-cost.selected {
+  border-color: #f9a825;
+}
+
+.overview-card.scale-emissions.selected {
+  border-color: #c62828;
+}
+
   </style>
 </head>
 <body>
@@ -74,29 +91,29 @@
       <g id="zoom-layer"></g>
     </svg>
 
-    <div id="overview">
-      <div class="overview-card" id="power-box">
-        <div class="overview-label">Power</div>
-        <div class="overview-value" id="overview-power">–</div>
-      </div>
-      <div class="overview-card" id="emissions-box">
-        <div class="overview-label">Emissions</div>
-        <div class="overview-value" id="overview-emissions">–</div>
-      </div>
-      <div class="overview-card" id="cost-box">
-        <div class="overview-label">Cost</div>
-        <div class="overview-value" id="overview-cost">–</div>
-      </div>
-      <div class="overview-card" id="scenario-box">
-        <div class="overview-label">Scenario</div>
-        <div class="overview-value" id="overview-scenario">–</div>
-      </div>
-    </div>
+<div id="overview">
+  <div class="overview-card" id="scale-power">
+    <div class="overview-label">Scale</div>
+    <div class="overview-value">Power</div>
   </div>
+  <div class="overview-card" id="scale-cost">
+    <div class="overview-label">Scale</div>
+    <div class="overview-value">Cost</div>
+  </div>
+  <div class="overview-card" id="scale-emissions">
+    <div class="overview-label">Scale</div>
+    <div class="overview-value">Emissions</div>
+  </div>
+  <div class="overview-card" id="scale-reset">
+    <div class="overview-label">Reset</div>
+    <div class="overview-value">Normal</div>
+  </div>
+</div>
 
   <script>
     const svg = d3.select("#map");
     const zoomLayer = svg.select("#zoom-layer");
+    let currentScaleMode = null;
 
 const zoomBehavior = d3.zoom()
   .scaleExtent([0.2, 5])
@@ -115,9 +132,11 @@ let currentGenerators = [];
    // === Fetch and Draw Map ===
 Promise.all([
   fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json())
-]).then(([nodes, lines]) => {
-  // Lines
+  fetch("/new-tests/full_lines.json").then(res => res.json()),
+  fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
+]).then(([nodes, lines, generatorData]) => {
+  currentGenerators = generatorData;
+  
   zoomGroup.selectAll("path.map-line")
     .data(lines)
     .enter()
@@ -128,23 +147,6 @@ Promise.all([
     .attr("stroke", "#888")
     .attr("stroke-width", 1.5)
     .attr("fill", "none");
-
-  // Generators
-  zoomGroup.selectAll("circle.map-gen")
-    .data(nodes.filter(d => d.type === "generator"))
-    .enter()
-    .append("circle")
-    .attr("class", "map-gen")
-    .attr("id", d => d.id)
-    .attr("cx", d => d.x)
-    .attr("cy", d => d.y)
-    .attr("r", 30)
-    .attr("fill", d => {
-        const match = currentGenerators.find(g => `Gen${g.bus}` === d.id); // TODO : NOT WORKING
-        return match && match.pg > 0 ? "#4caf50" : "ffffff";        // TODO : css
-      })
-    .attr("stroke", "black")
-    .attr("stroke-width", 1.2);
 
 zoomGroup.selectAll("rect.map-bus")
   .data(nodes.filter(d => d.type === "bus"))
@@ -185,6 +187,92 @@ zoomGroup.selectAll("path.map-load")
     return null;
   });
 
+    // Generators - drawn last to ensure they are on top
+  zoomGroup.selectAll("circle.map-gen")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("circle")
+    .attr("class", "map-gen")
+    .attr("id", d => d.id)
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y)
+    .attr("r", 30)
+      .attr("fill", d => {
+  const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+  return match && match.pg > 0 ? "#4caf50" : "#000000";
+    console.log("🚀 Drawing generators on startup with conditional fill: green if pg > 0, else white"); 
+})
+
+
+function scaleGeneratorsBy(metric) {
+  currentScaleMode = metric;
+
+  const values = currentGenerators.map(g => g[metric]);
+  const scale = d3.scaleLinear()
+    .domain([0, d3.max(values)])
+    .range([5, 50]);
+
+  const color = {
+    pmax: "#4caf50",          // green
+    cost_per_mw: "#f9a825", // yellow
+    emissions_per_mw: "#c62828" // red
+  }[metric];
+
+  console.log(`🎯 Drawing generators with fill color: ${color} for metric: ${metric}`);
+
+  d3.selectAll(".map-gen")
+    .transition()
+    .duration(500)
+    .attr("r", d => {
+      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return gen ? scale(gen[metric]) : 10;
+    })
+    .attr("fill", color);
+
+  highlightButton(metric);
+}
+
+
+
+
+function resetGeneratorSizes() {
+  currentScaleMode = null;
+
+  d3.selectAll(".map-gen")
+    .transition()
+    .duration(500)
+    .attr("r", 30)
+    .attr("fill", "black");
+
+  highlightButton(null);
+}
+
+function highlightButton(mode) {
+  const buttons = {
+    pmax: "scale-power",
+    cost_per_mw: "scale-cost",
+    emissions_per_mw: "scale-emissions"
+  };
+
+  // Always clear
+  document.querySelectorAll(".overview-card").forEach(btn => {
+    btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions");
+  });
+
+  // Re-apply only if mode is defined
+  if (mode && buttons[mode]) {
+    const id = buttons[mode];
+    const btn = document.getElementById(id);
+    btn.classList.add("selected");
+
+    if (mode === "pmax") btn.classList.add("scale-power");
+    if (mode === "cost_per_mw") btn.classList.add("scale-cost");
+    if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
+  }
+}
+
+
+
 
   // === Hover & Selection Sync
   d3.selectAll(".map-gen")
@@ -205,6 +293,12 @@ zoomGroup.selectAll("path.map-load")
     .attr("y", d => d.y + 3)
     .attr("font-size", "6px")
     .text(d => d.id); */
+
+
+        document.getElementById("scale-power").onclick = () => scaleGeneratorsBy("pmax");
+document.getElementById("scale-cost").onclick = () => scaleGeneratorsBy("cost_per_mw");
+document.getElementById("scale-emissions").onclick = () => scaleGeneratorsBy("emissions_per_mw");
+document.getElementById("scale-reset").onclick = resetGeneratorSizes;
 });
 
 // === Update generator colors on scenario load ===
@@ -242,7 +336,9 @@ function updateMapGeneratorsFromScenario() {
         .attr("pointer-events", "none");
     }
   }
+  
 }
+
 
   </script>
 </body>
