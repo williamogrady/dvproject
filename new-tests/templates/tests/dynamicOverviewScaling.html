@@ -27,48 +27,95 @@
       background: #dfcfcf;
     }
 
-    #overview {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 12px;
-      background: #2c2c2c;
-      padding: 10px 16px;
-      border-radius: 16px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-      z-index: 10;
-    }
+#overview {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+  padding: 10px 20px;
+  background: rgba(40, 40, 40, 0.85); /* translucent wrapper */
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
 
-    .overview-card {
-      background: #1f1f1f;
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s ease;
-      min-width: 120px;
-      text-align: center;
-    }
+#overview-top {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
 
-    .overview-card:hover {
-      background: #3c3c3c;
-    }
+#overview-bottom {
+  margin-top: 10px;
+}
 
-    .overview-label {
-      font-size: 12px;
-      color: #bbb;
-      margin-bottom: 4px;
-    }
+.overview-card {
+  background: rgba(20, 20, 20, 0.95); /* darker than container */
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  min-width: 120px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  transition: background 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
 
-    .overview-value {
-      font-size: 16px;
-      font-weight: bold;
-      color: #fff;
-    }
+.overview-card:hover {
+  background: rgba(60, 60, 60, 0.95);
+  transform: translateY(-2px);
+}
+
+.overview-label {
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.overview-value {
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+.overview-status {
+  font-size: 0.7rem;
+  color: var(--text-light);
+}
+
+#overview-bottom {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+#overview-scenario {
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.scenario-label {
+  font-weight: 500;
+  color: var(--text-light);
+}
+
+.scenario-name {
+  font-weight: bold;
+}
+
 
 .overview-card.selected {
-  border: 2px solid white; /* fallback if no class added */
+  border: 2px solid #42a5f5; /* fallback if no class added */
 }
 
 .overview-card.scale-power.selected {
@@ -116,25 +163,37 @@
     </svg>
 
 <div id="overview">
-  <div class="overview-card" id="scale-power">
-    <div class="overview-label">Power</div>
-    <div class="overview-value" id="overview-power">–</div>
+  <div id="overview-top">
+    <div class="overview-card" id="scale-power">
+      <div class="overview-label">Power</div>
+      <div class="overview-value" id="overview-power">–</div>
+      <div class="overview-status" id="status-power">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-cost">
+      <div class="overview-label">Cost</div>
+      <div class="overview-value" id="overview-cost">–</div>
+      <div class="overview-status" id="status-cost">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-emissions">
+      <div class="overview-label">Emissions</div>
+      <div class="overview-value" id="overview-emissions">–</div>
+      <div class="overview-status" id="status-emissions">Click to scale</div>
+    </div>
+    <div class="overview-card" id="line-status">
+      <div class="overview-label">Overloaded Lines</div>
+      <div class="overview-value" id="overview-lines">–</div>
+    </div>
+    <div class="overview-card" id="scale-reset">
+  <div class="overview-label">Reset</div>
+  <div class="overview-value">Normal</div>
+</div>
   </div>
-  <div class="overview-card" id="scale-cost">
-    <div class="overview-label">Cost</div>
-    <div class="overview-value" id="overview-cost">–</div>
-  </div>
-  <div class="overview-card" id="scale-emissions">
-    <div class="overview-label">Emissions</div>
-    <div class="overview-value" id="overview-emissions">–</div>
-  </div>
-  <div class="overview-card" id="scale-reset">
-    <div class="overview-label">Reset</div>
-    <div class="overview-value">Normal</div>
-  </div>
-  <div class="overview-card" id="overview-scenario">
-    <div class="overview-label">Scenario</div>
-    <div class="overview-value" id="overview-scenario-name">–</div>
+
+  <div id="overview-bottom">
+    <div id="overview-scenario">
+      <span class="scenario-label">Current Scenario:</span>
+      <span class="scenario-name" id="overview-scenario-name">–</span>
+    </div>
   </div>
 </div>
 
@@ -177,9 +236,8 @@ const zoomBehavior = d3.zoom()
 
 svg.call(zoomBehavior);
 
-// Initial zoom out and center — 🧪 use this instead of bbox math
 window.addEventListener("load", () => {
-  const initialScale = 0.3;  // 👁️ Zoomed-out start
+  const initialScale = 0.3;
   const centerX = svgElement.clientWidth / 2;
   const centerY = svgElement.clientHeight / 2;
 
@@ -190,10 +248,14 @@ window.addEventListener("load", () => {
       .scale(initialScale)
       .translate(-centerX, -centerY)
   );
+
+  // ✅ FIX: call fetchAllScenarios here
+  fetchAllScenarios();
 });
 
 
-    async function fetchAllScenarios() {
+async function fetchAllScenarios() {
+  console.log("fetchAllScenarios")
       const res = await fetch("/api/scenarios");
       const data = await res.json();
 
@@ -213,8 +275,22 @@ window.addEventListener("load", () => {
       }
     }
 
+function renderOverview(gens, scenarioData = {}) {
+  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+
+  const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
+
+  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
+  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
+  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  document.getElementById("overview-lines").textContent = overloaded;
+  document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
+}
 
  async function loadScenario(scenarioId) {
+  console.log("loadScenario")
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
   currentScenarioId = scenarioId;
@@ -265,7 +341,7 @@ function updateMapGeneratorsFromScenario() {
     const isSelected = d.id === selectedGeneratorId;
     d3.select(this)
       .attr("stroke", isSelected ? "blue" : "black")
-      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+      .attr("stroke-width", 5);
   });
 
   d3.selectAll(".map-gen-highlight").remove();
@@ -361,8 +437,6 @@ zoomGroup.selectAll("path.map-load")
     .attr("cx", d => d.x)
     .attr("cy", d => d.y)
     .attr("r", 30)
-    .attr("stroke", "black")
-    .attr("stroke-width", 3)
     .attr("fill", d => {
   const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
   return match && match.pg > 0 ? "#4caf50" : "#ffffff";
@@ -439,26 +513,7 @@ svg.on("click", function(event) {
   }
 });
 
-function updateGeneratorStrokes() {
-  d3.selectAll(".map-gen").each(function(d) {
-    const el = d3.select(this);
-    const isSelected = d.id === selectedGeneratorId;
-    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
 
-    // Determine base stroke color by scaling
-    let stroke = "black";
-    if (currentScaleMode === "pmax") stroke = "#9ccc65";
-    else if (currentScaleMode === "cost_per_mw") stroke = "#f9a825";
-    else if (currentScaleMode === "emissions_per_mw") stroke = "#ef5350";
-
-    // If selected, override with blue
-    if (isSelected) stroke = "#42a5f5";
-
-    const width = isSelected ? 4 : 3;
-
-    el.attr("stroke", stroke).attr("stroke-width", width);
-  });
-}
 
 function resetGeneratorSizes() {
   currentScaleMode = null;
@@ -471,8 +526,6 @@ function resetGeneratorSizes() {
       const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
       return match && match.pg > 0 ? "#4caf50" : "#ffffff";
     })
-    .attr("stroke", "black")
-    .attr("stroke-width", 3);
 
   highlightButton(null);
   updateGeneratorStrokes();
@@ -483,40 +536,35 @@ function resetGeneratorSizes() {
 
 
 
-
-
-function renderOverview(gens, scenarioData = {}) {
-  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
-  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
-  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
-
-  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
-  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
-  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
-  document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
-}
-
 function highlightButton(mode) {
-  const buttons = {
+  const modes = ["pmax", "cost_per_mw", "emissions_per_mw"];
+  const buttonIds = {
     pmax: "scale-power",
     cost_per_mw: "scale-cost",
     emissions_per_mw: "scale-emissions"
   };
+  const statusIds = {
+    pmax: "status-power",
+    cost_per_mw: "status-cost",
+    emissions_per_mw: "status-emissions"
+  };
 
-  // Always clear
-  document.querySelectorAll(".overview-card").forEach(btn => {
+  // Clear all button states and reset texts
+  modes.forEach(m => {
+    const btn = document.getElementById(buttonIds[m]);
+    const status = document.getElementById(statusIds[m]);
     btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions");
+    if (status) status.textContent = "Click to scale";
   });
 
-  // Re-apply only if mode is defined
-  if (mode && buttons[mode]) {
-    const id = buttons[mode];
-    const btn = document.getElementById(id);
+  if (mode && buttonIds[mode]) {
+    const btn = document.getElementById(buttonIds[mode]);
+    const status = document.getElementById(statusIds[mode]);
     btn.classList.add("selected");
-
     if (mode === "pmax") btn.classList.add("scale-power");
     if (mode === "cost_per_mw") btn.classList.add("scale-cost");
     if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
+    if (status) status.textContent = "Currently scaling";
   }
 }
 
@@ -543,9 +591,9 @@ function highlightButton(mode) {
 
 
         document.getElementById("scale-power").onclick = () => scaleGeneratorsBy("pmax");
-document.getElementById("scale-cost").onclick = () => scaleGeneratorsBy("cost_per_mw");
-document.getElementById("scale-emissions").onclick = () => scaleGeneratorsBy("emissions_per_mw");
-document.getElementById("scale-reset").onclick = resetGeneratorSizes;
+        document.getElementById("scale-cost").onclick = () => scaleGeneratorsBy("cost_per_mw");
+        document.getElementById("scale-emissions").onclick = () => scaleGeneratorsBy("emissions_per_mw");
+        document.getElementById("scale-reset").onclick = resetGeneratorSizes;
 });
 
 
@@ -578,7 +626,25 @@ function updateConnector() {
     .style("display", "block");
 }
   
+function updateGeneratorStrokes() {
+  d3.selectAll(".map-gen").each(function(d) {
+    const el = d3.select(this);
+    const isSelected = d.id === selectedGeneratorId;
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
 
+    if (isSelected) {
+      el.attr("stroke", "#42a5f5").attr("stroke-width", 4);
+    } else if (currentScaleMode && gen) {
+      let strokeColor = "black";
+      if (currentScaleMode === "pmax") strokeColor = "#9ccc65";
+      else if (currentScaleMode === "cost_per_mw") strokeColor = "#f9a825";
+      else if (currentScaleMode === "emissions_per_mw") strokeColor = "#ef5350";
+      el.attr("stroke", strokeColor).attr("stroke-width", 3);
+    } else {
+      el.attr("stroke", "none").attr("stroke-width", 0);
+    }
+  });
+}
 
 // === Update generator colors on scenario load ===
 function updateMapGeneratorsFromScenario() {
@@ -590,9 +656,8 @@ function updateMapGeneratorsFromScenario() {
     const isSelected = d.id === selectedGeneratorId;
 
     d3.select(this)
-      .attr("fill", isOn ? "#4caf50" : "white")
-      .attr("stroke", isSelected ? "blue" : "black")
-      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+    .attr("fill", isOn ? "#4caf50" : "white");
+    updateGeneratorStrokes();
   });
 
   d3.selectAll(".map-gen-highlight").remove();
@@ -616,18 +681,6 @@ function updateMapGeneratorsFromScenario() {
     }
   }
   
-document.getElementById("scenario-select").addEventListener("change", (e) => {
-  loadScenario(e.target.value);
-});
-
-document.getElementById("reset-button").addEventListener("click", () => {
-  loadScenario(currentScenarioId);
-});
-
-window.addEventListener("DOMContentLoaded", () => {
-  fetchAllScenarios();
-});
-
 }
   </script>
 </body>
