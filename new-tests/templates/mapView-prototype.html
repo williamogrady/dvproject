@@ -24,6 +24,14 @@
   cursor: pointer;
 }
 
+.power-block-row .power-block[style*="background: var(--gen-on)"] {
+  background: var(--gen-on);
+}
+
+.map-load {
+  fill: #5878cf;
+}
+
 
 :root {
   --gen-on: #4caf50;
@@ -167,18 +175,21 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
 
-    .bubble {
+.bubble {
   position: absolute;
   background: #333;
   color: white;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  pointer-events: none;
+  padding: 18px 30px; /* 3x padding */
+  border-radius: 18px;
+  font-size: 1.2rem; /* larger text */
+  pointer-events: auto; /* <-- needed to register clicks */
   border: 2px solid #42a5f5;
   display: none;
   z-index: 20;
+  min-width: 300px;
+  max-width: 400px;
 }
+
 
   </style>
 </head>
@@ -551,6 +562,42 @@ while (current + 100 <= match.pmax) {
 }
 if (current < match.pmax) levels.push(match.pmax);
 
+if (match.pg > 0) {
+  const offBlock = document.createElement("div");
+  offBlock.className = "power-block off-toggle";
+  offBlock.textContent = "off";
+  offBlock.style = `
+    background: #444; color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 2px 6px; font-size: 0.7rem;
+    border-radius: 4px; cursor: pointer;
+    margin-bottom: 4px;
+  `;
+  offBlock.title = "Turn off generator but keep it active";
+
+  offBlock.addEventListener("click", () => {
+    fetch(`/api/set_generation/${match.index}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ percent: 0, user_active: true })
+    })
+      .then(res => res.json())
+      .then(data => {
+        currentGenerators = data.generators;
+        renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+        updateMapGeneratorsFromScenario();
+        updateGeneratorHalos();
+
+        const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+        if (!selected.empty()) {
+          selected.dispatch("click");
+        }
+      });
+  });
+
+  blockRow.appendChild(offBlock);
+}
+
 levels.forEach((level, i) => {
   const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
   const isHalf = isRemainder && (match.pmax % 100 <= 50);
@@ -641,14 +688,22 @@ function scaleGeneratorsBy(metric) {
 }
 
 svg.on("click", function(event) {
-  if (event.target.tagName === "svg") {
+  const bubbleEl = document.getElementById("bubble");
+  const bubbleRect = bubbleEl.getBoundingClientRect();
+
+  const x = event.clientX;
+  const y = event.clientY;
+
+  const withinX = x >= bubbleRect.left && x <= bubbleRect.right;
+  const withinY = y >= bubbleRect.top && y <= bubbleRect.bottom;
+
+  if (!(withinX && withinY)) {
     selectedGeneratorId = null;
     updateGeneratorStrokes();
     bubble.style("display", "none").html("");
     connectorLine.style("display", "none");
   }
 });
-
 
 
 function resetGeneratorSizes() {
@@ -812,26 +867,35 @@ function createBlock(level, isHalf, gen) {
   block.style.width = isHalf ? `10px` : `20px`;
   block.style.height = "20px";
   block.style.borderRadius = "4px";
-  block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+  const updated = currentGenerators.find(g => g.index === gen.index);
+  block.style.background = updated && updated.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
   block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
   block.title = `${level} MW`;
 
   block.style.cursor = "pointer";
-  block.addEventListener("mousedown", () => {
-    const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
-    fetch(`/api/set_generation/${gen.index}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ percent, user_active: true })
-    })
-      .then(res => res.json())
-      .then(data => {
-        currentGenerators = data.generators;
-        renderOverview(data.generators, data.lines, data.total_cost, data.solved);
-        updateMapGeneratorsFromScenario();
-        updateGeneratorHalos();
-      });
-  });
+  block.addEventListener("mousedown", (event) => {
+  event.stopPropagation(); // prevent bubble from closing
+
+  const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+  fetch(`/api/set_generation/${gen.index}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ percent, user_active: true })
+  })
+    .then(res => res.json())
+    .then(data => {
+      currentGenerators = data.generators;
+      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      updateMapGeneratorsFromScenario();
+      updateGeneratorHalos();
+
+      // 🔁 Redraw the generator bubble to reflect the updated gen.pg
+      const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+      if (!selected.empty()) {
+        selected.dispatch("click");
+      }
+    });
+});
 
   return block;
 }
@@ -857,8 +921,10 @@ function updateMapGeneratorsFromScenario() {
   if (selectedGeneratorId) {
     const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
     if (!selected.empty()) {
-      const { cx, cy } = selected.node();
-      const r = +selected.attr("r");
+      const genNode = selected.select(".map-gen");
+      const cx = +genNode.attr("cx") || 0;
+      const cy = +genNode.attr("cy") || 0;
+      const r = +genNode.attr("r") || 30;
 
       d3.select("#zoom-group")
         .append("circle")
