@@ -8,6 +8,10 @@ import os
 app = Flask(__name__, static_folder='css', static_url_path='/css')
 grid = Grid()
 
+@app.route("/")
+def start():
+    return render_template("start.html")
+
 @app.route("/list")
 def list_view():
     return render_template("listView-prototype.html")
