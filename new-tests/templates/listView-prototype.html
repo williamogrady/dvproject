@@ -115,6 +115,19 @@
 </div>
 <button onclick="window.location.href='/map'"> Switch to Map View</button>
 
+<div id="map-tooltip" style="
+  position: absolute;
+  display: none;
+  padding: 6px 10px;
+  background: #222;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  z-index: 1000;
+"></div>
+
   <!-- Zoomable SVG Map Wrapper -->
   <div id="map-wrapper" style="flex: 1; position: relative;"></div>
 </div>
@@ -137,6 +150,18 @@
 const svgWidth = 600;
 const svgHeight = 600;
 let selectedGeneratorId = null;
+
+function showTooltip(text, x, y) {
+  const tooltip = document.getElementById("map-tooltip");
+  tooltip.textContent = text;
+  tooltip.style.left = (x + 12) + "px";
+  tooltip.style.top = (y - 20) + "px";
+  tooltip.style.display = "block";
+}
+
+function hideTooltip() {
+  document.getElementById("map-tooltip").style.display = "none";
+}
 
     async function fetchAllScenarios() {
       const res = await fetch("/api/scenarios");
@@ -366,23 +391,37 @@ function renderMapLineLoads(lines) {
     const group = d3.select("#zoom-group");
 
     lines.forEach(line => {
-      const path = document.getElementById(`Line_Bus${Math.min(line.from_bus, line.to_bus)}_Bus${Math.max(line.from_bus, line.to_bus)}`);
+      const lineId = `Line_Bus${Math.min(line.from_bus, line.to_bus)}_Bus${Math.max(line.from_bus, line.to_bus)}`;
+      const path = document.getElementById(lineId);
       if (!path) return;
 
-      const mid = path.getPointAtLength(path.getTotalLength() / 2);
+      const totalLength = path.getTotalLength();
+      const pointA = path.getPointAtLength(totalLength * 0.45);
+      const pointB = path.getPointAtLength(totalLength * 0.55);
 
-      group.append("rect")
+      const dx = pointB.x - pointA.x;
+      const dy = pointB.y - pointA.y;
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      const flow = line.flow;
+      const dir = flow >= 0 ? 1 : -1;
+      const color = getLoadColor(getLineLoadPct(line));
+
+      group.append("path")
         .attr("class", "line-load-indicator")
-        .attr("x", mid.x - 3)
-        .attr("y", mid.y - 3)
-        .attr("width", 20)
-        .attr("height", 20)
-        .attr("fill", getLoadColor(getLineLoadPct(line)))
+        .attr("d", "M -30 -20 L 0 0 L -30 20")
+        .attr("fill", color)
         .attr("stroke", "black")
-        .attr("stroke-width", 0.5);
-    });
+        .attr("stroke-width", 0.5)
+        .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
+    })
+    .on("click", (event) => {
+  showTooltip(line.id, event.pageX, event.pageY);
+  event.stopPropagation();
+});
   }, 0);
 }
+
 
 function getLoadColor(pct) {
   return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
@@ -776,7 +815,14 @@ Promise.all([
         return match && match.pg > 0 ? "#4caf50" : "ffffff";        // TODO : css
       })
     .attr("stroke", "black")
-    .attr("stroke-width", 1.2);
+    .attr("stroke-width", 1.2)
+    .on("click", function(event, d) {
+  selectedGeneratorId = d.id;
+  updateGeneratorStrokes();
+  updateGeneratorHalos();
+  showTooltip(d.id, event.pageX, event.pageY);
+  event.stopPropagation();
+});
 
 zoomGroup.selectAll("rect.map-bus")
   .data(nodes.filter(d => d.type === "bus"))

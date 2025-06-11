@@ -6,31 +6,33 @@ const parser = new XMLParser({
   attributeNamePrefix: ''
 });
 
-const svgContent = fs.readFileSync('./topology.svg', 'utf8');
+// Load single, full SVG file with correct coordinates
+const svgContent = fs.readFileSync('topology-noarrows.svg', 'utf8');
 const parsed = parser.parse(svgContent);
-const svgElements = parsed.svg || parsed;
+const svgRoot = parsed.svg || parsed;
 
 let elements = [];
+
 function walk(node) {
   if (Array.isArray(node)) node.forEach(walk);
   else if (typeof node === 'object') {
-    ['path', 'line'].forEach(tag => {
-      const el = node[tag];
-      if (el) {
-        if (Array.isArray(el)) elements.push(...el);
-        else elements.push(el);
-      }
-    });
+    if (node.path) {
+      if (Array.isArray(node.path)) elements.push(...node.path);
+      else elements.push(node.path);
+    }
     Object.values(node).forEach(walk);
   }
 }
-walk(svgElements);
+
+walk(svgRoot);
 
 const links = [];
 
 elements.forEach(el => {
   const id = el.id;
-  if (!id || !id.startsWith('Line')) return;
+  const d = el.d;
+
+  if (!id || !id.startsWith('Line') || !d) return;
 
   const parts = id.includes('_') ? id.split('_') : id.split('-');
   if (parts.length < 3) return;
@@ -50,8 +52,6 @@ elements.forEach(el => {
     target = parts[2];
   }
 
-  const d = el.d || `M${el.x1},${el.y1}L${el.x2},${el.y2}`;
-
   links.push({
     id,
     source,
@@ -61,4 +61,4 @@ elements.forEach(el => {
 });
 
 fs.writeFileSync('full_lines.json', JSON.stringify(links, null, 2));
-console.log(`✅ Updated full_lines.json (${links.length} lines)`);
+console.log(`✅ Wrote full_lines.json with ${links.length} lines from topology-noarrows.svg`);

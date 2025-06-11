@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Neutral Lines Preview</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #f0f0f0;
+    }
+    svg {
+      width: 100vw;
+      height: 100vh;
+      background: #fff;
+    }
+    .map-line {
+      fill: none;
+      stroke: #888;
+      stroke-width: 2px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <svg id="map"></svg>
+
+  <script>
+    const svg = d3.select("#map");
+
+    // Load full_lines.json
+    fetch("/new-tests/full_lines.json")
+      .then(res => res.json())
+      .then(lines => {
+
+        // Define a rough regex to trim arrowheads (simple heuristic: remove last 3 segments)
+function removeArrowSegments(dString) {
+  const segments = dString.trim().split(/[ML]/).filter(Boolean);
+  if (segments.length > 3) {
+    return 'M' + segments.slice(0, 2).map(s => s.trim()).join(' L ');
+  }
+  return dString;
+}
+
+svg.selectAll("path.map-line")
+  .data(lines)
+  .enter()
+  .append("path")
+  .attr("class", "map-line")
+  .attr("id", d => d.id)
+  .attr("d", d => removeArrowSegments(d.d));
+
+      });
+  </script>
+</body>
+</html>

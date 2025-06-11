@@ -1,0 +1,646 @@
+<svg width="2825" height="2163" viewBox="0 0 2825 2163" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="SVG MAP FRAME">
+<g id="SOUTH REGION">
+<g id="SOUTH LINES">
+<g id="SOUTH BUS-BUS LINES">
+<path id="Line_Bus38_Bus37" d="M1747 362V981" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus95_Bus96" d="M2127 1647V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus96_Bus97" d="M2127.87 1552V1641" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus77_Bus82" d="M1952 1643V1527" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus82_Bus96" d="M2102.5 1647V1672L1952 1671.5V1649" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus94_Bus95" d="M2147.5 1710.5V1689H2209V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus93_Bus94" d="M2209 1719V1810" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus94_Bus100" d="M2307 1711V1689.5H2262.5V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus92_Bus94" d="M2244 1719V1879" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus92_Bus100" d="M2307.5 1719V1879" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus80_Bus96" d="M2244 1641V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus94_Bus96" d="M2244 1647V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus98_Bus100" d="M2344 1712L2343 1505" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus99_Bus100" d="M2415 1434L2414 1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus100_Bus106" d="M2441.5 1569V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus80_Bus98" d="M2280 1499V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus80_Bus99" d="M2369.5 1434.5V1472H2316V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus81_Bus80" d="M2199 1372V1427" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus79_Bus80" d="M2139 1313V1427" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus80_Bus97" d="M2201 1545V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus77_Bus80_2" d="M2111.12 1434.5V1521" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus77_Bus80" d="M2127 1435V1521" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus77_Bus78" d="M2093 1374V1521" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus78_Bus79" d="M2093 1313V1368" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus69_Bus77" d="M2039 1520V1187.5H2051" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus76_Bus77" d="M1951 1520V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus76_Bus118" d="M1817 1434.5V1472.5L1924 1473V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus75_Bus77" d="M1924.5 1528V1560H1694V1530" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus69_Bus75" d="M1694.5 1523V1276L1965 1275V1152H2051" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus38_Bus65" d="M2335 1210V1240H1782V987" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus70_Bus74" d="M1630.25 1464V1156" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus70_Bus71" d="M1613.69 1156V1281" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus71_Bus72" d="M1560 1234V1281" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus71_Bus73" d="M1560 1336V1287" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus24_Bus72" d="M1500.5 1233.5V1250H1461V1155" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus24_Bus70" d="M1621.5 1149V1134.5H1446.5V1149" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus68_Bus69" d="M2058 1134H2144" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus69_Bus70" d="M1711 1149L1711 1130.03L2051 1130.03" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus65_Bus68" d="M2151 1080.5H2334.5V1203" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus68_Bus81" d="M2174 1365V1205H2150" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus65_Bus66" d="M2351.76 1056V1203" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus62_Bus66" d="M2422.5 1049V1028.5H2494.5V1050" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus62_Bus67" d="M2423 978V1010H2531.5V1050" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus66_Bus67" d="M2387.5 979V1050" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus68_Bus116" d="M2150 1152H2215" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus70_Bus75" d="M1660 1523V1156" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus74_Bus75" d="M1629 1523V1471" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus75_Bus118" d="M1782.71 1435V1490H1720V1523.5" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus82_Bus83" d="M1683.5 1710.5V1669.5H1888.5V1649" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus92_Bus93" d="M2155 1817V1879" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus92_Bus102" d="M2155 1885V1951" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus89_Bus92_2" d="M2076 1886.5V1912.5H1889V1885" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus89_Bus92" d="M2063 1886.5V1903H1898V1885" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus89_Bus90_2" d="M1840 1998V1885" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus89_Bus90" d="M1858 1998L1858 1885" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus90_Bus91" d="M2066 2008.5V2019.5H1892V2005" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus91_Bus92" d="M2093 1886.5V2001" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus101_Bus102" d="M2209.5 1951V1930.5H2306.5V1951" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus100_Bus103" d="M2427.5 1951V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus100_Bus101" d="M2351 1951V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus100_Bus104" d="M2485 1718V1733.5H2441V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus103_Bus104" d="M2504 1718V1951" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus103_Bus105" d="M2601.5 1719V1822H2529.5V1951" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus104_Bus105" d="M2583.5 1719V1735H2531V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus103_Bus110" d="M2565 2022V1957" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus110_Bus111" d="M2515 2054H2565V2029" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus109_Bus110" d="M2619 2022V1921H2637" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus110_Bus112" d="M2654 2029V2054H2725V2032" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus108_Bus109" d="M2636.5 1893.5H2619V1840H2636.5" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus105_Bus108" d="M2635.5 1814H2619.5V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus105_Bus106" d="M2619 1569V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus105_Bus107" d="M2726 1719.5V1734.5H2654V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus106_Bus105" d="M2708.5 1710.5V1568" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus86_Bus89" d="M1819.5 1886.5V1930H1631.5V1887" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus88_Bus89" d="M1800 1886.5V1902H1736V1885" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus85_Bus88" d="M1710.5 1886V1900H1649.5V1887" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus83_Bus85" d="M1658 1881V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus84_Bus85" d="M1630 1762L1630 1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus86_Bus87" d="M1657 2001H1614V1959" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus84_Bus85_2" d="M1612 1880V1769" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus85_Bus86" d="M1613 1952V1887" stroke="#619D54" stroke-width="3"/>
+</g>
+<g id="SOUTH BUS-GEN LINES">
+<path id="Line_Bus92_Gen" d="M2094 1853V1879.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus91_Gen" d="M2094 2039V2008" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus100_Gen" d="M2396 1756V1719" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus103_Gen" d="M2459 1925V1951.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus111_Gen" d="M2477 2122L2508 2122" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus90_Gen" d="M1892 1972V1998.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus82_Gen" d="M1916 1692V1649" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus89_Gen" d="M1824 1852V1878.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus87_Gen" d="M1701 2001H1665" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus85_Gen" d="M1561 1922V1888" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus110_Gen" d="M2654 1994V2023" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus112_Gen" d="M2725 2001V2027.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus77_Gen" d="M2039 1565V1527" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus74_Gen" d="M1595 1440V1466.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus73_Gen" d="M1525 1368V1344" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus72_Gen" d="M1514 1258V1233" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus24_Gen" d="M1418 1193V1156" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus65_Gen" d="M2405 1246V1209" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus116_Gen" d="M2249.02 1152H2223" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus69_Gen" d="M2072 1079H2058" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus62_Gen" d="M2654 1094V1055" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus66_Gen" d="M2396 1094V1055" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus80_Gen" d="M2165 1472V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus76_Gen" d="M1926 1401V1427.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus70_Gen" d="M1701 1193V1157" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus104_Gen" d="M2513 1680V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus105_Gen" d="M2654 1680V1712" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus107_Gen" d="M2741 1680V1713" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus99_Gen" d="M2398 1400V1426.02" stroke="#619D54" stroke-width="3"/>
+</g>
+<g id="SOUTH BUS-LOAD LINES">
+<path id="Line_Bus97_Load" d="M2200.5 1579.02V1550" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus96_Load" d="M2102.5 1641V1615" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus80_Load" d="M2218.5 1473V1434" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus78_Load" d="M2066.5 1413V1374" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus76_Load" d="M1978.5 1428V1385" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus79_Load" d="M2120.5 1307V1269" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus98_Load" d="M2298.5 1544V1505" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus77_Load" d="M1995.5 1565V1527" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus95_Load" d="M2120.5 1749V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus93_Load" d="M2156.5 1810V1782" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus94_Load" d="M2263.5 1749V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus100_Load" d="M2369.5 1749V1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus92_Load" d="M2119.5 1916V1884" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus102_Load" d="M2183.5 1988.02V1959" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus101_Load" d="M2334.5 1986.02V1957" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus103_Load" d="M2503.5 1987V1957" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus110_Load" d="M2619.5 2051V2028" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus109_Load" d="M2642 1911.5H2671.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus108_Load" d="M2642 1822.5H2671.02" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus112_Load" d="M2752.5 2051V2030" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus107_Load" d="M2761.5 1749V1717" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus105_Load" d="M2583.5 1713.02V1684" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus104_Load" d="M2483.5 1713.02V1684" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus106_Load" d="M2582.5 1567.02V1538" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus90_Load" d="M1856.5 2049V2005" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus88_Load" d="M1728.5 1879V1846" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus86_Load" d="M1599.5 2001V1959" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus85_Load" d="M1560.5 1881.02V1852" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus84_Load" d="M1594.5 1810V1769" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus83_Load" d="M1683.5 1760L1683.5 1718" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus82_Load" d="M1915.5 1643V1620" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus75_Load" d="M1661.5 1573V1530" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus74_Load" d="M1577.5 1513V1471" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus118_Load" d="M1799.5 1428V1385" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus70_Load" d="M1676.5 1150V1105" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus67_Load" d="M2405.5 972V929" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus66_Load" d="M2431.5 1094V1056" stroke="#619D54" stroke-width="3"/>
+<path id="Line_Bus62_Load" d="M2511.5 1094V1056" stroke="#619D54" stroke-width="3"/>
+</g>
+</g>
+<g id="SOUTH GENERATORS">
+<circle id="Gen24" cx="1418" cy="1218" r="25" fill="#56CF88"/>
+<circle id="Gen72" cx="1514" cy="1283" r="25" fill="#56CF88"/>
+<circle id="Gen73" cx="1524" cy="1392" r="25" fill="#56CF88"/>
+<circle id="Gen74" cx="1595" cy="1417" r="25" fill="#56CF88"/>
+<circle id="Gen70" cx="1701" cy="1218" r="25" fill="#56CF88"/>
+<circle id="Gen76" cx="1926" cy="1379" r="25" fill="#56CF88"/>
+<circle id="Gen82" cx="1916" cy="1715" r="25" fill="#56CF88"/>
+<circle id="Gen77" cx="2039" cy="1589" r="25" fill="#56CF88"/>
+<circle id="Gen80" cx="2165" cy="1496" r="25" fill="#56CF88"/>
+<circle id="Gen92" cx="2095" cy="1829" r="25" fill="#56CF88"/>
+<circle id="Gen104" cx="2513" cy="1662" r="25" fill="#56CF88"/>
+<circle id="Gen100" cx="2396" cy="1781" r="25" fill="#56CF88"/>
+<circle id="Gen99" cx="2398" cy="1379" r="25" fill="#56CF88"/>
+<circle id="Gen85" cx="1561" cy="1946" r="25" fill="#56CF88"/>
+<circle id="Gen90" cx="1893" cy="1954" r="25" fill="#56CF88"/>
+<circle id="Gen111" cx="2451" cy="2122" r="25" fill="#56CF88"/>
+<circle id="Gen89" cx="1824" cy="1827" r="25" fill="#56CF88"/>
+<circle id="Gen87" cx="1726" cy="2001" r="25" fill="#56CF88"/>
+<circle id="Gen91" cx="2096" cy="2063" r="25" fill="#56CF88"/>
+<circle id="Gen66" cx="2396" cy="1118" r="25" fill="#56CF88"/>
+<circle id="Gen69" cx="2096" cy="1081" r="25" fill="#56CF88"/>
+<circle id="Gen116" cx="2272" cy="1152" r="25" fill="#56CF88"/>
+<circle id="Gen65" cx="2405" cy="1271" r="25" fill="#56CF88"/>
+<circle id="Gen103" cx="2459" cy="1903" r="25" fill="#56CF88"/>
+<circle id="Gen62" cx="2654" cy="1117" r="25" fill="#56CF88"/>
+<circle id="Gen110" cx="2653" cy="1976" r="25" fill="#56CF88"/>
+<circle id="Gen112" cx="2726" cy="1976" r="25" fill="#56CF88"/>
+<circle id="Gen105" cx="2653" cy="1665" r="25" fill="#56CF88"/>
+<circle id="Gen107" cx="2741" cy="1665" r="25" fill="#56CF88"/>
+</g>
+<g id="SOUTH LOADS">
+<path id="Load105" d="M2583 1667L2595.99 1689.5H2570.01L2583 1667Z" fill="#0DA335"/>
+<path id="Load106" d="M2583 1517L2595.99 1539.5H2570.01L2583 1517Z" fill="#0DA335"/>
+<path id="Load96" d="M2102 1595L2114.99 1617.5H2089.01L2102 1595Z" fill="#0DA335"/>
+<path id="Load80" d="M2220 1490L2207.01 1467.5H2232.99L2220 1490Z" fill="#0DA335"/>
+<path id="Load94" d="M2263 1767L2250.01 1744.5H2275.99L2263 1767Z" fill="#0DA335"/>
+<path id="Load95" d="M2121 1767L2108.01 1744.5H2133.99L2121 1767Z" fill="#0DA335"/>
+<path id="Load100" d="M2370 1763L2357.01 1740.5H2382.99L2370 1763Z" fill="#0DA335"/>
+<path id="Load104" d="M2485 1675L2497.99 1697.5H2472.01L2485 1675Z" fill="#0DA335"/>
+<path id="Load98" d="M2300 1562L2287.01 1539.5H2312.99L2300 1562Z" fill="#0DA335"/>
+<path id="Load97" d="M2201 1597L2188.01 1574.5H2213.99L2201 1597Z" fill="#0DA335"/>
+<path id="Load101" d="M2334 2009L2321.01 1986.5H2346.99L2334 2009Z" fill="#0DA335"/>
+<path id="Load102" d="M2184 2007L2171.01 1984.5H2196.99L2184 2007Z" fill="#0DA335"/>
+<path id="Load92" d="M2120 1936L2107.01 1913.5H2132.99L2120 1936Z" fill="#0DA335"/>
+<path id="Load110" d="M2619 2069L2606.01 2046.5H2631.99L2619 2069Z" fill="#0DA335"/>
+<path id="Load112" d="M2751 2069L2738.01 2046.5H2763.99L2751 2069Z" fill="#0DA335"/>
+<path id="Load103" d="M2504 2009L2491.01 1986.5H2516.99L2504 2009Z" fill="#0DA335"/>
+<path id="Load109" d="M2693 1911L2670.5 1923.99V1898.01L2693 1911Z" fill="#0DA335"/>
+<path id="Load108" d="M2693 1821L2670.5 1833.99V1808.01L2693 1821Z" fill="#0DA335"/>
+<path id="Load107" d="M2761 1770L2748.01 1747.5H2773.99L2761 1770Z" fill="#0DA335"/>
+<path id="Load90" d="M1857 2069L1844.01 2046.5H1869.99L1857 2069Z" fill="#0DA335"/>
+<path id="Load88" d="M1726 1827L1738.99 1849.5H1713.01L1726 1827Z" fill="#0DA335"/>
+<path id="Load86" d="M1599 2017L1586.01 1994.5H1611.99L1599 2017Z" fill="#0DA335"/>
+<path id="Load85" d="M1561 1837L1573.99 1859.5H1548.01L1561 1837Z" fill="#0DA335"/>
+<path id="Load84" d="M1596 1827L1583.01 1804.5H1608.99L1596 1827Z" fill="#0DA335"/>
+<path id="Load83" d="M1684 1776L1671.01 1753.5H1696.99L1684 1776Z" fill="#0DA335"/>
+<path id="Load82" d="M1916 1599L1928.99 1621.5H1903.01L1916 1599Z" fill="#0DA335"/>
+<path id="Load77" d="M1995 1587L1982.01 1564.5H2007.99L1995 1587Z" fill="#0DA335"/>
+<path id="Load75" d="M1662 1593L1649.01 1570.5H1674.99L1662 1593Z" fill="#0DA335"/>
+<path id="Load118" d="M1799 1368L1811.99 1390.5H1786.01L1799 1368Z" fill="#0DA335"/>
+<path id="Load76" d="M1980 1368L1992.99 1390.5H1967.01L1980 1368Z" fill="#0DA335"/>
+<path id="Load78" d="M2068 1431L2055.01 1408.5H2080.99L2068 1431Z" fill="#0DA335"/>
+<path id="Load74" d="M1578 1534L1565.01 1511.5H1590.99L1578 1534Z" fill="#0DA335"/>
+<path id="Load79" d="M2121 1252L2133.99 1274.5H2108.01L2121 1252Z" fill="#0DA335"/>
+<path id="Load66" d="M2432 1111L2419.01 1088.5H2444.99L2432 1111Z" fill="#0DA335"/>
+<path id="Load62" d="M2512 1110L2499.01 1087.5H2524.99L2512 1110Z" fill="#0DA335"/>
+<path id="Load67" d="M2406 909L2418.99 931.5H2393.01L2406 909Z" fill="#0DA335"/>
+<path id="Load70" d="M1676 1085L1688.99 1107.5H1663.01L1676 1085Z" fill="#0DA335"/>
+<path id="Load93" d="M2155 1767L2167.99 1789.5H2142.01L2155 1767Z" fill="#0DA335"/>
+</g>
+<g id="SOUTH BUSES">
+<rect id="Bus106" x="2428" y="1562" width="293" height="6" fill="#9BF8A6"/>
+<rect id="Bus104" x="2474" y="1712" width="73" height="6" fill="#9BF8A6"/>
+<rect id="Bus105" x="2567" y="1712" width="108" height="6" fill="#9BF8A6"/>
+<rect id="Bus107" x="2697" y="1712" width="83" height="6" fill="#9BF8A6"/>
+<rect id="Bus108" x="2637" y="1855" width="62" height="6" transform="rotate(-90 2637 1855)" fill="#9BF8A6"/>
+<rect id="Bus109" x="2637" y="1939" width="65" height="6" transform="rotate(-90 2637 1939)" fill="#9BF8A6"/>
+<rect id="Bus112" x="2695" y="2025" width="73" height="6" fill="#9BF8A6"/>
+<rect id="Bus110" x="2555" y="2023" width="108" height="6" fill="#9BF8A6"/>
+<rect id="Bus103" x="2393" y="1951" width="189" height="6" fill="#9BF8A6"/>
+<rect id="Bus111" x="2508" y="2158" width="132" height="6" transform="rotate(-90 2508 2158)" fill="#9BF8A6"/>
+<rect id="Bus101" x="2289" y="1951" width="82" height="6" fill="#9BF8A6"/>
+<rect id="Bus100" x="2300" y="1712" width="153" height="6" fill="#9BF8A6"/>
+<rect id="Bus94" x="2194" y="1712" width="85" height="6" fill="#9BF8A6"/>
+<rect id="Bus95" x="2100" y="1712" width="79" height="6" fill="#9BF8A6"/>
+<rect id="Bus93" x="2125" y="1810" width="107" height="6" fill="#9BF8A6"/>
+<rect id="Bus102" x="2136" y="1952" width="96" height="6" fill="#9BF8A6"/>
+<rect id="Bus92" x="2054" y="1879" width="272" height="6" fill="#9BF8A6"/>
+<rect id="Bus91" x="2038" y="2001" width="79" height="6" fill="#9BF8A6"/>
+<rect id="Bus89" x="1787" y="1879" width="157" height="6" fill="#9BF8A6"/>
+<rect id="Bus90" x="1816" y="1999" width="102" height="6" fill="#9BF8A6"/>
+<rect id="Bus88" x="1694" y="1879" width="73" height="6" fill="#9BF8A6"/>
+<rect id="Bus82" x="1870" y="1643" width="118" height="6" fill="#9BF8A6"/>
+<rect id="Bus83" x="1612" y="1712" width="96" height="6" fill="#9BF8A6"/>
+<rect id="Bus84" x="1577" y="1763" width="74" height="6" fill="#9BF8A6"/>
+<rect id="Bus85" x="1550" y="1881" width="124" height="6" fill="#9BF8A6"/>
+<rect id="Bus87" x="1658" y="2029" width="51" height="6" transform="rotate(-90 1658 2029)" fill="#9BF8A6"/>
+<rect id="Bus86" x="1589" y="1953" width="50" height="6" fill="#9BF8A6"/>
+<rect id="Bus75" x="1605" y="1524" width="134" height="6" fill="#9BF8A6"/>
+<rect id="Bus77" x="1904" y="1521" width="235" height="6" fill="#9BF8A6"/>
+<rect id="Bus96" x="2090" y="1641" width="177" height="6" fill="#9BF8A6"/>
+<rect id="Bus97" x="2105" y="1545" width="119" height="6" fill="#9BF8A6"/>
+<rect id="Bus76" x="1892" y="1428" width="108" height="6" fill="#9BF8A6"/>
+<rect id="Bus118" x="1763" y="1428" width="79" height="6" fill="#9BF8A6"/>
+<rect id="Bus74" x="1555" y="1465" width="97" height="6" fill="#9BF8A6"/>
+<rect id="Bus98" x="2253" y="1499" width="119" height="6" fill="#9BF8A6"/>
+<rect id="Bus80" x="2101" y="1428" width="237" height="6" fill="#9BF8A6"/>
+<rect id="Bus99" x="2358" y="1428" width="79" height="6" fill="#9BF8A6"/>
+<rect id="Bus81" x="2148" y="1366" width="84" height="6" fill="#9BF8A6"/>
+<rect id="Bus78" x="2055" y="1368" width="61" height="6" fill="#9BF8A6"/>
+<rect id="Bus79" x="2080" y="1307" width="79" height="6" fill="#9BF8A6"/>
+<rect id="Bus71" x="1549" y="1281" width="73" height="6" fill="#9BF8A6"/>
+<rect id="Bus73" x="1487" y="1337" width="79" height="6" fill="#9BF8A6"/>
+<rect id="Bus72" x="1469" y="1227" width="96" height="6" fill="#9BF8A6"/>
+<rect id="Bus24" x="1336" y="1149" width="163" height="6" fill="#9BF8A6"/>
+<rect id="Bus70" x="1601" y="1150" width="121" height="6" fill="#9BF8A6"/>
+<rect id="Bus69" x="2051" y="1210" width="175" height="6" transform="rotate(-90 2051 1210)" fill="#9BF8A6"/>
+<rect id="Bus38" x="1699" y="981" width="96" height="6" fill="#9BF8A6"/>
+<rect id="Bus68" x="2144" y="1225" width="169" height="6" transform="rotate(-90 2144 1225)" fill="#9BF8A6"/>
+<rect id="Bus116" x="2216" y="1194" width="79" height="6" transform="rotate(-90 2216 1194)" fill="#9BF8A6"/>
+<rect id="Bus65" x="2307" y="1203" width="189" height="6" fill="#9BF8A6"/>
+<rect id="Bus66" x="2272" y="1050" width="177" height="6" fill="#9BF8A6"/>
+<rect id="Bus62" x="2481" y="1050" width="246" height="6" fill="#9BF8A6"/>
+<rect id="Bus67" x="2373" y="972" width="79" height="6" fill="#9BF8A6"/>
+</g>
+</g>
+<g id="NORTH REGION">
+<g id="NORTH LINES">
+<g id="NORTH BUS-BUS LINES">
+<path id="Line_Bus39_Bus40" d="M1729.5 105V164H1674" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus37_Bus39" d="M1675 200H1730V356" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus37_Bus40" d="M1755 105V356" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus52_Bus53" d="M2085 104L2084 226" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus54" d="M2223 104L2222 695.999" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus50" d="M2314.5 414L2264 414L2263 695.999" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus51" d="M2373.5 369L2364 369L2364 485.5L2280 485.5L2280 696.085" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus54_2" d="M2235 104V696" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus51_Bus52" d="M2084 233V343H2374" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus57_Bus50" d="M2322.5 289H2343V377H2322" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus56_Bus57" d="M2322.5 271.5H2342.5V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus56_Bus58" d="M2373.5 252H2360.5V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus51_Bus58" d="M2373.5 272L2361 271.5V325H2374" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus40_Bus42" d="M1988 104V147H1781V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus41_Bus42" d="M1951 105V127.5H1907V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus40_Bus41" d="M1870 105.021V128H1800V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus53_Bus54" d="M2192 105.021V128H2138V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus54_Bus56" d="M2316 105.021V128H2264V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus55_Bus56" d="M2494 104V128H2396V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus54_Bus55" d="M2262.5 97.5V4L2495 4L2494.5 97" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus42_Bus49_2" d="M2190.5 695L2192 377.5H2004.5V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus42_Bus49" d="M2209.49 695L2208.5 364H2022V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus44_Bus45" d="M1924 564L1925 352" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus34_Bus36" d="M1622 591L1623 430" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus34_Bus37" d="M1650 362.5V424.5" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus43_Bus44" d="M1889 352V436" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus63_Bus64" d="M2560 234L2494 234L2494 537.5L2537 537.5" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus60_Bus61" d="M2638.5 574H2672L2671.5 484.5H2638" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus59_Bus61" d="M2639.31 608H2727L2725.69 173H2638" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus60_Bus62" d="M2637.5 448.5H2694V994H2588.5V1049" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus64_Bus65" d="M2537 573.5H2459V1203" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus64_Bus61" d="M2631 573H2543" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus61_Bus62" d="M2556.5 1049.5V926L2662.5 925.5V627H2638" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus63_Bus59" d="M2631 235H2566" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus34_Bus43" d="M1836 442V468.5H1650V430" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus45_Bus46" d="M1904 627.5H1924V571" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus46_Bus48" d="M2049.5 532.5L2049.5 634.988L1903 636" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus46_Bus47" d="M1903 661.899L1981 662.188" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus47_Bus49" d="M1987 662.479L2138 662.478L2138 695" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus48_Bus49" d="M2084.5 532L2084.5 636L2174 636L2174 695" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus66_2" d="M2218.73 702L2218.73 833.079L2352.39 832.885L2352 1049" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus66" d="M2244.5 702L2244.5 800L2369.5 800L2369.5 1048.75" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Bus69" d="M2085 702.001L2085 724.002L2042.5 724.002L2040 1054.5L2050.5 1054.5" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus47_Bus69" d="M2050 1089.5L2004.5 1089.5L2004.5 688.501L1987 688.501" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus54_Bus59" d="M2631 203L2330.86 199.829L2245 199.325L2245.62 103" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus56_Bus59_2" d="M2632 173.5L2427.5 172.5L2369 172.5L2369 104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus56_Bus59" d="M2632 155L2437.92 154.523L2382.4 154.598L2382.49 103.926" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus55_Bus59" d="M2632 136.584L2559.41 136.757L2538.7 136.584L2538.85 103.693" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus45_Bus49" d="M2102.86 695.001L2102.86 672.001L2014.01 672L2014.01 591L1950.12 590.999L1950.12 570.999" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus33_Bus37" d="M1702 355V279.5H1488V244" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus35_Bus37" d="M1675.5 354.5V323.5H1497V591L1381 591.5" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus35_Bus36" d="M1381 640.5H1622.5V597.5" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus59_Bus60" d="M2638.76 413H2690L2689.24 236H2638" stroke="#E2036F" stroke-width="3"/>
+</g>
+<g id="NORTH BUS-LOAD LINES">
+<path id="Line_Bus40_Load" d="M1781.5 98V60" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus41_Load" d="M1889.5 98V60" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus42_Load" d="M2014.5 98V60" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus53_Load" d="M2121.5 98V60" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus54_Load" d="M2248.5 98V60" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus56_Load" d="M2325.5 98V68" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus58_Load" d="M2381 264.5H2406" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus57_Load" d="M2295 271.5H2316" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus55_Load" d="M2520.5 127V104" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus59_Load" d="M2638 111.5H2665" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus51_Load" d="M2380 352.5H2406" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus60_Load" d="M2605 449.5H2632" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Load" d="M2120.5 736V702" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus47_Load" d="M1950 693.5H1981" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus45_Load" d="M1951.38 565L1951.37 535" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus48_Load" d="M2067 526V505" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus46_Load" d="M1876 660.5H1899" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus43_Load" d="M1854.5 436V409" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus44_Load" d="M1907.25 346.002V316.498" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus52_Load" d="M2111.5 226V191" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus39_Load" d="M1628 199.5H1668" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus36_Load" d="M1657.5 633V597" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus34_Load" d="M1586.5 462V430" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus35_Load" d="M1339 609.5H1375" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus33_Load" d="M1466.5 238V203" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus50_Load" d="M2296 379.5H2316" stroke="#E2036F" stroke-width="3"/>
+</g>
+<g id="NORTH BUS-GEN LINES">
+<path id="Line_Bus61_Gen" d="M2598 538L2631 538" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Gen" d="M2335 659V695" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Gen_2" d="M2387 75V97" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Gen_3" d="M2539 74V97" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus49_Gen_4" d="M2209 75V97" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus42_Gen" d="M1970 76V97" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus46_Gen" d="M1864 607V627H1897" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus40_Gen" d="M1729 75V97" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus36_Gen" d="M1658 566V591" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus34_Gen" d="M1587 401V423" stroke="#E2036F" stroke-width="3"/>
+<path id="Line_Bus59_Gen" d="M2687 55.6094H2638.99" stroke="#E2036F" stroke-width="3"/>
+</g>
+</g>
+<g id="NORTH GENERATORS">
+<circle id="Gen49" cx="2336" cy="635" r="25" fill="#E877EA"/>
+<circle id="Gen61" cx="2574" cy="538" r="25" fill="#E877EA"/>
+<path id="Gen42" d="M1995 50.9999C1995 64.807 1983.81 75.9999 1970 75.9999C1956.19 75.9999 1945 64.807 1945 50.9999C1945 37.1928 1956.19 25.9999 1970 25.9999C1983.81 25.9999 1995 37.1928 1995 50.9999Z" fill="#E877EA"/>
+<circle id="Gen54" cx="2209" cy="51" r="25" fill="#E877EA"/>
+<circle id="Gen40" cx="1729" cy="50" r="25" fill="#E877EA"/>
+<circle id="Gen34" cx="1587" cy="376" r="25" fill="#E877EA"/>
+<circle id="Gen36" cx="1658" cy="541" r="25" fill="#E877EA"/>
+<circle id="Gen46" cx="1863" cy="584" r="25" fill="#E877EA"/>
+<circle id="Gen56" cx="2387" cy="51" r="25" fill="#E877EA"/>
+<circle id="Gen55" cx="2539" cy="50" r="25" fill="#E877EA"/>
+<circle id="Gen59" cx="2711" cy="53" r="25" fill="#E877EA"/>
+</g>
+<g id="NORTH LOADS">
+<path id="Load39" d="M1606 199L1628.5 186.01V211.99L1606 199Z" fill="#C50CAD"/>
+<path id="Load40" d="M1783 39L1795.99 61.5H1770.01L1783 39Z" fill="#C50CAD"/>
+<path id="Load41" d="M1889 39L1901.99 61.5H1876.01L1889 39Z" fill="#C50CAD"/>
+<path id="Load33" d="M1466 181L1478.99 203.5H1453.01L1466 181Z" fill="#C50CAD"/>
+<path id="Load35" d="M1317 608L1339.5 595.01V620.99L1317 608Z" fill="#C50CAD"/>
+<path id="Load36" d="M1658 655L1645.01 632.5H1670.99L1658 655Z" fill="#C50CAD"/>
+<path id="Load46" d="M1851 663L1873.5 650.01V675.99L1851 663Z" fill="#C50CAD"/>
+<path id="Load47" d="M1928 693L1950.5 680.01V705.99L1928 693Z" fill="#C50CAD"/>
+<path id="Load43" d="M1854 387L1866.99 409.5H1841.01L1854 387Z" fill="#C50CAD"/>
+<path id="Load44" d="M1907 294L1919.99 316.5H1894.01L1907 294Z" fill="#C50CAD"/>
+<path id="Load52" d="M2111 169L2123.99 191.5H2098.01L2111 169Z" fill="#C50CAD"/>
+<path id="Load42" d="M2014 39L2026.99 61.5H2001.01L2014 39Z" fill="#C50CAD"/>
+<path id="Load53" d="M2121 40L2133.99 62.5H2108.01L2121 40Z" fill="#C50CAD"/>
+<path id="Load54" d="M2249 39L2261.99 61.5H2236.01L2249 39Z" fill="#C50CAD"/>
+<path id="Load56" d="M2326 46L2338.99 68.5H2313.01L2326 46Z" fill="#C50CAD"/>
+<path id="Load50" d="M2274 379L2296.5 366.01V391.99L2274 379Z" fill="#C50CAD"/>
+<path id="Load57" d="M2274 271L2296.5 258.01V283.99L2274 271Z" fill="#C50CAD"/>
+<path id="Load58" d="M2428 264L2405.5 276.99V251.01L2428 264Z" fill="#C50CAD"/>
+<path id="Load51" d="M2428 352L2405.5 364.99V339.01L2428 352Z" fill="#C50CAD"/>
+<path id="Load45" d="M1951 513L1963.99 535.5H1938.01L1951 513Z" fill="#C50CAD"/>
+<path id="Load49" d="M2121 758L2108.01 735.5H2133.99L2121 758Z" fill="#C50CAD"/>
+<path id="Load48" d="M2067 483L2079.99 505.5H2054.01L2067 483Z" fill="#C50CAD"/>
+<path id="Load55" d="M2521 149L2508.01 126.5H2533.99L2521 149Z" fill="#C50CAD"/>
+<path id="Load34" d="M1587 484L1574.01 461.5H1599.99L1587 484Z" fill="#C50CAD"/>
+<path id="Load60" d="M2583 449L2605.5 436.01V461.99L2583 449Z" fill="#C50CAD"/>
+<path id="Load59" d="M2687 112L2664.5 124.99V99.0096L2687 112Z" fill="#C50CAD"/>
+</g>
+<g id="NORTH BUSES">
+<rect id="Bus56" x="2307" y="98" width="96" height="6" fill="#FECEFF"/>
+<rect id="Bus55" x="2475" y="98" width="90" height="6" fill="#FECEFF"/>
+<rect id="Bus54" x="2179" y="98" width="107" height="6" fill="#FECEFF"/>
+<rect id="Bus53" x="2063" y="98" width="96" height="6" fill="#FECEFF"/>
+<rect id="Bus42" x="1935" y="98" width="96" height="6" fill="#FECEFF"/>
+<rect id="Bus41" x="1842" y="98" width="79" height="6" fill="#FECEFF"/>
+<rect id="Bus40" x="1638" y="98" width="184" height="6" fill="#FECEFF"/>
+<rect id="Bus44" x="1866" y="346" width="96" height="6" fill="#FECEFF"/>
+<rect id="Bus52" x="2057" y="226" width="73" height="6" fill="#FECEFF"/>
+<rect id="Bus43" x="1825" y="436" width="84" height="6" fill="#FECEFF"/>
+<rect id="Bus45" x="1900" y="565" width="73" height="6" fill="#FECEFF"/>
+<rect id="Bus48" x="2028" y="526" width="73" height="6" fill="#FECEFF"/>
+<rect id="Bus49" x="2063" y="696" width="308" height="6" fill="#FECEFF"/>
+<rect id="Bus37" x="1634" y="356" width="142" height="6" fill="#FECEFF"/>
+<rect id="Bus33" x="1430" y="238" width="78" height="6" fill="#FECEFF"/>
+<rect id="Bus34" x="1529" y="424" width="142" height="6" fill="#FECEFF"/>
+<rect id="Bus36" x="1598" y="591" width="85" height="6" fill="#FECEFF"/>
+<rect id="Bus57" x="2316" y="303" width="60" height="6" transform="rotate(-90 2316 303)" fill="#FECEFF"/>
+<rect id="Bus50" x="2316" y="421" width="69" height="6" transform="rotate(-90 2316 421)" fill="#FECEFF"/>
+<rect id="Bus46" x="1897" y="688" width="82" height="6" transform="rotate(-90 1897 688)" fill="#FECEFF"/>
+<rect id="Bus47" x="1981" y="714" width="75" height="6" transform="rotate(-90 1981 714)" fill="#FECEFF"/>
+<rect id="Bus35" x="1375" y="662" width="107" height="6" transform="rotate(-90 1375 662)" fill="#FECEFF"/>
+<rect id="Bus58" x="2375" y="284" width="43" height="6" transform="rotate(-90 2375 284)" fill="#FECEFF"/>
+<rect id="Bus51" x="2374" y="382" width="69" height="6" transform="rotate(-90 2374 382)" fill="#FECEFF"/>
+<rect id="Bus63" x="2560" y="270" width="54" height="6" transform="rotate(-90 2560 270)" fill="#FECEFF"/>
+<rect id="Bus59" x="2632" y="270" width="250" height="6" transform="rotate(-90 2632 270)" fill="#FECEFF"/>
+<rect id="Bus60" x="2632" y="505" width="107" height="6" transform="rotate(-90 2632 505)" fill="#FECEFF"/>
+<rect id="Bus64" x="2537" y="598" width="96" height="6" transform="rotate(-90 2537 598)" fill="#FECEFF"/>
+<rect id="Bus61" x="2632" y="675" width="157" height="6" transform="rotate(-90 2632 675)" fill="#FECEFF"/>
+<rect id="Bus39" x="1668" y="257" width="107" height="6" transform="rotate(-90 1668 257)" fill="#FECEFF"/>
+</g>
+</g>
+<g id="WEST REGION">
+<g id="WEST LINES">
+<g id="WEST BUS-BUS LINES">
+<path id="Line_Bus1_Bus3" d="M32.5 54L33 176" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus23_Bus32" d="M645 1028.5V1000.5H903V1159H1027.75V1236" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus1_Bus2" d="M72 54V93H193V54" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus2_Bus12" d="M245 54V93L503.5 93V203.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus11_Bus13" d="M344 271V360H636.5V432.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus12_Bus14" d="M583 211V271L761 271V329" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus12_Bus117" d="M619 211V233H761V211" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus13_Bus15" d="M797 429V406H689V433" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus4_Bus11" d="M174 271V307H263V271" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus3_Bus12" d="M156 176V147.5L458 147.5L458.5 203.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus5_Bus6" d="M219 465V486H290V465" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus5_Bus11" d="M218 459.5V351H298.5V271" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus6_Bus7" d="M334 465V486H405V465" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus114_Bus115" d="M566 1139V1160H637V1139" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus31_Bus32" d="M463.5 972H533.5V1029" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus32_Bus114" d="M534 1035V1084.84V1133" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus9_Bus10" d="M174 984V1045.54V1105" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus8_Bus9" d="M174 826V903.819V979" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus8_Bus5" d="M174 465V646.069L174 821" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus27_Bus28" d="M292 1085V1147.56V1208" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus28_Bus29" d="M292 956V1018.56V1079" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus4_Bus5" d="M103 273L103.509 367.603L104 459" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus3_Bus5" d="M67 181L66.4914 323.922L66 462" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus11_Bus12" d="M370 271V310H458.5V210.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus7_Bus12" d="M459 463.5V484.5H503.5V209.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus12_Bus16" d="M530 209.5L530.5 564H507" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus16_Bus17" d="M505.686 609H744L743.5 693.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus17_Bus31" d="M719 695V644.5H533V911.5H464" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus17_Bus113" d="M671.5 695V675.5L565 676V751H590" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus8_Bus30" d="M725.5 827V858.5H226.5V826.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus14_Bus15" d="M832 335L832 382.81L832 429" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus18_Bus19" d="M993 596L993 646.353L993 695" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus19_Bus20" d="M997 911.5L1026.5 912L1028 752.259V596" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus15_Bus19" d="M904.5 435L904.5 496L1082.5 496V589.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus15_Bus33" d="M905 430L905 377L1456.6 377L1456.6 245" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus19_Bus34" d="M1118 590.5L1118 466.5L1543.5 466.5L1543.5 431.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus30_Bus17" d="M761 700L761 767.871L761 821" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus17_Bus18" d="M796.5 699.5L796.5 732.5L920.5 732.5V699.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus15_Bus17" d="M796 434L796 566.241L796 694" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus30_Bus38" d="M831.5 821L831.5 782L1723 782L1722 980" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus32_Bus113" d="M589.5 804L566 804L566 905.664L566 1029" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus26_Bus30" d="M761 827.5L761 1139.81L761 1272" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus23_Bus24" d="M1366 1155L1366 1201L1108 1201L1108 1236.68" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus23_Bus25" d="M1081 1242L1081 1301.81L1081 1364.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus22_Bus23" d="M1062.5 1142.5L1046 1142.5L1046 1201.81L1046 1236.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus21_Bus22" d="M1062 1115.5L1028 1115.5L1028 1040.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus20_Bus21" d="M1027 1034L1027 940.5L995.5 940.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus26_Bus25" d="M815 1278.5L815 1365.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus27_Bus32" d="M378.5 1208.5L378.5 1089L494 1089V1036.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus29_Bus31" d="M319 950L319 911.5L457 911.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus27_Bus115" d="M418.5 1208.5L418.5 1187.5L673 1187.5L673 1139.5" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus25_Bus27" d="M419 1214L419 1347L761 1347L761 1366" stroke="#CA6767" stroke-width="3"/>
+</g>
+<g id="WEST BUS-LOAD LINES">
+<path id="Line_Bus1_Load" d="M13.5 53L13.5 80" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus2_Load" d="M218.5 17V49" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus11_Load" d="M320.5 234V266" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus4_Load" d="M134.5 273V312" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus3_Load" d="M32.5 181V214" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus12_Load" d="M556.5 209V241" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus117_Load" d="M805.5 210V245" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus14_Load" d="M796.5 335V370" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus21_Load" d="M1059.5 998V1035" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus13_Load" d="M662.5 438V473" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus15_Load" d="M881.5 434V472" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus18_Load" d="M993 699V739" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus19_Load" d="M1116.5 596V636" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus32_Load" d="M584 1035V1076" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus115_Load" d="M708 1139V1160" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus114_Load" d="M512 1139V1160" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus27_Load" d="M352 1214V1255" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus28_Load" d="M325 1084V1126" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus31_Load" d="M463 947H510" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus29_Load" d="M319 996V955" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus17_Load" d="M719 699V731" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus7_Load" d="M427.5 464V499" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus6_Load" d="M318.5 464V499" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus22_Load" d="M1067 1124.5H1113" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus16_Load" d="M455 590.5H501" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus23_Load" d="M1108.5 1281.04L1108.5 1242" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus20_Load" d="M953 929.5H990" stroke="#CA6767" stroke-width="3"/>
+</g>
+<g id="WEST BUS-GEN LINES">
+<path id="Line_Bus113_Gen" d="M595 778H637.036" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus31_Gen" d="M421 972H463.036" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus32_Gen" d="M607 1029V1006" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus8_Gen" d="M128 820V797" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus10_Gen" d="M174 1111V1149" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus27_Gen" d="M292 1214V1249" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus26_Gen" d="M805 1272V1250" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus25_Gen" d="M947 1366V1343" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus6_Gen" d="M319 458V436" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus18_Gen" d="M921.018 694.018L921.001 671" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus15_Gen" d="M832 472L832.018 434.982" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus19_Gen" d="M993 589V567" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus4_Gen" d="M135 267V247" stroke="#CA6767" stroke-width="3"/>
+<path id="Line_Bus12_Gen" d="M551 204V182" stroke="#CA6767" stroke-width="3"/>
+</g>
+</g>
+<g id="WEST GENERATORS">
+<circle id="Gen4" cx="135" cy="220" r="25" fill="#D9D9D9"/>
+<circle id="Gen6" cx="320" cy="409" r="25" fill="#D9D9D9"/>
+<circle id="Gen8" cx="130" cy="770" r="25" fill="#D9D9D9"/>
+<circle id="Gen10" cx="174" cy="1172" r="25" fill="#D9D9D9"/>
+<circle id="Gen12" cx="550" cy="153" r="25" fill="#D9D9D9"/>
+<circle id="Gen27" cx="292" cy="1276" r="25" fill="#D9D9D9"/>
+<circle id="Gen25" cx="948" cy="1317" r="25" fill="#D9D9D9"/>
+<circle id="Gen26" cx="805" cy="1223" r="25" fill="#D9D9D9"/>
+<circle id="Gen31" cx="405" cy="973" r="25" fill="#D9D9D9"/>
+<circle id="Gen32" cx="608" cy="979" r="25" fill="#D9D9D9"/>
+<circle id="Gen113" cx="662" cy="778" r="25" fill="#D9D9D9"/>
+<circle id="Gen18" cx="920" cy="645" r="25" fill="#D9D9D9"/>
+<circle id="Gen19" cx="993" cy="541" r="25" fill="#D9D9D9"/>
+<circle id="Gen15" cx="832" cy="498" r="25" fill="#D9D9D9"/>
+</g>
+<g id="WEST LOADS">
+<path id="Load21" d="M1060 980L1072.99 1002.5H1047.01L1060 980Z" fill="#818181"/>
+<path id="Load22" d="M1131 1125L1108.5 1137.99V1112.01L1131 1125Z" fill="#818181"/>
+<path id="Load23" d="M1109 1299L1096.01 1276.5H1121.99L1109 1299Z" fill="#818181"/>
+<path id="Load20" d="M939 931L961.5 918.01V943.99L939 931Z" fill="#818181"/>
+<path id="Load115" d="M708 1177L695.01 1154.5H720.99L708 1177Z" fill="#818181"/>
+<path id="Load32" d="M583 1096L570.01 1073.5H595.99L583 1096Z" fill="#818181"/>
+<path id="Load114" d="M512 1177L499.01 1154.5H524.99L512 1177Z" fill="#818181"/>
+<path id="Load13" d="M662 488L649.01 465.5H674.99L662 488Z" fill="#818181"/>
+<path id="Load18" d="M993 753L980.01 730.5H1005.99L993 753Z" fill="#818181"/>
+<path id="Load19" d="M1116 650L1103.01 627.5H1128.99L1116 650Z" fill="#818181"/>
+<path id="Load15" d="M883 488L870.01 465.5H895.99L883 488Z" fill="#818181"/>
+<path id="Load17" d="M719 748L706.01 725.5H731.99L719 748Z" fill="#818181"/>
+<path id="Load31" d="M527 948L504.5 960.99V935.01L527 948Z" fill="#818181"/>
+<path id="Load28" d="M326 1144L313.01 1121.5H338.99L326 1144Z" fill="#818181"/>
+<path id="Load29" d="M317 1013L304.01 990.5H329.99L317 1013Z" fill="#818181"/>
+<path id="Load27" d="M352 1276L339.01 1253.5H364.99L352 1276Z" fill="#818181"/>
+<path id="Load16" d="M440 591L462.5 578.01V603.99L440 591Z" fill="#818181"/>
+<path id="Load2" d="M219 0L231.99 22.5H206.01L219 0Z" fill="#818181"/>
+<path id="Load1" d="M14 96L1.00962 73.5H26.9904L14 96Z" fill="#818181"/>
+<path id="Load3" d="M30 235L17.0096 212.5H42.9904L30 235Z" fill="#818181"/>
+<path id="Load4" d="M134 325L121.01 302.5H146.99L134 325Z" fill="#818181"/>
+<path id="Load11" d="M320 214L332.99 236.5H307.01L320 214Z" fill="#818181"/>
+<path id="Load12" d="M557 256L544.01 233.5H569.99L557 256Z" fill="#818181"/>
+<path id="Load6" d="M320 516L307.01 493.5H332.99L320 516Z" fill="#818181"/>
+<path id="Load7" d="M428 514L415.01 491.5H440.99L428 514Z" fill="#818181"/>
+<path id="Load117" d="M805 265L792.01 242.5H817.99L805 265Z" fill="#818181"/>
+<path id="Load14" d="M797 387L784.01 364.5H809.99L797 387Z" fill="#818181"/>
+</g>
+<g id="WEST BUSES">
+<rect id="Bus1" x="4" y="48" width="88" height="6" fill="#F54E4E"/>
+<rect id="Bus2" x="140" y="48" width="159" height="6" fill="#F54E4E"/>
+<rect id="Bus3" x="18" y="176" width="203" height="6" fill="#F54E4E"/>
+<rect id="Bus5" x="18" y="459" width="233" height="6" fill="#F54E4E"/>
+<rect id="Bus4" x="91" y="268" width="102" height="6" fill="#F54E4E"/>
+<rect id="Bus11" x="245" y="265" width="147" height="6" fill="#F54E4E"/>
+<rect id="Bus6" x="276" y="459" width="89" height="6" fill="#F54E4E"/>
+<rect id="Bus7" x="390" y="459" width="89" height="6" fill="#F54E4E"/>
+<rect id="Bus117" x="717" y="205" width="117" height="6" fill="#F54E4E"/>
+<rect id="Bus14" x="718" y="329" width="160" height="6" fill="#F54E4E"/>
+<rect id="Bus13" x="603" y="433" width="118" height="6" fill="#F54E4E"/>
+<rect id="Bus30" x="703" y="821" width="130" height="6" fill="#F54E4E"/>
+<rect id="Bus32" x="474" y="1030" width="182" height="6" fill="#F54E4E"/>
+<rect id="Bus29" x="261" y="950" width="89" height="6" fill="#F54E4E"/>
+<rect id="Bus8" x="103" y="821" width="147" height="6" fill="#F54E4E"/>
+<rect id="Bus9" x="131" y="977" width="89" height="6" fill="#F54E4E"/>
+<rect id="Bus114" x="488" y="1133" width="104" height="6" fill="#F54E4E"/>
+<rect id="Bus28" x="261" y="1079" width="88" height="6" fill="#F54E4E"/>
+<rect id="Bus10" x="133" y="1105" width="87" height="6" fill="#F54E4E"/>
+<rect id="Bus27" x="247" y="1208" width="231" height="6" fill="#F54E4E"/>
+<rect id="Bus115" x="618" y="1133" width="159" height="6" fill="#F54E4E"/>
+<rect id="Bus26" x="717" y="1273" width="159" height="6" fill="#F54E4E"/>
+<rect id="Bus25" x="731" y="1365" width="389" height="6" fill="#F54E4E"/>
+<rect id="Bus23" x="1017" y="1236" width="117" height="6" fill="#F54E4E"/>
+<rect id="Bus21" x="980" y="1034" width="103" height="6" fill="#F54E4E"/>
+<rect id="Bus15" x="777" y="429" width="164" height="6" fill="#F54E4E"/>
+<rect id="Bus19" x="974" y="590" width="189" height="6" fill="#F54E4E"/>
+<rect id="Bus18" x="868" y="695" width="159" height="6" fill="#F54E4E"/>
+<rect id="Bus17" x="646" y="695" width="174" height="6" fill="#F54E4E"/>
+<rect id="Bus16" x="500" y="645" width="106" height="6" transform="rotate(-90 500 645)" fill="#F54E4E"/>
+<rect id="Bus113" x="589" y="826" width="106" height="6" transform="rotate(-90 589 826)" fill="#F54E4E"/>
+<rect id="Bus31" x="457" y="1020" width="132" height="6" transform="rotate(-90 457 1020)" fill="#F54E4E"/>
+<rect id="Bus20" x="990" y="1010" width="159" height="6" transform="rotate(-90 990 1010)" fill="#F54E4E"/>
+<rect id="Bus22" x="1062" y="1177" width="107" height="6" transform="rotate(-90 1062 1177)" fill="#F54E4E"/>
+<rect id="Bus12" x="432" y="205" width="217" height="6" fill="#F54E4E"/>
+</g>
+</g>
+</g>
+</svg>
