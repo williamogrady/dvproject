@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chevron Flow Test with Zoom</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+   html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+svg#map {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #1e1e1e; /* optional for better contrast */
+}
+    .button-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+    button {
+      margin: 4px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .chevron {
+      fill: red;
+      opacity: 1;
+      transform-origin: center;
+    }
+    .faded {
+      opacity: 0.1;
+    }
+  </style>
+</head>
+<body>
+  <div class="button-bar">
+    <button onclick="setMode('full')">Full Layout</button>
+    <button onclick="setMode('pmax')">Power</button>
+    <button onclick="setMode('cost_per_mw')">Cost</button>
+    <button onclick="setMode('emissions_per_mw')">Emissions</button>
+    <button onclick="setMode('overloads')">Overloads</button>
+  </div>
+  <svg id="map" width="100%" height="100%">
+    <g id="zoom-layer"></g>
+  </svg>
+
+  <script>
+    const svg = d3.select("#map");
+    const svgElement = svg.node();
+    const zoomLayer = svg.select("#zoom-layer");
+
+    let buses = [], lines = [], generators = [], mode = "full";
+
+    // === Zoom Setup (same as prototype)
+    const zoomBehavior = d3.zoom()
+      .scaleExtent([0.2, 2.0])
+      .on("zoom", event => {
+        zoomLayer.attr("transform", event.transform);
+      });
+
+    svg.call(zoomBehavior);
+
+    window.addEventListener("load", () => {
+      const initialScale = 0.3;
+      const centerX = svgElement.clientWidth / 2;
+      const centerY = svgElement.clientHeight / 2;
+
+      svg.call(
+        zoomBehavior.transform,
+        d3.zoomIdentity
+          .translate(centerX - 200, centerY - 150)
+          .scale(initialScale)
+          .translate(-centerX, -centerY)
+      );
+    });
+
+    function busById(id) {
+      return buses.find(b => b.id === id);
+    }
+
+    function getLineFlow(line) {
+      const from = busById(line.from);
+      const to = busById(line.to);
+      function extractBusNumber(id) {
+  const match = id.match(/(\d+)/);
+  return match ? parseInt(match[1]) : null;
+}
+
+function getLineFlow(line) {
+  const from = busById(line.from);
+  const to = busById(line.to);
+  if (!from || !to) return 0;
+
+  const fromBusNum = extractBusNumber(from.id);
+  const toBusNum = extractBusNumber(to.id);
+
+  const genFrom = generators.find(g => g.bus === fromBusNum);
+  const genTo = generators.find(g => g.bus === toBusNum);
+
+  return (genFrom?.pg || 0) - (genTo?.pg || 0);
+}
+
+      return (genFrom?.pg || 0) - (genTo?.pg || 0);
+    }
+
+    function chevronPath(scale) {
+      return `M ${-scale} 0 L 0 ${-scale} L ${scale} 0 L 0 ${scale} Z`;
+    }
+
+
+function chevronTransform(d) {
+  const from = busById(d.from);
+  const to = busById(d.to);
+  if (!from || !to) return "";
+
+  const x = (from.x + to.x) / 2;
+  const y = (from.y + to.y) / 2;
+  const angle = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI;
+  return `translate(${x},${y}) rotate(${angle})`;
+}
+
+    function draw() {
+      zoomLayer.selectAll("*").remove();
+
+      // Lines
+      zoomLayer.selectAll("path.line")
+        .data(lines)
+        .enter()
+        .append("path")
+        .attr("class", "line")
+        .attr("d", d => d.d)
+        .attr("stroke", "#888")
+        .attr("stroke-width", 2)
+        .attr("fill", "none");
+
+      // Buses
+      zoomLayer.selectAll("rect.bus")
+        .data(buses.filter(d => d.type === "bus"))
+        .enter()
+        .append("rect")
+        .attr("class", "bus")
+        .attr("x", d => d.x - d.width / 2)
+        .attr("y", d => d.y - d.height / 2)
+        .attr("width", d => d.width)
+        .attr("height", d => d.height)
+        .attr("fill", "#666");
+
+      // Generators
+      const baseSize = 30;
+      zoomLayer.selectAll("circle.gen")
+        .data(buses.filter(d => d.type === "generator"))
+        .enter()
+        .append("circle")
+        .attr("class", "gen")
+        .attr("id", d => d.id)
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", d => {
+          const match = generators.find(g => `Gen${g.bus}` === d.id);
+          if (!match) return baseSize;
+          if (mode === "pmax") return 20 + (match.pmax / 400) * 40;
+          if (mode === "cost_per_mw") return 20 + (match.cost_per_mw / 50) * 40;
+          if (mode === "emissions_per_mw") return 20 + (match.emissions_per_mw / 100) * 40;
+          return baseSize;
+        })
+        .attr("fill", d => {
+          const match = generators.find(g => `Gen${g.bus}` === d.id);
+          return match && match.pg > 0 ? "#4caf50" : "#fff";
+        });
+
+      // Chevrons
+lines.forEach(line => {
+  const pathEl = document.getElementById(line.id);
+  if (!pathEl) {
+    console.warn("No path found for", line.id);
+    return;
+  }
+
+  lines
+  .filter(l => l.from?.startsWith("Bus") && l.to?.startsWith("Bus"))
+  .forEach(line => {
+    // draw chevron here
+  });
+
+  const totalLength = pathEl.getTotalLength();
+  const pointA = pathEl.getPointAtLength(totalLength * 0.45);
+  const pointB = pathEl.getPointAtLength(totalLength * 0.55);
+
+  const dx = pointB.x - pointA.x;
+  const dy = pointB.y - pointA.y;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  const flow = getLineFlow(line);
+  const dir = flow >= 0 ? 1 : -1;
+  const scale = 4 + Math.abs(flow) / 10;
+  const opacity = mode === "overloads" ? 1 : 0.1;
+
+  zoomLayer.append("path")
+    .attr("class", "chevron")
+    .attr("d", chevronPath(scale))
+    .attr("fill", "red")
+    .attr("opacity", opacity)
+    .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
+});
+
+
+
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      draw();
+    }
+
+    Promise.all([
+      fetch("/new-tests/full_nodes.json").then(res => res.json()),
+      fetch("/new-tests/full_lines.json").then(res => res.json()),
+      fetch("/api/generators").then(res => res.json())
+    ]).then(([nodeData, lineData, generatorData]) => {
+      buses = nodeData;
+      lines = lineData;
+      generators = generatorData;
+lines.forEach(line => {
+  const match = line.id.match(/^Line_(Bus\d+)_(Bus\d+)$/);
+  if (match) {
+    line.from = match[1];
+    line.to = match[2];
+    console.log(`✅ Line ${line.id} → from: ${line.from}, to: ${line.to}`);
+  } else {
+    console.warn(`⏭ Skipping non-Bus↔Bus line: ${line.id}`);
+  }
+});
+
+
+      draw();
+    });
+  </script>
+</body>
+</html>

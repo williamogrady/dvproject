@@ -93,6 +93,8 @@
     <label for="scenario-select">Load Scenario:</label>
     <select id="scenario-select"></select>
     <button id="reset-button">🔁 Reset</button>
+    <button id="undo-button">↩️ Undo</button>
+    <button id="redo-button">↪️ Redo</button>
     <button id="theme-toggle" class="theme-button">🌙 Dark Mode</button>
   </div>
   <div class="controls-right">
@@ -146,6 +148,12 @@
     let previousLineFlows = {};  // keyed by `from_bus-to_bus`
     let activeGenerators = [];
     let inactiveGenerators = [];
+
+    let historyStack = [];
+let redoStack = [];
+
+
+
     // SVG Map Rendering
 const svgWidth = 600;
 const svgHeight = 600;
@@ -941,6 +949,34 @@ document.querySelectorAll(".layer-toggle").forEach(checkbox => {
   });
 });
 
+function pushToHistory(generators) {
+  historyStack.push(JSON.parse(JSON.stringify(generators)));
+  if (historyStack.length > 100) historyStack.shift(); // prevent memory bloat
+  redoStack = []; // clear redo stack on new action
+}
+
+function applyGeneratorState(state) {
+  currentGenerators = JSON.parse(JSON.stringify(state));
+  renderGenerators(currentGenerators);
+  renderOverview(currentGenerators, currentScenarioData.lines, currentScenarioData.total_cost, currentScenarioData.solved);
+  updateMapGeneratorsFromScenario();
+}
+
+document.getElementById("undo-button").addEventListener("click", () => {
+  if (historyStack.length > 0) {
+    const prevState = historyStack.pop();
+    redoStack.push(JSON.parse(JSON.stringify(currentGenerators)));
+    applyGeneratorState(prevState);
+  }
+});
+
+document.getElementById("redo-button").addEventListener("click", () => {
+  if (redoStack.length > 0) {
+    const nextState = redoStack.pop();
+    historyStack.push(JSON.parse(JSON.stringify(currentGenerators)));
+    applyGeneratorState(nextState);
+  }
+});
 
 document.getElementById("theme-toggle").addEventListener("click", () => {
   const body = document.body;
