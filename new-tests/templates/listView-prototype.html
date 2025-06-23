@@ -130,10 +130,20 @@
   z-index: 1000;
 "></div>
 
+
+
   <!-- Zoomable SVG Map Wrapper -->
   <div id="map-wrapper" style="flex: 1; position: relative;"></div>
-</div>
+    <div id="map-legend-bar">
+    <div class="legend-title">Legend</div>
+    <div class="legend-items">
+      <div class="legend-entry"><span class="legend-symbol legend-gen-on"></span> Generator (On)</div>
+      <div class="legend-entry"><span class="legend-symbol legend-gen-off"></span> Generator (Off)</div>
+      <div class="legend-entry"><span class="legend-triangle"></span> Load</div>
+      <div class="legend-entry"><span class="legend-chevron">➤</span> Line Load</div>
   </div>
+  </div>
+</div>
 
   <script> 
     let activeSort = {

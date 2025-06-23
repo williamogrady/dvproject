@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel Horizontal Expand</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      height: 100vh;
+      margin: 0;
+      position: relative;
+    }
+
+    .admin-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      height: auto;
+      background: #e0e0e0;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: width 0.4s ease, padding 0.4s ease;
+      white-space: nowrap;
+    }
+
+    .admin-panel.collapsed {
+      width: 190px;
+      padding: 10px 12px;
+    }
+
+    .admin-panel.expanded {
+      width: 780px;
+      padding: 10px 16px;
+    }
+
+    .admin-toggle-btn {
+      background: #ccc;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-right: 12px;
+    }
+
+    .admin-body {
+      display: flex;
+      gap: 10px;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    .admin-panel.collapsed .admin-body {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    select, button {
+      font-size: 0.85rem;
+      padding: 4px 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-panel collapsed" id="adminPanel">
+    <button class="admin-toggle-btn" id="toggleBtn">Admin Controls (show)</button>
+    <div class="admin-body" id="adminBody">
+      <label>
+        Scenario:
+        <select>
+          <option>A</option>
+          <option>B</option>
+        </select>
+      </label>
+      <button>🔁 Reset</button>
+      <button>↩️ Undo</button>
+      <button>↪️ Redo</button>
+      <button>🌙 Theme</button>
+    </div>
+  </div>
+
+  <script>
+    const panel = document.getElementById("adminPanel");
+    const button = document.getElementById("toggleBtn");
+
+    button.addEventListener("click", () => {
+      const isCollapsed = panel.classList.contains("collapsed");
+
+      if (isCollapsed) {
+        panel.classList.remove("collapsed");
+        panel.classList.add("expanded");
+        button.textContent = "Admin Controls (hide)";
+      } else {
+        panel.classList.add("collapsed");
+        panel.classList.remove("expanded");
+        button.textContent = "Admin Controls (show)";
+      }
+    });
+  </script>
+
+</body>
+</html>

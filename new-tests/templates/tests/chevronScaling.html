@@ -5,17 +5,17 @@
   <title>Chevron Flow Test with Zoom</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-   html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-svg#map {
-  width: 100%;
-  height: 100%;
-  display: block;
-  background: #1e1e1e; /* optional for better contrast */
-}
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    svg#map {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #1e1e1e;
+    }
     .button-bar {
       position: absolute;
       top: 10px;
@@ -30,7 +30,6 @@ svg#map {
     }
     .chevron {
       fill: red;
-      opacity: 1;
       transform-origin: center;
     }
     .faded {
@@ -46,7 +45,7 @@ svg#map {
     <button onclick="setMode('emissions_per_mw')">Emissions</button>
     <button onclick="setMode('overloads')">Overloads</button>
   </div>
-  <svg id="map" width="100%" height="100%">
+  <svg id="map">
     <g id="zoom-layer"></g>
   </svg>
 
@@ -57,7 +56,6 @@ svg#map {
 
     let buses = [], lines = [], generators = [], mode = "full";
 
-    // === Zoom Setup (same as prototype)
     const zoomBehavior = d3.zoom()
       .scaleExtent([0.2, 2.0])
       .on("zoom", event => {
@@ -87,59 +85,42 @@ svg#map {
     function getLineFlow(line) {
       const from = busById(line.from);
       const to = busById(line.to);
-      function extractBusNumber(id) {
-  const match = id.match(/(\d+)/);
-  return match ? parseInt(match[1]) : null;
-}
+      if (!from || !to) return 0;
 
-function getLineFlow(line) {
-  const from = busById(line.from);
-  const to = busById(line.to);
-  if (!from || !to) return 0;
+      const extractBusNumber = id => {
+        const match = id.match(/(\d+)/);
+        return match ? parseInt(match[1]) : null;
+      };
 
-  const fromBusNum = extractBusNumber(from.id);
-  const toBusNum = extractBusNumber(to.id);
+      const fromBusNum = extractBusNumber(from.id);
+      const toBusNum = extractBusNumber(to.id);
 
-  const genFrom = generators.find(g => g.bus === fromBusNum);
-  const genTo = generators.find(g => g.bus === toBusNum);
-
-  return (genFrom?.pg || 0) - (genTo?.pg || 0);
-}
+      const genFrom = generators.find(g => g.bus === fromBusNum);
+      const genTo = generators.find(g => g.bus === toBusNum);
 
       return (genFrom?.pg || 0) - (genTo?.pg || 0);
     }
 
-    function chevronPath(scale) {
-      return `M ${-scale} 0 L 0 ${-scale} L ${scale} 0 L 0 ${scale} Z`;
-    }
-
-
-function chevronTransform(d) {
-  const from = busById(d.from);
-  const to = busById(d.to);
-  if (!from || !to) return "";
-
-  const x = (from.x + to.x) / 2;
-  const y = (from.y + to.y) / 2;
-  const angle = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI;
-  return `translate(${x},${y}) rotate(${angle})`;
+function chevronPath(scale) {
+  return `M 0 ${-scale} L ${scale} 0 L 0 ${scale} L ${-scale} 0 Z`;  // arrow pointing → right
 }
 
     function draw() {
       zoomLayer.selectAll("*").remove();
 
-      // Lines
+      // Draw lines
       zoomLayer.selectAll("path.line")
         .data(lines)
         .enter()
         .append("path")
         .attr("class", "line")
+        .attr("id", d => d.id)
         .attr("d", d => d.d)
         .attr("stroke", "#888")
         .attr("stroke-width", 2)
         .attr("fill", "none");
 
-      // Buses
+      // Draw buses
       zoomLayer.selectAll("rect.bus")
         .data(buses.filter(d => d.type === "bus"))
         .enter()
@@ -151,7 +132,7 @@ function chevronTransform(d) {
         .attr("height", d => d.height)
         .attr("fill", "#666");
 
-      // Generators
+      // Draw generators
       const baseSize = 30;
       zoomLayer.selectAll("circle.gen")
         .data(buses.filter(d => d.type === "generator"))
@@ -174,49 +155,98 @@ function chevronTransform(d) {
           return match && match.pg > 0 ? "#4caf50" : "#fff";
         });
 
-      // Chevrons
-lines.forEach(line => {
-  const pathEl = document.getElementById(line.id);
-  if (!pathEl) {
-    console.warn("No path found for", line.id);
-    return;
-  }
+const chevronLayer = zoomLayer.append("g").attr("id", "chevron-layer");
 
-  lines
-  .filter(l => l.from?.startsWith("Bus") && l.to?.startsWith("Bus"))
-  .forEach(line => {
-    // draw chevron here
-  });
+const busFrom = busById("Bus1");
+const busTo = busById("Bus2");
 
-  const totalLength = pathEl.getTotalLength();
-  const pointA = pathEl.getPointAtLength(totalLength * 0.45);
-  const pointB = pathEl.getPointAtLength(totalLength * 0.55);
-
-  const dx = pointB.x - pointA.x;
-  const dy = pointB.y - pointA.y;
+if (busFrom && busTo) {
+  const x = (busFrom.x + busTo.x) / 2;
+  const y = (busFrom.y + busTo.y) / 2;
+  const dx = busTo.x - busFrom.x;
+  const dy = busTo.y - busFrom.y;
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-  const flow = getLineFlow(line);
-  const dir = flow >= 0 ? 1 : -1;
-  const scale = 4 + Math.abs(flow) / 10;
-  const opacity = mode === "overloads" ? 1 : 0.1;
+  console.log("🟡 Drawing yellow chevron  at", x, y, "angle", angle);
 
-  zoomLayer.append("path")
-    .attr("class", "chevron")
-    .attr("d", chevronPath(scale))
-    .attr("fill", "red")
-    .attr("opacity", opacity)
-    .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
-});
+  chevronLayer.append("path")
+    .attr("d", chevronPath(6))
+    .attr("fill", "yellow")
+    .attr("stroke", "black")
+    .attr("stroke-width", 1)
+    .attr("opacity", 1)
+    .attr("transform", `translate(${x}, ${y}) rotate(${angle})`);
+}
 
+
+lines
+  .filter(line => line.from?.startsWith("Bus") && line.to?.startsWith("Bus"))
+  .forEach(line => {
+    const pathEl = d3.select(`#${CSS.escape(line.id)}`).node();
+    if (!pathEl) return;
+
+    const totalLength = pathEl.getTotalLength();
+    const pointA = pathEl.getPointAtLength(totalLength * 0.45);
+    const pointB = pathEl.getPointAtLength(totalLength * 0.55);
+
+    if (line.id === "Line_Bus50_Bus60") {
+      console.log("Midpoint from path:", (pointA.x + pointB.x)/2, (pointA.y + pointB.y)/2);
+
+      const busFrom = busById("Bus50");
+      const busTo = busById("Bus60");
+      console.log("Midpoint from bus data:", (busFrom.x + busTo.x)/2, (busFrom.y + busTo.y)/2);
+    }
+
+    const dx = pointB.x - pointA.x;
+    const dy = pointB.y - pointA.y;
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+    const flow = getLineFlow(line);
+    const dir = flow >= 0 ? 1 : -1;
+    const scale = 4 + Math.abs(flow) / 10;
+    const opacity = mode === "overloads" ? 1 : 0.1;
+
+    if (line.id === "Line_Bus1_Bus2") {
+  const midpointX = (pointA.x + pointB.x) / 2;
+  const midpointY = (pointA.y + pointB.y) / 2;
+  console.log("🔍 Line_Bus1_Bus2 midpoint (from path):", midpointX, midpointY);
+
+  chevronLayer.append("circle")
+    .attr("cx", midpointX)
+    .attr("cy", midpointY)
+    .attr("r", 5)
+    .attr("fill", "yellow")
+    .attr("stroke", "black")
+    .attr("stroke-width", 1);
+}
+
+    chevronLayer.append("path")
+      .attr("class", "chevron")
+      .attr("d", chevronPath(scale))
+      .attr("fill", "red")
+      .attr("opacity", opacity)
+      .attr("transform", `translate(${(pointA.x + pointB.x)/2}, ${(pointA.y + pointB.y)/2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
+  });
 
 
     }
 
-    function setMode(newMode) {
-      mode = newMode;
-      draw();
-    }
+function setMode(newMode) {
+  mode = newMode;
+
+  let genScalingDesc = "not scaled";
+  if (mode === "pmax") genScalingDesc = "scaled by max power";
+  else if (mode === "cost_per_mw") genScalingDesc = "scaled by cost per MW";
+  else if (mode === "emissions_per_mw") genScalingDesc = "scaled by emissions per MW";
+
+  const chevronsFaded = mode === "overloads" ? "no" : "yes";
+
+  console.log(`\n📊 MODE: ${mode.toUpperCase()}`);
+  console.log(`🟢 Generators: ${genScalingDesc}`);
+  console.log(`🔻 Line chevrons faded: ${chevronsFaded}`);
+
+  draw();
+}
 
     Promise.all([
       fetch("/new-tests/full_nodes.json").then(res => res.json()),
@@ -226,17 +256,17 @@ lines.forEach(line => {
       buses = nodeData;
       lines = lineData;
       generators = generatorData;
-lines.forEach(line => {
-  const match = line.id.match(/^Line_(Bus\d+)_(Bus\d+)$/);
-  if (match) {
-    line.from = match[1];
-    line.to = match[2];
-    console.log(`✅ Line ${line.id} → from: ${line.from}, to: ${line.to}`);
-  } else {
-    console.warn(`⏭ Skipping non-Bus↔Bus line: ${line.id}`);
-  }
-});
 
+      lines.forEach(line => {
+        const match = line.id.match(/^Line_(Bus\d+)_(Bus\d+)$/);
+        if (match) {
+          line.from = match[1];
+          line.to = match[2];
+          console.log(`✅ Line ${line.id} → from: ${line.from}, to: ${line.to}`);
+        } else {
+          console.warn(`⏭ Skipping non-Bus↔Bus line: ${line.id}`);
+        }
+      });
 
       draw();
     });

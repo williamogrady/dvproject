@@ -753,3 +753,63 @@ body {
 .submit-button:hover {
   background-color: #2196f3;
 }
+
+#map-legend-bar {
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.95));
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-soft, #ccc);
+  font-family: sans-serif;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#map-legend-bar .legend-title {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+#map-legend-bar .legend-items {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.legend-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.legend-symbol {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #333;
+}
+
+.legend-gen-on {
+  background-color: #4caf50;
+}
+
+.legend-gen-off {
+  background-color: white;
+}
+
+.legend-triangle {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 14px solid #258fec;
+  margin-top: 2px;
+}
+
+.legend-chevron {
+  font-size: 14px;
+  color: red;
+  font-weight: bold;
+}
