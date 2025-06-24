@@ -400,6 +400,9 @@ let selectedGeneratorId = null;
 let currentScaleMode = null;
 let currentGenerators = [];
 
+let staticLines = [];
+let staticNodes = [];
+
 let currentScenarioId = "";
 let currentScenarioData = null;
 let availableScenarios = [];
@@ -430,6 +433,10 @@ window.addEventListener("load", () => {
   // ✅ FIX: call fetchAllScenarios here
   fetchAllScenarios();
 });
+
+function getLineLoadPct(line) {
+  return line.rate_a > 0 ? (line.flow / line.rate_a) : 0;
+}
 
 function getLoadColor(pct) {
   return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
@@ -483,6 +490,22 @@ function renderOverview(gens, scenarioData = {}) {
 
   renderOverview(currentGenerators, currentScenarioData || {});
   updateMapGeneratorsFromScenario(); // Make sure this is called too
+
+  const scenarioLines = data.lines || [];
+
+const enrichedLines = staticLines.map(line => {
+  const live = scenarioLines.find(l =>
+    line.source === `Bus${l.from_bus}` && line.target === `Bus${l.to_bus}`
+  );
+  return {
+    ...line,
+    flow: live?.flow ?? 0,
+    rate_a: live?.rate_a ?? 1
+  };
+});
+
+drawChevrons(enrichedLines, staticNodes);
+
 }
 
     function populateScenarioDropdown(scenarios, selectedId) {
@@ -587,9 +610,9 @@ lines.forEach(line => {
     const midY = (pointA.y + pointB.y) / 2;
 
     const pct = line.rate_a > 0 ? line.flow / line.rate_a : 0;
-const color = getLoadColor(pct);
+    const color = getLoadColor(pct);
 
-  const size = d3.scaleLinear().domain([0, 1]).range([6, 16])(pct);
+  const size = 10; // default size on startup
 
 chevronGroup.append("path")
   .datum(line) // ✅ This makes scaleChevronsByLoad() easier
@@ -620,6 +643,8 @@ Promise.all([
   fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
 ]).then(([nodes, lines, generatorData]) => {
   currentGenerators = generatorData;
+  staticNodes = nodes;
+  staticLines = lines;
 
   zoomGroup.selectAll("path.map-line")
     .data(lines)
@@ -697,6 +722,8 @@ genGroups.append("circle")
   .attr("class", "map-gen")
   .attr("id", d => d.id)
   .attr("r", 30)
+    .attr("stroke", "black")
+  .attr("stroke-width", 3)
   .attr("fill", d => {
     const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
     return match && match.pg > 0 ? "#4caf50" : "#ffffff";
@@ -1000,10 +1027,6 @@ if (fullStatus) {
     .attr("y", d => d.y + 3)
     .attr("font-size", "6px")
     .text(d => d.id); */
-
-      console.log("after this, calling drawChevrons");
-                // Draw chevrons for lines
-        drawChevrons(lines, nodes);
 
        document.getElementById("mode-full").onclick = () => applyMapMode("full");
         document.getElementById("mode-lines").onclick = () => applyMapMode("lines");
