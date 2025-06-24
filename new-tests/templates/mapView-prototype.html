@@ -605,19 +605,20 @@ lines.forEach(line => {
     const pointA = path.getPointAtLength(totalLength * 0.45);
     const pointB = path.getPointAtLength(totalLength * 0.55);
 
-    const angle = Math.atan2(pointB.y - pointA.y, pointB.x - pointA.x) * 180 / Math.PI;
+    const angle = Math.atan2(pointB.y - pointA.y, pointB.x - pointA.x) * 180 / Math.PI + 180;
     const midX = (pointA.x + pointB.x) / 2;
     const midY = (pointA.y + pointB.y) / 2;
+
+    const baseSize = 10;
 
     const pct = line.rate_a > 0 ? line.flow / line.rate_a : 0;
     const color = getLoadColor(pct);
 
-  const size = 10; // default size on startup
-
 chevronGroup.append("path")
   .datum(line) // ✅ This makes scaleChevronsByLoad() easier
   .attr("class", "chevron")
-  .attr("d", chevronPath(size))
+  .attr("d", chevronPath(baseSize))
+  .attr("data-pct", pct)  // Optional: store for later use if needed
   .attr("fill", color)
   .attr("opacity", 0.95)
   .attr("stroke", "#111")
@@ -630,7 +631,16 @@ chevronGroup.append("path")
 }
 
 function chevronPath(scale) {
-  return `M 0 ${-scale} L ${scale} 0 L 0 ${scale} L ${-scale} 0 Z`;
+    const length = scale * 2;
+  const width = scale;
+
+  return `
+    M 0 0
+    L ${length} ${-width}
+    L ${length * 0.8} 0
+    L ${length} ${width}
+    Z
+  `;
 }
 
 
@@ -915,10 +925,10 @@ function applyMapMode(mode) {
   d3.selectAll(".chevron")
     .transition().duration(500)
     .attr("opacity", isLines || isFull ? 1 : 0.2)
-    .attr("d", d => {
+    .attr("d", function(d) {
       if (!isLines) return chevronPath(10);
-      const pct = d.rate_a > 0 ? d.flow / d.rate_a : 0;
-      const size = d3.scaleLinear().domain([0, 1]).range([6, 16])(pct);
+      const pct = +d3.select(this).attr("data-pct") || 0;
+      const size = 15 + 6 * pct;
       return chevronPath(size);
     });
 
