@@ -340,10 +340,15 @@
       <div class="overview-value" id="overview-emissions">–</div>
       <div class="overview-status" id="status-emissions">Click to scale</div>
     </div>
-    <div class="overview-card" id="mode-full">
+    <div class="overview-card" id="mode-lines">
   <div class="overview-label">Overloaded Lines</div>
   <div class="overview-value" id="overview-lines">–</div>
-  <div class="overview-status">Click to show full layout</div>
+  <div class="overview-status">Click to scale</div>
+</div>
+<div class="overview-card" id="mode-full">
+  <div class="overview-label">Full</div>
+  <div class="overview-value">No Scaling</div>
+  <div class="overview-status">Click to reset visual scaling</div>
 </div>
   </div>
 
@@ -426,6 +431,9 @@ window.addEventListener("load", () => {
   fetchAllScenarios();
 });
 
+function getLoadColor(pct) {
+  return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
+}
 
 async function fetchAllScenarios() {
   console.log("fetchAllScenarios")
@@ -578,12 +586,22 @@ lines.forEach(line => {
     const midX = (pointA.x + pointB.x) / 2;
     const midY = (pointA.y + pointB.y) / 2;
 
-    chevronGroup.append("path")
-      .attr("class", "chevron")
-      .attr("d", chevronPath(6))
-      .attr("fill", "red")
-      .attr("opacity", 0.8)
-      .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
+    const pct = line.rate_a > 0 ? line.flow / line.rate_a : 0;
+const color = getLoadColor(pct);
+
+  const size = d3.scaleLinear().domain([0, 1]).range([6, 16])(pct);
+
+chevronGroup.append("path")
+  .datum(line) // ✅ This makes scaleChevronsByLoad() easier
+  .attr("class", "chevron")
+  .attr("d", chevronPath(size))
+  .attr("fill", color)
+  .attr("opacity", 0.95)
+  .attr("stroke", "#111")
+  .attr("stroke-width", 0.4)
+  .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
+
+
     console.log("has gone past the append part")
   });
 }
@@ -804,75 +822,82 @@ bubbleEl.appendChild(maxLabel);
   });
 
 
-function setMapMode(mode) {
-  currentMapMode = mode;
+function applyMapMode(mode) {
+  const isFull = mode === "full";
+  const isLines = mode === "lines";
+  const isMetricMode = ["pmax", "cost_per_mw", "emissions_per_mw"].includes(mode);
 
-  const fadeOpacity = mode === "full" ? 1 : 0.2;
+  const baseRadius = 30;
+  const maxRadius = 75;
 
+  const metricColors = {
+    pmax: "#9ccc65",
+    cost_per_mw: "#f9a825",
+    emissions_per_mw: "#ef5350"
+  };
+
+  const strokeColor = metricColors[mode] || "black";
+
+  const sizeScale = isMetricMode
+    ? d3.scaleLinear()
+        .domain([0, d3.max(currentGenerators.map(g => g[mode]))])
+        .range([baseRadius, maxRadius])
+    : null;
+
+  // === Generators ===
+  d3.selectAll(".map-gen")
+    .transition().duration(500)
+    .attr("r", d => {
+      if (isMetricMode) {
+        const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+        return gen ? sizeScale(gen[mode]) : baseRadius;
+      }
+      return baseRadius;
+    })
+    .attr("opacity", isLines ? 0.2 : 1)
+    .attr("stroke", strokeColor)
+    .attr("stroke-width", isMetricMode ? 5 : 3);
+
+  // === Generator Halos ===
+  d3.selectAll(".map-gen-halo")
+    .transition().duration(500)
+    .attr("r", d => {
+      const genCircle = d3.select(`#${CSS.escape(d.id)}`);
+      const r = +genCircle.attr("r") || baseRadius;
+      return r + 6;
+    })
+    .attr("opacity", d => d.id === selectedGeneratorId && !isLines ? 1 : 0);
+
+  // === Lines ===
   d3.selectAll(".map-line")
     .transition().duration(300)
-    .attr("opacity", fadeOpacity);
+    .attr("opacity", isLines ? 1 : (isFull ? 1 : 0.2));
 
-  d3.selectAll(".map-load")
-    .transition().duration(300)
-    .attr("opacity", fadeOpacity);
+  // === Buses and Loads ===
+  const busLoadOpacity = mode === "full" ? 1 : 0.2;
 
   d3.selectAll(".map-bus")
     .transition().duration(300)
-    .attr("opacity", fadeOpacity);
+    .attr("opacity", busLoadOpacity);
 
-  if (mode === "full") {
-    resetGeneratorSizes();
-  } else {
-    scaleGeneratorsBy(mode);
-  }
+  d3.selectAll(".map-load")
+    .transition().duration(300)
+    .attr("opacity", busLoadOpacity);
+
+  // === Chevrons ===
+  d3.selectAll(".chevron")
+    .transition().duration(500)
+    .attr("opacity", isLines || isFull ? 1 : 0.2)
+    .attr("d", d => {
+      if (!isLines) return chevronPath(10);
+      const pct = d.rate_a > 0 ? d.flow / d.rate_a : 0;
+      const size = d3.scaleLinear().domain([0, 1]).range([6, 16])(pct);
+      return chevronPath(size);
+    });
 
   highlightButton(mode);
 }
-function scaleGeneratorsBy(metric) {
-  currentScaleMode = metric;
 
-  const baseSize = 30;  // normal radius
-  const values = currentGenerators.map(g => g[metric]);
-  const max = d3.max(values);
-
-  const sizeScale = d3.scaleLinear()
-    .domain([0, max])
-    .range([baseSize, baseSize * 2.5]);
-
-  const color = {
-    pmax: "#9ccc65",          // lighter lime green
-    cost_per_mw: "#f9a825",   // bright yellow
-    emissions_per_mw: "#ef5350" // soft red
-  }[metric];
-
-  d3.selectAll(".map-gen")
-    .transition()
-    .duration(500)
-    .attr("r", d => {
-      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return gen ? sizeScale(gen[metric]) : baseSize;
-    })
-    .attr("stroke", d => {
-      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return gen ? color : "black";
-    })
-    .attr("stroke-width", d => {
-      const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return gen ? 5 : 3;
-    });
-    
-    d3.selectAll(".map-gen-halo")
-  .transition()
-  .duration(500)
-  .attr("r", function(d) {
-    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-    return gen ? sizeScale(gen[metric]) + 6 : 36;  // always slightly larger than gen
-  });
-    
-  updateGeneratorStrokes();
-  highlightButton(metric);
-}
 
 svg.on("click", function(event) {
   const bubbleEl = document.getElementById("bubble");
@@ -903,18 +928,19 @@ function resetGeneratorSizes() {
     .attr("fill", d => {
       const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
       return match && match.pg > 0 ? "#4caf50" : "#ffffff";
-    })
+    });
 
   d3.selectAll(".map-gen-halo")
-  .transition()
-  .duration(500)
-  .attr("r", 36) // base size slightly larger than 30
-  .attr("opacity", d => d.id === selectedGeneratorId ? 1 : 0);
+    .transition()
+    .duration(500)
+    .attr("r", 36)
+    .attr("opacity", d => d.id === selectedGeneratorId ? 1 : 0);
 
   highlightButton(null);
   updateGeneratorStrokes();
-
 }
+
+
 
 
 function highlightButton(mode) {
@@ -979,10 +1005,12 @@ if (fullStatus) {
                 // Draw chevrons for lines
         drawChevrons(lines, nodes);
 
-                document.getElementById("scale-power").onclick = () => setMapMode("pmax");
-        document.getElementById("scale-cost").onclick = () => setMapMode("cost_per_mw");
-        document.getElementById("scale-emissions").onclick = () => setMapMode("emissions_per_mw");
-        document.getElementById("mode-full").onclick = () => setMapMode("full");
+       document.getElementById("mode-full").onclick = () => applyMapMode("full");
+        document.getElementById("mode-lines").onclick = () => applyMapMode("lines");
+        document.getElementById("scale-power").onclick = () => applyMapMode("pmax");
+        document.getElementById("scale-cost").onclick = () => applyMapMode("cost_per_mw");
+        document.getElementById("scale-emissions").onclick = () => applyMapMode("emissions_per_mw");
+
 });
 
 
