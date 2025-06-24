@@ -548,7 +548,7 @@ function updateMapGeneratorsFromScenario() {
     const isSelected = d.id === selectedGeneratorId;
     d3.select(this)
       .attr("stroke", isSelected ? "blue" : "black")
-      .attr("stroke-width", 5);
+      .attr("stroke-width", isSelected ? 2.5 : 3); // ✅ consistent width
   });
 
   d3.selectAll(".map-gen-highlight").remove();
@@ -952,6 +952,8 @@ function resetGeneratorSizes() {
     .transition()
     .duration(500)
     .attr("r", 30)
+    .attr("stroke", "black")
+.attr("stroke-width", 3)
     .attr("fill", d => {
       const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
       return match && match.pg > 0 ? "#4caf50" : "#ffffff";
@@ -1071,22 +1073,32 @@ function updateGeneratorStrokes() {
     const el = d3.select(this);
     const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
 
-    let strokeColor = "none";
-    let strokeWidth = 0;
+    let strokeColor = "black";  // Default stroke
+    let strokeWidth = 3;
 
     if (d.id === selectedGeneratorId) {
       strokeColor = "#42a5f5"; // Blue if selected
       strokeWidth = 4;
     } else if (currentScaleMode && gen) {
-      if (currentScaleMode === "pmax") strokeColor = "#9ccc65";
-      else if (currentScaleMode === "cost_per_mw") strokeColor = "#f9a825";
-      else if (currentScaleMode === "emissions_per_mw") strokeColor = "#ef5350";
+      switch (currentScaleMode) {
+        case "pmax":
+          strokeColor = "#9ccc65";
+          break;
+        case "cost_per_mw":
+          strokeColor = "#f9a825";
+          break;
+        case "emissions_per_mw":
+          strokeColor = "#ef5350";
+          break;
+      }
       strokeWidth = 3;
     }
 
-    el.attr("stroke", strokeColor).attr("stroke-width", strokeWidth);
+    el.attr("stroke", strokeColor)
+      .attr("stroke-width", strokeWidth);
   });
 }
+
 
 function updateGeneratorHalos() {
   d3.selectAll(".map-gen-halo")
@@ -1166,6 +1178,8 @@ function updateMapGeneratorsFromScenario() {
       const cx = +genNode.attr("cx") || 0;
       const cy = +genNode.attr("cy") || 0;
       const r = +genNode.attr("r") || 30;
+      const stroke = +genNode.attr("stroke") || "black";
+      const stroke_width = +genNode.attr("stroke-width") || 3;
 
       d3.select("#zoom-group")
         .append("circle")
