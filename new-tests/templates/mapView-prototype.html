@@ -340,10 +340,15 @@
       <div class="overview-value" id="overview-emissions">–</div>
       <div class="overview-status" id="status-emissions">Click to scale</div>
     </div>
-    <div class="overview-card" id="mode-full">
+    <div class="overview-card" id="mode-lines">
   <div class="overview-label">Overloaded Lines</div>
   <div class="overview-value" id="overview-lines">–</div>
-  <div class="overview-status">Click to show full layout</div>
+  <div class="overview-status">Click to scale</div>
+</div>
+<div class="overview-card" id="mode-full">
+  <div class="overview-label">Full</div>
+  <div class="overview-value">No Scaling</div>
+  <div class="overview-status">Click to reset visual scaling</div>
 </div>
   </div>
 
@@ -389,8 +394,13 @@ const svgElement = svg.node();
 const zoomLayer = svg.select("#zoom-layer");
 const zoomGroup = svg.append("g").attr("id", "zoom-group");
 
+let allLines = [];
+let allNodes = [];
+
+
 const bubble = d3.select("#bubble");
 let selectedGeneratorId = null;
+let currentMapMode = "full";
 
 let currentScaleMode = null;
 let currentGenerators = [];
@@ -453,13 +463,21 @@ function renderOverview(gens, scenarioData = {}) {
   const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
   const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
-  const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
 
-  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
-  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
-  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  let overloaded = "–";
+  if (currentScenarioData?.lines && currentMapMode === "flow") {
+    overloaded = currentScenarioData.lines.filter(l => Math.abs(l.flow) > l.rate_a).length;
+  }
   document.getElementById("overview-lines").textContent = overloaded;
-  document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
+
+
+ document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
+document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
+document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+document.getElementById("overview-lines").textContent =
+  currentMapMode === "flow" ? overloaded : "–";
+document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
+
 }
 
  async function loadScenario(scenarioId) {
@@ -469,12 +487,16 @@ function renderOverview(gens, scenarioData = {}) {
   currentScenarioId = scenarioId;
   currentScenarioData = data;
   currentGenerators = data.generators;
-  let currentMapMode = "full";
+  currentMapMode = "full";
 
 
 
   renderOverview(currentGenerators, currentScenarioData || {});
   updateMapGeneratorsFromScenario(); // Make sure this is called too
+  
+  setTimeout(() => {
+  drawChevrons(allLines, allNodes);
+}, 0);
 }
 
     function populateScenarioDropdown(scenarios, selectedId) {
@@ -542,54 +564,85 @@ function updateMapGeneratorsFromScenario() {
   }
 }
 
+
 function drawChevrons(lines, nodes) {
-  console.log("in drawChevrons")
+  console.log("🔥 drawChevrons() called");
+
+  if (!currentScenarioData || !currentScenarioData.lines) {
+    console.warn("⚠️ drawChevrons(): currentScenarioData not ready.");
+    return;
+  }
+
+  console.log("✅ Scenario data ready: drawing chevrons for", currentScenarioData.lines.length, "lines");
+
   const chevronGroup = zoomGroup.append("g").attr("id", "chevron-layer");
 
-lines.forEach(line => {
-  const fromId = line.source;
-  const toId = line.target;
+  currentScenarioData.lines.forEach((line, idx) => {
+    const fromId = line.source;
+    const toId = line.target;
+    console.log(`🔎 Line ${idx}: ${fromId} → ${toId}`);
 
-  if (!fromId || !toId) {
-    console.log("⚠️ Missing source or target for line:", line.id);
-    return;
-  }
+    const fullLine = lines.find(l =>
+      (l.source === fromId && l.target === toId) ||
+      (l.source === toId && l.target === fromId)
+    );
 
-  const from = nodes.find(n => n.id === fromId);
-  const to = nodes.find(n => n.id === toId);
+    if (!fullLine) {
+      console.warn("❌ No matching geometry in lines.json for", fromId, toId);
+      return;
+    }
 
-  if (!from || !to || from.type !== "bus" || to.type !== "bus") {
-    console.log("⚠️ Skipping non-bus line:", line.id, from, to);
-    return;
-  }
+    const path = document.getElementById(fullLine.id);
+    if (!path) {
+      console.warn("🚫 No path element for", fullLine.id);
+      return;
+    }
 
-  const path = document.getElementById(line.id);
-  if (!path) {
-    console.log("⚠️ Line path not found in DOM for:", line.id);
-    return;
-  }
-
+    const from = nodes.find(n => n.id === fromId);
+    const to = nodes.find(n => n.id === toId);
+    if (!from || !to) {
+      console.warn("⚠️ Invalid endpoints for", fullLine.id);
+      return;
+    }
 
     const totalLength = path.getTotalLength();
     const pointA = path.getPointAtLength(totalLength * 0.45);
     const pointB = path.getPointAtLength(totalLength * 0.55);
-
     const angle = Math.atan2(pointB.y - pointA.y, pointB.x - pointA.x) * 180 / Math.PI;
-    const midX = (pointA.x + pointB.x) / 2;
-    const midY = (pointA.y + pointB.y) / 2;
+
+    const scale = getChevronScale(line, currentMapMode);
+    const ratio = (typeof line.flow === "number" && typeof line.rate_a === "number" && line.rate_a !== 0)
+      ? Math.abs(line.flow / line.rate_a)
+      : 0;
+
+    const color = getLoadColor(ratio);
+    const fadeChevrons = ["pmax", "cost_per_mw", "emissions_per_mw"].includes(currentMapMode);
 
     chevronGroup.append("path")
       .attr("class", "chevron")
-      .attr("d", chevronPath(6))
-      .attr("fill", "red")
-      .attr("opacity", 0.8)
-      .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
-    console.log("has gone past the append part")
+      .attr("d", chevronPath(scale))
+      .attr("fill", color)
+      .attr("opacity", fadeChevrons ? 0.1 : 1)
+      .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle})`);
   });
+
+  console.log("✅ Finished drawing all chevrons.");
 }
+
+
 
 function chevronPath(scale) {
   return `M 0 ${-scale} L ${scale} 0 L 0 ${scale} L ${-scale} 0 Z`;
+}
+
+function getChevronScale(line, mode) {
+  if (mode !== "flow") return 6; // base size
+  const ratio = Math.abs(line.flow / line.rate_a);
+  return 6 + Math.min(ratio, 1) * 10; // scale between 6 and 16
+}
+
+function getLoadColor(pct) {
+  return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
 }
 
 
@@ -639,18 +692,13 @@ zoomGroup.selectAll("path.map-load")
   .enter()
   .append("path")
   .attr("class", "map-load")
-  .attr("id", d => d.id)
-  .attr("d", d => {
-    const size = 20;
-    const x = d.x;
-    const y = d.y;
-    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
-  })
+  .attr("d", d3.symbol().type(d3.symbolTriangle).size(150))
   .attr("transform", d => {
-    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
-      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    if (d.rotate !== undefined && d.rotateX !== null && d.rotateY !== null) {
+      return `translate(${d.rotateX}, ${d.rotateY}) rotate(${d.rotate})`;
+    } else {
+      return `translate(${d.x}, ${d.y})`;
     }
-    return null;
   });
 
     // Generators - drawn last to ensure they are on top
@@ -821,10 +869,12 @@ function setMapMode(mode) {
     .transition().duration(300)
     .attr("opacity", fadeOpacity);
 
-  if (mode === "full") {
-    resetGeneratorSizes();
-  } else {
+  if (["pmax", "cost_per_mw", "emissions_per_mw"].includes(mode)) {
     scaleGeneratorsBy(mode);
+    d3.selectAll(".map-gen-group").attr("opacity", 1);
+  } else {
+    resetGeneratorSizes();
+    d3.selectAll(".map-gen-group").attr("opacity", mode === "flow" ? 0.1 : 1);
   }
 
   highlightButton(mode);
@@ -948,9 +998,10 @@ function highlightButton(mode) {
     if (status) status.textContent = "Currently scaling";
   }
   const fullCard = document.getElementById("mode-full");
-const fullStatus = fullCard?.querySelector(".overview-status");
-if (fullStatus) {
-  fullStatus.textContent = (mode === "full") ? "Currently showing full layout" : "Click to show full layout";
+const lineCard = document.getElementById("mode-lines");
+const lineStatus = lineCard?.querySelector(".overview-status");
+if (lineStatus) {
+  lineStatus.textContent = (mode === "flow") ? "Currently scaling" : "Click to scale";
 }
 }
 
@@ -979,7 +1030,8 @@ if (fullStatus) {
                 // Draw chevrons for lines
         drawChevrons(lines, nodes);
 
-                document.getElementById("scale-power").onclick = () => setMapMode("pmax");
+        document.getElementById("mode-lines").onclick = () => setMapMode("flow");
+        document.getElementById("scale-power").onclick = () => setMapMode("pmax");
         document.getElementById("scale-cost").onclick = () => setMapMode("cost_per_mw");
         document.getElementById("scale-emissions").onclick = () => setMapMode("emissions_per_mw");
         document.getElementById("mode-full").onclick = () => setMapMode("full");

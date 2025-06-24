@@ -1,64 +1,68 @@
-const fs = require('fs');
-const { XMLParser } = require('fast-xml-parser');
+const fs = require("fs");
+const { XMLParser } = require("fast-xml-parser");
 
 const parser = new XMLParser({
   ignoreAttributes: false,
-  attributeNamePrefix: ''
+  attributeNamePrefix: ""
 });
 
-// Load single, full SVG file with correct coordinates
-const svgContent = fs.readFileSync('topology-noarrows.svg', 'utf8');
-const parsed = parser.parse(svgContent);
-const svgRoot = parsed.svg || parsed;
+const svg = fs.readFileSync("topology-noarrows.svg", "utf8");
+const parsed = parser.parse(svg);
 
-let elements = [];
-
+const elements = [];
 function walk(node) {
   if (Array.isArray(node)) node.forEach(walk);
-  else if (typeof node === 'object') {
-    if (node.path) {
-      if (Array.isArray(node.path)) elements.push(...node.path);
-      else elements.push(node.path);
+  else if (typeof node === "object") {
+    if (node.path || node.rect || node.polygon || node.g) {
+      const targets = [].concat(
+        node.path || [],
+        node.rect || [],
+        node.polygon || [],
+        node.g || []
+      );
+      elements.push(...targets);
     }
     Object.values(node).forEach(walk);
   }
 }
+walk(parsed);
 
-walk(svgRoot);
-
-const links = [];
-
+const nodes = [];
 elements.forEach(el => {
+  if (!el.id) return;
+
   const id = el.id;
-  const d = el.d;
+  const type = id.startsWith("Gen")
+    ? "generator"
+    : id.startsWith("Bus")
+    ? "bus"
+    : id.startsWith("Load")
+    ? "load"
+    : null;
 
-  if (!id || !id.startsWith('Line') || !d) return;
+  if (!type) return;
 
-  const parts = id.includes('_') ? id.split('_') : id.split('-');
-  if (parts.length < 3) return;
+  const x = parseFloat(el.x || el.cx || 0);
+  const y = parseFloat(el.y || el.cy || 0);
 
-  let rawBus = parts[1];
-  let rawOther = parts[2];
-  let source = '', target = '';
+  const node = { id, x, y, type};
 
-  if (rawOther === 'Gen') {
-    source = `Bus${rawBus.replace('Bus', '')}`;
-    target = `Gen${rawBus.replace('Bus', '')}`;
-  } else if (rawOther === 'Load') {
-    source = `Bus${rawBus.replace('Bus', '')}`;
-    target = `Load${rawBus.replace('Bus', '')}`;
-  } else {
-    source = parts[1];
-    target = parts[2];
+  if (type === "bus" && el.width && el.height) {
+    node.width = parseFloat(el.width);
+    node.height = parseFloat(el.height);
   }
 
-  links.push({
-    id,
-    source,
-    target,
-    d
-  });
+  if (type === "load" && el.transform && el.transform.startsWith("rotate")) {
+    const match = el.transform.match(/rotate\((-?\d+\.?\d*),\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)\)/);
+    if (match) {
+      node.rotate = parseFloat(match[1]);
+      node.rotateX = parseFloat(match[2]);
+      node.rotateY = parseFloat(match[3]);
+    }
+  }
+
+  nodes.push(node);
 });
 
-fs.writeFileSync('full_lines.json', JSON.stringify(links, null, 2));
-console.log(`✅ Wrote full_lines.json with ${links.length} lines from topology-noarrows.svg`);
+fs.writeFileSync("full_nodes.json", JSON.stringify(nodes, null, 2));
+console.log("✅ Wrote full_nodes.json with", nodes.length, "nodes");
