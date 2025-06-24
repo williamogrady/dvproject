@@ -542,6 +542,57 @@ function updateMapGeneratorsFromScenario() {
   }
 }
 
+function drawChevrons(lines, nodes) {
+  console.log("in drawChevrons")
+  const chevronGroup = zoomGroup.append("g").attr("id", "chevron-layer");
+
+lines.forEach(line => {
+  const fromId = line.source;
+  const toId = line.target;
+
+  if (!fromId || !toId) {
+    console.log("⚠️ Missing source or target for line:", line.id);
+    return;
+  }
+
+  const from = nodes.find(n => n.id === fromId);
+  const to = nodes.find(n => n.id === toId);
+
+  if (!from || !to || from.type !== "bus" || to.type !== "bus") {
+    console.log("⚠️ Skipping non-bus line:", line.id, from, to);
+    return;
+  }
+
+  const path = document.getElementById(line.id);
+  if (!path) {
+    console.log("⚠️ Line path not found in DOM for:", line.id);
+    return;
+  }
+
+
+    const totalLength = path.getTotalLength();
+    const pointA = path.getPointAtLength(totalLength * 0.45);
+    const pointB = path.getPointAtLength(totalLength * 0.55);
+
+    const angle = Math.atan2(pointB.y - pointA.y, pointB.x - pointA.x) * 180 / Math.PI;
+    const midX = (pointA.x + pointB.x) / 2;
+    const midY = (pointA.y + pointB.y) / 2;
+
+    chevronGroup.append("path")
+      .attr("class", "chevron")
+      .attr("d", chevronPath(6))
+      .attr("fill", "red")
+      .attr("opacity", 0.8)
+      .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
+    console.log("has gone past the append part")
+  });
+}
+
+function chevronPath(scale) {
+  return `M 0 ${-scale} L ${scale} 0 L 0 ${scale} L ${-scale} 0 Z`;
+}
+
+
 
 
    // === Fetch and Draw Map ===
@@ -552,7 +603,6 @@ Promise.all([
 ]).then(([nodes, lines, generatorData]) => {
   currentGenerators = generatorData;
 
- 
   zoomGroup.selectAll("path.map-line")
     .data(lines)
     .enter()
@@ -925,6 +975,9 @@ if (fullStatus) {
     .attr("font-size", "6px")
     .text(d => d.id); */
 
+      console.log("after this, calling drawChevrons");
+                // Draw chevrons for lines
+        drawChevrons(lines, nodes);
 
                 document.getElementById("scale-power").onclick = () => setMapMode("pmax");
         document.getElementById("scale-cost").onclick = () => setMapMode("cost_per_mw");

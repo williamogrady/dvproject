@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Chevron Flow Test with Zoom</title>
+  <title>Chevron Flow Map (Reset)</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     html, body {
@@ -10,264 +10,132 @@
       padding: 0;
       height: 100%;
     }
-    svg#map {
+    svg {
       width: 100%;
       height: 100%;
-      display: block;
       background: #1e1e1e;
-    }
-    .button-bar {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-    }
-    button {
-      margin: 4px;
-      padding: 6px 12px;
-      font-size: 0.9rem;
-      cursor: pointer;
     }
     .chevron {
       fill: red;
-      transform-origin: center;
+      opacity: 0.8;
     }
-    .faded {
-      opacity: 0.1;
+    .line {
+      stroke: #888;
+      stroke-width: 2;
+      fill: none;
+    }
+    .bus {
+      fill: #666;
+    }
+    .gen {
+      fill: #4caf50;
     }
   </style>
 </head>
 <body>
-  <div class="button-bar">
-    <button onclick="setMode('full')">Full Layout</button>
-    <button onclick="setMode('pmax')">Power</button>
-    <button onclick="setMode('cost_per_mw')">Cost</button>
-    <button onclick="setMode('emissions_per_mw')">Emissions</button>
-    <button onclick="setMode('overloads')">Overloads</button>
+  <div style="position:absolute; top:10px; left:10px; z-index:10">
+    <button onclick="setMode('generator')">Generator Mode</button>
+    <button onclick="setMode('flow')">Flow Mode</button>
   </div>
-  <svg id="map">
+  <svg id="map" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
     <g id="zoom-layer"></g>
   </svg>
 
   <script>
     const svg = d3.select("#map");
-    const svgElement = svg.node();
     const zoomLayer = svg.select("#zoom-layer");
 
-    let buses = [], lines = [], generators = [], mode = "full";
+    let buses = [], lines = [], generators = [], mode = "generator";
 
     const zoomBehavior = d3.zoom()
-      .scaleExtent([0.2, 2.0])
-      .on("zoom", event => {
-        zoomLayer.attr("transform", event.transform);
-      });
+      .scaleExtent([0.2, 2])
+      .on("zoom", event => zoomLayer.attr("transform", event.transform));
 
     svg.call(zoomBehavior);
 
-    window.addEventListener("load", () => {
-      const initialScale = 0.3;
-      const centerX = svgElement.clientWidth / 2;
-      const centerY = svgElement.clientHeight / 2;
-
-      svg.call(
-        zoomBehavior.transform,
-        d3.zoomIdentity
-          .translate(centerX - 200, centerY - 150)
-          .scale(initialScale)
-          .translate(-centerX, -centerY)
-      );
-    });
-
-    function busById(id) {
-      return buses.find(b => b.id === id);
+    function setMode(newMode) {
+      mode = newMode;
+      draw();
     }
 
-    function getLineFlow(line) {
-      const from = busById(line.from);
-      const to = busById(line.to);
-      if (!from || !to) return 0;
-
-      const extractBusNumber = id => {
-        const match = id.match(/(\d+)/);
-        return match ? parseInt(match[1]) : null;
-      };
-
-      const fromBusNum = extractBusNumber(from.id);
-      const toBusNum = extractBusNumber(to.id);
-
-      const genFrom = generators.find(g => g.bus === fromBusNum);
-      const genTo = generators.find(g => g.bus === toBusNum);
-
-      return (genFrom?.pg || 0) - (genTo?.pg || 0);
+    function chevronPath(scale) {
+      return `M 0 ${-scale} L ${scale} 0 L 0 ${scale} L ${-scale} 0 Z`;
     }
 
-function chevronPath(scale) {
-  return `M 0 ${-scale} L ${scale} 0 L 0 ${scale} L ${-scale} 0 Z`;  // arrow pointing → right
-}
+    function drawChevrons() {
+      lines.forEach(line => {
+        const fromType = buses.find(b => b.id === line.from)?.type;
+        const toType = buses.find(b => b.id === line.to)?.type;
+        if (fromType !== "bus" || toType !== "bus") return;
+
+        const pathEl = document.getElementById(line.id);
+        if (!pathEl) return;
+
+        const totalLength = pathEl.getTotalLength();
+        const pointA = pathEl.getPointAtLength(totalLength * 0.45);
+        const pointB = pathEl.getPointAtLength(totalLength * 0.55);
+
+        const dx = pointB.x - pointA.x;
+        const dy = pointB.y - pointA.y;
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        const scale = mode === "flow" ? 6 + Math.random() * 4 : 6;
+        const opacity = mode === "flow" ? 1 : 0.1;
+
+        zoomLayer.append("path")
+          .attr("class", "chevron")
+          .attr("d", chevronPath(scale))
+          .attr("opacity", opacity)
+          .attr("transform", `translate(${(pointA.x + pointB.x)/2}, ${(pointA.y + pointB.y)/2}) rotate(${angle})`);
+      });
+    }
 
     function draw() {
       zoomLayer.selectAll("*").remove();
 
-      // Draw lines
       zoomLayer.selectAll("path.line")
         .data(lines)
         .enter()
         .append("path")
         .attr("class", "line")
         .attr("id", d => d.id)
-        .attr("d", d => d.d)
-        .attr("stroke", "#888")
-        .attr("stroke-width", 2)
-        .attr("fill", "none");
+        .attr("d", d => d.d);
 
-      // Draw buses
       zoomLayer.selectAll("rect.bus")
         .data(buses.filter(d => d.type === "bus"))
         .enter()
         .append("rect")
         .attr("class", "bus")
-        .attr("x", d => d.x - d.width / 2)
-        .attr("y", d => d.y - d.height / 2)
-        .attr("width", d => d.width)
-        .attr("height", d => d.height)
-        .attr("fill", "#666");
+        .attr("x", d => d.x - 5)
+        .attr("y", d => d.y - 5)
+        .attr("width", 10)
+        .attr("height", 10);
 
-      // Draw generators
-      const baseSize = 30;
       zoomLayer.selectAll("circle.gen")
         .data(buses.filter(d => d.type === "generator"))
         .enter()
         .append("circle")
         .attr("class", "gen")
-        .attr("id", d => d.id)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
-        .attr("r", d => {
-          const match = generators.find(g => `Gen${g.bus}` === d.id);
-          if (!match) return baseSize;
-          if (mode === "pmax") return 20 + (match.pmax / 400) * 40;
-          if (mode === "cost_per_mw") return 20 + (match.cost_per_mw / 50) * 40;
-          if (mode === "emissions_per_mw") return 20 + (match.emissions_per_mw / 100) * 40;
-          return baseSize;
-        })
-        .attr("fill", d => {
-          const match = generators.find(g => `Gen${g.bus}` === d.id);
-          return match && match.pg > 0 ? "#4caf50" : "#fff";
-        });
+        .attr("r", d => mode === "generator" ? 12 : 6);
 
-const chevronLayer = zoomLayer.append("g").attr("id", "chevron-layer");
-
-const busFrom = busById("Bus1");
-const busTo = busById("Bus2");
-
-if (busFrom && busTo) {
-  const x = (busFrom.x + busTo.x) / 2;
-  const y = (busFrom.y + busTo.y) / 2;
-  const dx = busTo.x - busFrom.x;
-  const dy = busTo.y - busFrom.y;
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-  console.log("🟡 Drawing yellow chevron  at", x, y, "angle", angle);
-
-  chevronLayer.append("path")
-    .attr("d", chevronPath(6))
-    .attr("fill", "yellow")
-    .attr("stroke", "black")
-    .attr("stroke-width", 1)
-    .attr("opacity", 1)
-    .attr("transform", `translate(${x}, ${y}) rotate(${angle})`);
-}
-
-
-lines
-  .filter(line => line.from?.startsWith("Bus") && line.to?.startsWith("Bus"))
-  .forEach(line => {
-    const pathEl = d3.select(`#${CSS.escape(line.id)}`).node();
-    if (!pathEl) return;
-
-    const totalLength = pathEl.getTotalLength();
-    const pointA = pathEl.getPointAtLength(totalLength * 0.45);
-    const pointB = pathEl.getPointAtLength(totalLength * 0.55);
-
-    if (line.id === "Line_Bus50_Bus60") {
-      console.log("Midpoint from path:", (pointA.x + pointB.x)/2, (pointA.y + pointB.y)/2);
-
-      const busFrom = busById("Bus50");
-      const busTo = busById("Bus60");
-      console.log("Midpoint from bus data:", (busFrom.x + busTo.x)/2, (busFrom.y + busTo.y)/2);
+      drawChevrons();
     }
-
-    const dx = pointB.x - pointA.x;
-    const dy = pointB.y - pointA.y;
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-    const flow = getLineFlow(line);
-    const dir = flow >= 0 ? 1 : -1;
-    const scale = 4 + Math.abs(flow) / 10;
-    const opacity = mode === "overloads" ? 1 : 0.1;
-
-    if (line.id === "Line_Bus1_Bus2") {
-  const midpointX = (pointA.x + pointB.x) / 2;
-  const midpointY = (pointA.y + pointB.y) / 2;
-  console.log("🔍 Line_Bus1_Bus2 midpoint (from path):", midpointX, midpointY);
-
-  chevronLayer.append("circle")
-    .attr("cx", midpointX)
-    .attr("cy", midpointY)
-    .attr("r", 5)
-    .attr("fill", "yellow")
-    .attr("stroke", "black")
-    .attr("stroke-width", 1);
-}
-
-    chevronLayer.append("path")
-      .attr("class", "chevron")
-      .attr("d", chevronPath(scale))
-      .attr("fill", "red")
-      .attr("opacity", opacity)
-      .attr("transform", `translate(${(pointA.x + pointB.x)/2}, ${(pointA.y + pointB.y)/2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
-  });
-
-
-    }
-
-function setMode(newMode) {
-  mode = newMode;
-
-  let genScalingDesc = "not scaled";
-  if (mode === "pmax") genScalingDesc = "scaled by max power";
-  else if (mode === "cost_per_mw") genScalingDesc = "scaled by cost per MW";
-  else if (mode === "emissions_per_mw") genScalingDesc = "scaled by emissions per MW";
-
-  const chevronsFaded = mode === "overloads" ? "no" : "yes";
-
-  console.log(`\n📊 MODE: ${mode.toUpperCase()}`);
-  console.log(`🟢 Generators: ${genScalingDesc}`);
-  console.log(`🔻 Line chevrons faded: ${chevronsFaded}`);
-
-  draw();
-}
 
     Promise.all([
       fetch("/new-tests/full_nodes.json").then(res => res.json()),
-      fetch("/new-tests/full_lines.json").then(res => res.json()),
-      fetch("/api/generators").then(res => res.json())
-    ]).then(([nodeData, lineData, generatorData]) => {
+      fetch("/new-tests/full_lines.json").then(res => res.json())
+    ]).then(([nodeData, lineData]) => {
       buses = nodeData;
       lines = lineData;
-      generators = generatorData;
-
       lines.forEach(line => {
         const match = line.id.match(/^Line_(Bus\d+)_(Bus\d+)$/);
         if (match) {
           line.from = match[1];
           line.to = match[2];
-          console.log(`✅ Line ${line.id} → from: ${line.from}, to: ${line.to}`);
-        } else {
-          console.warn(`⏭ Skipping non-Bus↔Bus line: ${line.id}`);
         }
       });
-
       draw();
     });
   </script>
