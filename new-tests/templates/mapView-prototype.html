@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>mapView prototype, June 10th</title>
+  <title>DV Project - MapView</title>
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
@@ -442,6 +442,29 @@ function getLoadColor(pct) {
   return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
 }
 
+function drawSelectedGeneratorHalo() {
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (!selectedGeneratorId) return;
+
+  const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+  if (!selected.empty()) {
+    const { cx, cy } = selected.node();
+    const r = +selected.attr("r");
+
+    zoomGroup
+      .append("circle")
+      .attr("class", "map-gen-highlight")
+      .attr("cx", cx)
+      .attr("cy", cy)
+      .attr("r", r + 6)
+      .attr("stroke", "blue")
+      .attr("fill", "none")
+      .attr("stroke-width", 2)
+      .lower();
+  }
+}
+
 async function fetchAllScenarios() {
   console.log("fetchAllScenarios")
       const res = await fetch("/api/scenarios");
@@ -490,21 +513,7 @@ function renderOverview(gens, scenarioData = {}) {
 
   renderOverview(currentGenerators, currentScenarioData || {});
   updateMapGeneratorsFromScenario(); // Make sure this is called too
-
-  const scenarioLines = data.lines || [];
-
-const enrichedLines = staticLines.map(line => {
-  const live = scenarioLines.find(l =>
-    line.source === `Bus${l.from_bus}` && line.target === `Bus${l.to_bus}`
-  );
-  return {
-    ...line,
-    flow: live?.flow ?? 0,
-    rate_a: live?.rate_a ?? 1
-  };
-});
-
-drawChevrons(enrichedLines, staticNodes);
+  refreshChevrons(data.lines);
 
 }
 
@@ -551,26 +560,8 @@ function updateMapGeneratorsFromScenario() {
       .attr("stroke-width", isSelected ? 2.5 : 3); // ✅ consistent width
   });
 
-  d3.selectAll(".map-gen-highlight").remove();
+  drawSelectedGeneratorHalo();
 
-  if (selectedGeneratorId) {
-    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
-    if (!selected.empty()) {
-      const { cx, cy } = selected.node();
-      const r = +selected.attr("r");
-
-      d3.select("#zoom-layer")
-        .append("circle")
-        .attr("class", "map-gen-highlight")
-        .attr("cx", cx.baseVal.value)
-        .attr("cy", cy.baseVal.value)
-        .attr("r", r + 6)
-        .attr("fill", "none")
-        .attr("stroke", "#00f")
-        .attr("stroke-width", 3)
-        .attr("pointer-events", "none");
-    }
-  }
 }
 
 function drawChevrons(lines, nodes) {
@@ -630,6 +621,7 @@ chevronGroup.append("path")
   });
 }
 
+
 function chevronPath(scale) {
     const length = scale * 2;
   const width = scale;
@@ -643,6 +635,22 @@ function chevronPath(scale) {
   `;
 }
 
+function refreshChevrons(liveLines) {
+  const enrichedLines = staticLines.map(line => {
+    const live = liveLines.find(l =>
+      `Bus${l.from_bus}` === line.source && `Bus${l.to_bus}` === line.target
+    );
+    return {
+      ...line,
+      id: line.id,
+      flow: live?.flow ?? 0,
+      rate_a: live?.rate_a ?? 1
+    };
+  });
+
+  d3.select("#chevron-layer").remove();
+  drawChevrons(enrichedLines, staticNodes);
+}
 
 
 
@@ -826,9 +834,11 @@ if (match.pg > 0) {
       .then(res => res.json())
       .then(data => {
         currentGenerators = data.generators;
-        renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+        renderOverview(data.generators, currentScenarioData, data.total_cost, data.solved);
         updateMapGeneratorsFromScenario();
         updateGeneratorHalos();
+
+        refreshChevrons(data.lines);
 
         const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
         if (!selected.empty()) {
@@ -953,7 +963,6 @@ svg.on("click", function(event) {
     connectorLine.style("display", "none");
   }
 });
-
 
 function resetGeneratorSizes() {
   currentScaleMode = null;
@@ -1148,7 +1157,7 @@ function createBlock(level, isHalf, gen) {
     .then(res => res.json())
     .then(data => {
       currentGenerators = data.generators;
-      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      renderOverview(data.generators, currentScenarioData, data.total_cost, data.solved);
       updateMapGeneratorsFromScenario();
       updateGeneratorHalos();
 
@@ -1179,30 +1188,8 @@ function updateMapGeneratorsFromScenario() {
   });
 
   updateGeneratorStrokes();
-  d3.selectAll(".map-gen-highlight").remove();
-
-  if (selectedGeneratorId) {
-    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
-    if (!selected.empty()) {
-      const genNode = selected.select(".map-gen");
-      const cx = +genNode.attr("cx") || 0;
-      const cy = +genNode.attr("cy") || 0;
-      const r = +genNode.attr("r") || 30;
-      const stroke = +genNode.attr("stroke") || "black";
-      const stroke_width = +genNode.attr("stroke-width") || 3;
-
-      d3.select("#zoom-group")
-        .append("circle")
-        .attr("class", "map-gen-highlight")
-        .attr("cx", cx.baseVal.value)
-        .attr("cy", cy.baseVal.value)
-        .attr("r", r + 6)
-        .attr("fill", "none")
-        .attr("stroke", "#00f")
-        .attr("stroke-width", 3)
-        .attr("pointer-events", "none");
-    }
-  }
+  drawSelectedGeneratorHalo();
+}
 
   document.getElementById("toggleBtn").addEventListener("click", () => {
   const panel = document.getElementById("adminPanel");
@@ -1219,7 +1206,7 @@ function updateMapGeneratorsFromScenario() {
   }
 });
   
-}
+
   </script>
 </body>
 </html>
