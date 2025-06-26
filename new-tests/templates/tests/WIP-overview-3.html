@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reconstructed Overview Bar</title>
+  <style>
+    body {
+      margin: 0;
+      background: #1e1e1e;
+      font-family: sans-serif;
+      color: #111;
+    }
+
+    /* === Overview Container === */
+    #overview-bar {
+      width: 95%;
+      max-width: 1400px;
+      margin: 24px auto;
+      background: white;
+      border-radius: 20px;
+      display: flex;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      gap: 20px;
+    }
+
+    /* === Status + Task Sections === */
+    .status-section {
+      flex: 0 0 70%;
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+    }
+
+    .task-section {
+      flex: 0 0 30%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+      border-left: 1px solid #ccc;
+      padding-left: 20px;
+    }
+
+    /* === Cards === */
+    .card {
+      background: #f5f5f5;
+      border-radius: 16px;
+      padding: 16px;
+      flex: 1;
+      min-width: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .card-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    /* === Power Blocks (preview style only) === */
+    .power-blocks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .power-block {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      background: #6EB25A;
+    }
+
+    .power-block.partial {
+      background: linear-gradient(to right, #6EB25A 50%, #d9d9d9 50%);
+    }
+
+    .power-block.empty {
+      background: #d9d9d9;
+    }
+
+    /* === Task checkbox styling === */
+    .task-section label {
+      font-size: 0.9rem;
+      color: #333;
+    }
+
+    .task-section input[type="checkbox"] {
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="overview-bar">
+    <!-- Status Section -->
+    <div class="status-section">
+      <div class="card" id="card-power">
+        <div class="card-title">🔌 Power</div>
+        <div class="power-blocks">
+          <div class="power-block"></div>
+          <div class="power-block"></div>
+          <div class="power-block"></div>
+          <div class="power-block"></div>
+          <div class="power-block"></div>
+          <div class="power-block partial"></div>
+          <div class="power-block empty"></div>
+          <div class="power-block empty"></div>
+        </div>
+      </div>
+
+      <div class="card" id="card-cost">
+        <div class="card-title">💰 Cost</div>
+        <div>$2550 / $3000</div>
+      </div>
+
+      <div class="card" id="card-emissions">
+        <div class="card-title">☁️ Emissions</div>
+        <div>80 / 200 CO₂</div>
+      </div>
+
+      <div class="card" id="card-lines">
+        <div class="card-title">⚡ Lines</div>
+        <div>3 overloaded</div>
+      </div>
+    </div>
+
+    <!-- Task Section -->
+    <div class="task-section">
+      <label><input type="checkbox"> Use only North generators</label>
+      <label><input type="checkbox"> Keep cost under $3000</label>
+      <label><input type="checkbox"> Keep emissions under 200 CO₂</label>
+    </div>
+  </div>
+
+</body>
+</html>
