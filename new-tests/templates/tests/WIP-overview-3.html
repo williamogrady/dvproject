@@ -1,142 +1,383 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Reconstructed Overview Bar</title>
+  <meta charset="UTF-8">
+  <title>Overview Bar Mock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      margin: 0;
-      background: #1e1e1e;
-      font-family: sans-serif;
-      color: #111;
+    :root {
+      --gray: #686868;
+      --green: #6EB25A;
+      --yellow: #c7ba32;
+      --red: #e35656;
+      --white: #ffffff;
+      --blue: #4A90E2;
     }
 
-    /* === Overview Container === */
-    #overview-bar {
-      width: 95%;
-      max-width: 1400px;
-      margin: 24px auto;
+    body {
+      font-family: 'Figtree', sans-serif;
+      background: #111;
+      margin: 0;
+      padding: 0;
+      color: var(--gray);
+      font-size: 13px; /* decreased by ~5 */
+    }
+
+    #overview {
+      width: 1204px;
+      height: 140px;
+      margin: 20px auto;
       background: white;
       border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      opacity: 0.8;
       display: flex;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      gap: 20px;
+      padding: 1rem;
+      gap: 1rem;
+      box-sizing: border-box;
     }
 
-    /* === Status + Task Sections === */
     .status-section {
-      flex: 0 0 70%;
       display: flex;
-      gap: 16px;
-      justify-content: space-between;
+      width: 60%;
+      gap: 1rem;
     }
 
     .task-section {
-      flex: 0 0 30%;
+      width: 40%;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      gap: 10px;
-      border-left: 1px solid #ccc;
-      padding-left: 20px;
+      justify-content: space-between;
     }
 
-    /* === Cards === */
     .card {
-      background: #f5f5f5;
-      border-radius: 16px;
-      padding: 16px;
-      flex: 1;
-      min-width: 100px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      flex-grow: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-      position: relative;
+      justify-content: space-between;
+      padding: 0.5rem;
+      transition: background 0.2s;
+      box-sizing: border-box;
+      overflow: hidden;
     }
+    .card:hover { background: #f0f0f0; cursor: pointer; }
 
-    .card-title {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
+    .title { font-weight: bold; font-size: 1.1rem; }
+    .status { font-size: 0.75rem; text-align: center; }
 
-    /* === Power Blocks (preview style only) === */
-    .power-blocks {
+    .power-middle {
       display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
+      flex-grow: 1;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .blocks {
+      display: flex;
+      gap: 2px;
+      flex-wrap: nowrap;
+      max-width: 80%;
+    }
+    .block {
+      width: 12px;
+      height: 20px;
+      background: var(--green);
+      border-radius: 4px;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
       justify-content: center;
     }
 
-    .power-block {
-      width: 22px;
-      height: 22px;
-      border-radius: 5px;
-      background: #6EB25A;
+    .fraction {
+      text-align: center;
+      font-weight: bold;
     }
 
-    .power-block.partial {
-      background: linear-gradient(to right, #6EB25A 50%, #d9d9d9 50%);
+    .line-middle {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
     }
 
-    .power-block.empty {
-      background: #d9d9d9;
+    .line-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: space-between;
     }
 
-    /* === Task checkbox styling === */
-    .task-section label {
+    .line-num {
+      font-size: 2.4rem;
+      font-weight: bold;
+    }
+
+    .line-sub {
+      font-size: 0.75rem;
+    }
+
+    .cost-num, .em-num {
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--yellow);
+    }
+    .em-num { color: var(--red); }
+
+    .em-label {
+      font-size: 0.75rem;
+      color: var(--red);
+      text-align: right;
+    }
+
+    .task-title {
       font-size: 0.9rem;
-      color: #333;
+      font-weight: bold;
     }
 
-    .task-section input[type="checkbox"] {
-      margin-right: 8px;
+    .task-subtitle {
+      font-size: 0.75rem;
+      color: #444;
     }
+
+    .checklist-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .checklist-column {
+      flex: 1;
+    }
+    .checklist-column-title {
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .task-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .requirement, .constraint {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .check {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .check.done {
+      background: white;
+      color: var(--green);
+    }
+
+    .lock {
+      width: 14px;
+      height: 14px;
+      background: url('locked.png') center/cover no-repeat;
+    }
+    .lock.disabled {
+      background: url('disabled.png') center/cover no-repeat;
+    }
+
+    .submit-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .submit-message {
+      font-size: 0.75rem;
+    }
+    .submit-button {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: gray;
+      color: white;
+      border: none;
+      cursor: not-allowed;
+    }
+    .submit-button.ready {
+      background: var(--blue);
+      cursor: pointer;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #222;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+    label { display: flex; flex-direction: column; align-items: center; }
+    input[type="range"] { width: 150px; }
+
   </style>
 </head>
 <body>
 
-  <div id="overview-bar">
-    <!-- Status Section -->
-    <div class="status-section">
-      <div class="card" id="card-power">
-        <div class="card-title">🔌 Power</div>
-        <div class="power-blocks">
-          <div class="power-block"></div>
-          <div class="power-block"></div>
-          <div class="power-block"></div>
-          <div class="power-block"></div>
-          <div class="power-block"></div>
-          <div class="power-block partial"></div>
-          <div class="power-block empty"></div>
-          <div class="power-block empty"></div>
-        </div>
+<div id="overview">
+  <div class="status-section">
+    <div class="card" style="flex: 2">
+      <div class="title">🔌 Power</div>
+      <div class="power-middle">
+        <div class="blocks" id="block-container"></div>
+        <div class="fraction" id="power-fraction">1700<br>/ 2000</div>
       </div>
-
-      <div class="card" id="card-cost">
-        <div class="card-title">💰 Cost</div>
-        <div>$2550 / $3000</div>
-      </div>
-
-      <div class="card" id="card-emissions">
-        <div class="card-title">☁️ Emissions</div>
-        <div>80 / 200 CO₂</div>
-      </div>
-
-      <div class="card" id="card-lines">
-        <div class="card-title">⚡ Lines</div>
-        <div>3 overloaded</div>
-      </div>
+      <div class="status">Click to scale</div>
     </div>
 
-    <!-- Task Section -->
-    <div class="task-section">
-      <label><input type="checkbox"> Use only North generators</label>
-      <label><input type="checkbox"> Keep cost under $3000</label>
-      <label><input type="checkbox"> Keep emissions under 200 CO₂</label>
+    <div class="card" style="flex: 1">
+      <div class="title">➤ Lines</div>
+      <div class="line-middle">
+        <div class="line-row">
+          <div class="line-num" id="line-count">3</div>
+          <div class="line-sub">Overloaded Lines</div>
+        </div>
+        <div class="line-sub">Highest: <span id="line-max">142%</span></div>
+      </div>
+      <div class="status">Click to scale</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; flex: 1; gap: 0.5rem;">
+      <div class="card">
+        <div class="title">💰 Cost</div>
+        <div class="cost-num" id="cost-num">$2500</div>
+        <div class="status">Click to scale</div>
+      </div>
+      <div class="card">
+        <div class="title">☁️ Emissions</div>
+        <div class="em-num" id="em-num">130</div>
+        <div class="em-label">CO₂/MW</div>
+      </div>
     </div>
   </div>
+
+  <div class="task-section">
+    <div>
+      <div class="task-title">Current Scenario</div>
+      <div class="task-subtitle">2 out of 5</div>
+    </div>
+    <div class="checklist-row">
+      <div class="checklist-column">
+        <div class="checklist-column-title">Requirements</div>
+        <ul>
+          <li class="requirement"><div class="check" id="check-power"></div> Power Target</li>
+          <li class="requirement"><div class="check" id="check-cost"></div> Cost Cap</li>
+          <li class="requirement"><div class="check" id="check-em"></div> Green Enough</li>
+        </ul>
+      </div>
+      <div class="checklist-column">
+        <div class="checklist-column-title">Constraints</div>
+        <ul>
+          <li class="constraint"><div class="lock" id="lock-north"></div> North Only</li>
+          <li class="constraint"><div class="lock disabled" id="lock-fossil"></div> No Fossil</li>
+        </ul>
+      </div>
+    </div>
+    <div class="submit-box">
+      <div class="submit-message" id="submit-msg">You are ready to submit your solution!</div>
+      <button class="submit-button" id="submit-btn" onclick="alert('Solution submitted!')">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateUI() {
+  const power = parseInt(document.getElementById('power-slider').value);
+  const cost = parseInt(document.getElementById('cost-slider').value);
+  const emissions = parseInt(document.getElementById('em-slider').value);
+  const lines = parseInt(document.getElementById('line-slider').value);
+  const load = parseInt(document.getElementById('load-slider').value);
+
+  const goal = 2000;
+  const blockSize = 100;
+  const blocks = Math.floor(goal / blockSize);
+  const fullBlocks = Math.floor(power / blockSize);
+  const overBlocks = fullBlocks - blocks;
+
+  const container = document.getElementById("block-container");
+  container.innerHTML = "";
+
+  for (let i = 0; i < blocks; i++) {
+    const b = document.createElement("div");
+    b.className = "block";
+    if (i < fullBlocks) b.style.background = "var(--green)";
+    else b.style.background = "#ddd";
+    container.appendChild(b);
+  }
+
+  if (overBlocks > 0) {
+    const b = document.createElement("div");
+    b.className = "block";
+    b.style.background = "var(--red)";
+    b.textContent = `+${overBlocks}`;
+    container.appendChild(b);
+  }
+
+  const fraction = document.getElementById("power-fraction");
+  fraction.innerHTML = `${power}<br>/ ${goal}`;
+  fraction.style.color = power > goal ? '#e35656' : (power === goal ? '#6EB25A' : '#686868');
+
+  document.getElementById("cost-num").textContent = "$" + cost;
+  document.getElementById("em-num").textContent = emissions;
+  document.getElementById("line-count").textContent = lines;
+  document.getElementById("line-max").textContent = `${load}%`;
+
+  // Checklist
+  const check = (id, passed) => {
+    const el = document.getElementById(id);
+    el.classList.toggle("done", passed);
+    el.textContent = passed ? "×" : "";
+  };
+  const powerOk = power >= 2000;
+  const costOk = cost <= 3000;
+  const emOk = emissions <= 150;
+
+  check("check-power", powerOk);
+  check("check-cost", costOk);
+  check("check-em", emOk);
+
+  const allReady = powerOk && costOk && emOk;
+  const msg = document.getElementById("submit-msg");
+  const btn = document.getElementById("submit-btn");
+
+  msg.style.visibility = allReady ? "visible" : "hidden";
+  btn.classList.toggle("ready", allReady);
+  btn.disabled = !allReady;
+  btn.style.cursor = allReady ? "pointer" : "not-allowed";
+}
+
+['power-slider','cost-slider','em-slider','line-slider','load-slider']
+  .forEach(id => document.getElementById(id).addEventListener("input", updateUI));
+
+updateUI();
+</script>
 
 </body>
 </html>
