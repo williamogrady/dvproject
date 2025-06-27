@@ -5,7 +5,7 @@
   <title>DV Project - MapView</title>
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <style>
+    <style>
 
     .power-block-row {
   display: flex;
@@ -76,81 +76,184 @@
 }
 
 #overview-top {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  align-items: stretch;
+  width: 100%;
 }
 
 #overview-bottom {
   margin-top: 10px;
 }
+</style>
+
+<style>
+#overview {
+  display: flex;
+  flex-direction: row; /* just in case */
+  background: white;
+  border-radius: 20px;
+  padding: 1rem;
+  gap: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  box-sizing: border-box;
+  width: 1204px;
+  margin: auto;
+  opacity: 0.95;
+  align-items: stretch; /* ensures both columns match height */
+}
+
+
+#overview-status-section {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  flex: 1 1 auto;
+}
+
+#overview-task-section {
+  width: 220px;
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* ----------------------------------------
+   GENERAL CARD STRUCTURE + TYPOGRAPHY
+---------------------------------------- */
 
 .overview-card {
-  background: rgba(20, 20, 20, 0.95); /* darker than container */
-  color: white;
-  padding: 10px 14px;
-  border-radius: 10px;
-  min-width: 120px;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-  transition: background 0.2s ease, transform 0.2s ease;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  box-sizing: border-box;
   cursor: pointer;
+  height: 100%;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .overview-card:hover {
-  background: rgba(60, 60, 60, 0.95);
-  transform: translateY(-2px);
+  background: #f5f5f5;
+  transform: translateY(-1px);
 }
 
 .overview-label {
-  font-weight: bold;
-  font-size: 0.9rem;
-  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
 }
 
 .overview-value {
-  font-size: 1.2rem;
-  margin-bottom: 4px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #000;
 }
 
 .overview-status {
   font-size: 0.7rem;
-  color: var(--text-light);
+  text-align: center;
+  color: #666;
+  margin-top: auto;
 }
 
-#overview-bottom {
+
+
+/* ----------------------------------------
+   SPECIFIC CARD LAYOUTS
+---------------------------------------- */
+
+#overview-power {
   display: flex;
+  flex-direction: column;
   justify-content: center;
-  margin-top: 6px;
-}
-
-
-#overview-scenario {
-  background: var(--bg-card);
-  color: var(--text);
-  padding: 8px 20px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  display: inline-flex;
-  gap: 8px;
   align-items: center;
 }
 
-.scenario-label {
-  font-weight: 500;
-  color: var(--text-light);
+#overview-power .overview-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.scenario-name {
+#scale-power {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-lines {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-cost,
+#scale-emissions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: calc(50% - 0.25rem);
+}
+
+#right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  grid-column: 3 / 4;
+}
+
+/* ----------------------------------------
+   TASK SECTION PLACEHOLDER
+---------------------------------------- */
+
+.task-card {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 1rem;
+  box-sizing: border-box;
+  color: #333;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 100%;
+   flex: 1;
+}
+
+.task-title {
+  font-size: 1rem;
   font-weight: bold;
+  margin-bottom: 0.25rem;
 }
 
+.task-subtitle {
+  font-size: 0.8rem;
+  color: #666;
+}
+/* ----------------------------------------
+   VISUAL FEEDBACK (SELECTED STATES)
+---------------------------------------- */
 
 .overview-card.selected {
-  border: 2px solid #42a5f5; /* fallback if no class added */
+  border: 2px solid #42a5f5;
 }
+
+.overview-card.scale-lines.selected {
+  border-color: #42a5f5;
+}
+
 
 .overview-card.scale-power.selected {
   border-color: #4caf50;
@@ -163,6 +266,45 @@
 .overview-card.scale-emissions.selected {
   border-color: #c62828;
 }
+
+/* ----------------------------------------
+   BLOCKS
+---------------------------------------- */
+.blocks {
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;
+  margin-bottom: 0.25rem;
+}
+
+.block {
+  width: 10px;
+  height: 18px;
+  background: var(--green, #6EB25A);
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fraction {
+  font-size: 0.8rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+
+
+
+</style>
+
+
+
+<style>
 
     #admin-controls {
       position: absolute;
@@ -322,14 +464,24 @@
     <svg id="map">
       <g id="zoom-layer"></g>
     </svg>
+    
 
 <div id="overview">
-  <div id="overview-top">
+  <div id="overview-status-section">
     <div class="overview-card" id="scale-power">
-      <div class="overview-label">Power</div>
-      <div class="overview-value" id="overview-power">–</div>
+  <div class="overview-label">Power</div>
+  <div class="overview-value" id="overview-power">
+    <div class="blocks"></div>
+    <div class="fraction">–</div>
+  </div>
       <div class="overview-status" id="status-power">Click to scale</div>
     </div>
+    <div class="overview-card" id="scale-lines">
+  <div class="overview-label">Overloaded Lines</div>
+  <div class="overview-value" id="overview-lines">–</div>
+  <div class="overview-status" id="status-lines"> Click to scale</div>
+</div>
+<div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
     <div class="overview-card" id="scale-cost">
       <div class="overview-label">Cost</div>
       <div class="overview-value" id="overview-cost">–</div>
@@ -340,23 +492,13 @@
       <div class="overview-value" id="overview-emissions">–</div>
       <div class="overview-status" id="status-emissions">Click to scale</div>
     </div>
-    <div class="overview-card" id="mode-lines">
-  <div class="overview-label">Overloaded Lines</div>
-  <div class="overview-value" id="overview-lines">–</div>
-  <div class="overview-status">Click to scale</div>
-</div>
-<div class="overview-card" id="mode-full">
-  <div class="overview-label">Full</div>
-  <div class="overview-value">No Scaling</div>
-  <div class="overview-status">Click to reset visual scaling</div>
-</div>
   </div>
-
-  <div id="overview-bottom">
-    <div id="overview-scenario">
-      <span class="scenario-label">Current Scenario:</span>
-      <span class="scenario-name" id="overview-scenario-name">–</span>
-    </div>
+  </div>
+  <div id="overview-task-section">
+    <div class="task-card">
+  <div class="task-title">Scenario Task</div>
+  <div class="task-subtitle">Requirements and constraints will appear here.</div>
+</div>
   </div>
 </div>
 
@@ -387,7 +529,6 @@
   </div>
 </div>
 
-
   <script>
 const svg = d3.select("#map");
 const svgElement = svg.node();
@@ -406,6 +547,8 @@ let staticNodes = [];
 let currentScenarioId = "";
 let currentScenarioData = null;
 let availableScenarios = [];
+
+let currentMapMode = "";
 
 // Define zoom behavior — same as before
 const zoomBehavior = d3.zoom()
@@ -494,12 +637,15 @@ function renderOverview(gens, scenarioData = {}) {
   const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
   const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
+  const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
 
+  updatePowerBlocks(totalPower, currentScenarioData.target_mw);
+  
   document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
   document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
   document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
-  document.getElementById("overview-scenario-name").textContent = scenarioData.title || currentScenarioId || "–";
+
 }
 
  async function loadScenario(scenarioId) {
@@ -509,7 +655,6 @@ function renderOverview(gens, scenarioData = {}) {
   currentScenarioId = scenarioId;
   currentScenarioData = data;
   currentGenerators = data.generators;
-  let currentMapMode = "full";
 
 
 
@@ -583,7 +728,7 @@ lines.forEach(line => {
   const to = nodes.find(n => n.id === toId);
 
   if (!from || !to || from.type !== "bus" || to.type !== "bus") {
-    console.log("⚠️ Skipping non-bus line:", line.id, from, to);
+    //console.log("⚠️ Skipping non-bus line:", line.id, from, to);
     return;
   }
 
@@ -872,9 +1017,15 @@ bubbleEl.appendChild(maxLabel);
 
 
 function applyMapMode(mode) {
+  // === Reset if the same button is clicked again ===
+  if (mode === currentMapMode) {
+    mode = "full";
+  }
+  currentMapMode = mode;
+
   const isFull = mode === "full";
   const isLines = mode === "lines";
-  const isMetricMode = ["pmax", "cost_per_mw", "emissions_per_mw"].includes(mode);
+  const isMetricMode = ["pmax", "cost_per_mw", "emissions_per_mw", "lines"].includes(mode);
 
   const baseRadius = 30;
   const maxRadius = 75;
@@ -896,14 +1047,19 @@ function applyMapMode(mode) {
   // === Generators ===
   d3.selectAll(".map-gen")
     .transition().duration(500)
-    .attr("r", d => {
-      if (isMetricMode) {
-        const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-        return gen ? sizeScale(gen[mode]) : baseRadius;
-      }
-      return baseRadius;
-    })
-    .attr("opacity", isLines ? 0.2 : 1)
+      .attr("r", d => {
+  if (mode === "lines") {
+    return baseRadius;
+  }
+
+  if (isMetricMode) {
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    return gen ? sizeScale(gen[mode]) : baseRadius;
+  }
+
+  return baseRadius;
+})
+    .attr("opacity", mode === "lines" ? 0.2 : 1)
     .attr("stroke", strokeColor)
     .attr("stroke-width", isMetricMode ? 5 : 3);
 
@@ -923,7 +1079,7 @@ function applyMapMode(mode) {
     .attr("opacity", isLines ? 1 : (isFull ? 1 : 0.2));
 
   // === Buses and Loads ===
-  const busLoadOpacity = mode === "full" ? 1 : 0.2;
+  const busLoadOpacity = isFull ? 1 : 0.2;
 
   d3.selectAll(".map-bus")
     .transition().duration(300)
@@ -944,8 +1100,42 @@ function applyMapMode(mode) {
       return chevronPath(size);
     });
 
-  highlightButton(mode);
+  // === Visual button update ===
+  const buttonIds = {
+  pmax: "scale-power",
+  cost_per_mw: "scale-cost",
+  emissions_per_mw: "scale-emissions",
+  lines: "scale-lines"
+};
+
+const statusIds = {
+  pmax: "status-power",
+  cost_per_mw: "status-cost",
+  emissions_per_mw: "status-emissions",
+  lines: "status-lines"
+};
+
+  Object.keys(buttonIds).forEach(key => {
+    const btn = document.getElementById(buttonIds[key]);
+    const status = document.getElementById(statusIds[key]);
+    if (btn) btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions", "scale-lines");
+    if (status) status.textContent = "Click to scale";
+  });
+
+  if (isMetricMode) {
+    const btn = document.getElementById(buttonIds[mode]);
+    const status = document.getElementById(statusIds[mode]);
+    if (btn) {
+      btn.classList.add("selected");
+      if (mode === "pmax") btn.classList.add("scale-power");
+      if (mode === "cost_per_mw") btn.classList.add("scale-cost");
+      if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
+      if (mode === "lines") btn.classList.add("scale-lines");
+    }
+    if (status) status.textContent = "Currently scaling";
+  }
 }
+
 
 
 svg.on("click", function(event) {
@@ -986,49 +1176,11 @@ function resetGeneratorSizes() {
     .attr("r", 36)
     .attr("opacity", d => d.id === selectedGeneratorId ? 1 : 0);
 
-  highlightButton(null);
   updateGeneratorStrokes();
 }
 
 
 
-
-function highlightButton(mode) {
-  const modes = ["pmax", "cost_per_mw", "emissions_per_mw"];
-  const buttonIds = {
-    pmax: "scale-power",
-    cost_per_mw: "scale-cost",
-    emissions_per_mw: "scale-emissions"
-  };
-  const statusIds = {
-    pmax: "status-power",
-    cost_per_mw: "status-cost",
-    emissions_per_mw: "status-emissions"
-  };
-
-  // Clear all button states and reset texts
-  modes.forEach(m => {
-    const btn = document.getElementById(buttonIds[m]);
-    const status = document.getElementById(statusIds[m]);
-    btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions");
-    if (status) status.textContent = "Click to scale";
-  });
-
-  if (mode && buttonIds[mode]) {
-    const btn = document.getElementById(buttonIds[mode]);
-    const status = document.getElementById(statusIds[mode]);
-    btn.classList.add("selected");
-    if (mode === "pmax") btn.classList.add("scale-power");
-    if (mode === "cost_per_mw") btn.classList.add("scale-cost");
-    if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
-    if (status) status.textContent = "Currently scaling";
-  }
-  const fullCard = document.getElementById("mode-full");
-const fullStatus = fullCard?.querySelector(".overview-status");
-if (fullStatus) {
-  fullStatus.textContent = (mode === "full") ? "Currently showing full layout" : "Click to show full layout";
-}
-}
 
 
   // === Hover & Selection Sync
@@ -1051,8 +1203,7 @@ if (fullStatus) {
     .attr("font-size", "6px")
     .text(d => d.id); */
 
-       document.getElementById("mode-full").onclick = () => applyMapMode("full");
-        document.getElementById("mode-lines").onclick = () => applyMapMode("lines");
+        document.getElementById("scale-lines").onclick = () => applyMapMode("lines");
         document.getElementById("scale-power").onclick = () => applyMapMode("pmax");
         document.getElementById("scale-cost").onclick = () => applyMapMode("cost_per_mw");
         document.getElementById("scale-emissions").onclick = () => applyMapMode("emissions_per_mw");
@@ -1208,6 +1359,47 @@ function updateMapGeneratorsFromScenario() {
   }
 });
   
+function updatePowerBlocks(totalPower, targetPower) {
+  const container = document.querySelector("#overview-power .blocks");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const blockCount = Math.ceil(targetPower);
+  const overAmount = totalPower - targetPower;
+  const showOver = overAmount > 0;
+
+  for (let i = 0; i < blockCount; i++) {
+    const block = document.createElement("div");
+    block.className = "block";
+    if (totalPower >= i + 1) {
+      block.classList.add("full");
+    } else if (totalPower > i) {
+      block.classList.add("partial");
+    } else {
+      block.classList.add("goal");
+    }
+    container.appendChild(block);
+  }
+
+  // Turn last block red if overfilled
+  if (showOver && blockCount > 0) {
+    const lastBlock = container.lastElementChild;
+    if (lastBlock) {
+      lastBlock.className = "block over";
+      lastBlock.textContent = overAmount > 20 ? "!!!" : `+${Math.ceil(overAmount)}`;
+    }
+  }
+
+  // Optional label update
+  const label = document.querySelector("#overview-power .fraction");
+  if (label) {
+    label.textContent = `${Math.round(totalPower)} / ${targetPower}`;
+  }
+}
+
+
+
+
 
   </script>
 </body>

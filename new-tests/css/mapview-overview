@@ -1,0 +1,138 @@
+#overview {
+  display: flex;
+  background: white;
+  border-radius: 20px;
+  padding: 1rem;
+  gap: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  box-sizing: border-box;
+  width: 1204px;
+  margin: auto;
+  opacity: 0.95;
+}
+
+#overview-status-section {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+#overview-task-section {
+  flex: 0 0 200px;
+}
+
+/* ----------------------------------------
+   GENERAL CARD STRUCTURE + TYPOGRAPHY
+---------------------------------------- */
+
+.overview-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 100%;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.overview-card:hover {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+.overview-label {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.overview-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #000;
+}
+
+.overview-status {
+  font-size: 0.7rem;
+  text-align: center;
+  color: #666;
+  margin-top: auto;
+}
+
+
+
+/* ----------------------------------------
+   SPECIFIC CARD LAYOUTS
+---------------------------------------- */
+
+#scale-power {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-lines {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-cost,
+#scale-emissions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: calc(50% - 0.25rem);
+}
+
+#right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  grid-column: 3 / 4;
+}
+
+/* ----------------------------------------
+   TASK SECTION PLACEHOLDER
+---------------------------------------- */
+
+.task-title {
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.task-subtitle {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* ----------------------------------------
+   VISUAL FEEDBACK (SELECTED STATES)
+---------------------------------------- */
+
+.overview-card.selected {
+  border: 2px solid #42a5f5;
+}
+
+.overview-card.scale-power.selected {
+  border-color: #4caf50;
+}
+
+.overview-card.scale-cost.selected {
+  border-color: #f9a825;
+}
+
+.overview-card.scale-emissions.selected {
+  border-color: #c62828;
+}

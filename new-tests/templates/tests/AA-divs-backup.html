@@ -1,0 +1,68 @@
+  <div id="map-container">
+    <svg id="map">
+      <g id="zoom-layer"></g>
+    </svg>
+    
+
+<div id="overview">
+  <div id="overview-status-section">
+    <div class="overview-card" id="scale-power">
+      <div class="overview-label">Power</div>
+      <div class="overview-value" id="overview-power">
+        <div class="blocks" id="block-container"></div>
+        <div class="fraction" id="power-fraction">–</div>
+        </div>
+      <div class="overview-status" id="status-power">Click to scale</div>
+    </div>
+    <div class="overview-card" id="mode-lines">
+  <div class="overview-label">Overloaded Lines</div>
+  <div class="overview-value" id="overview-lines">–</div>
+  <div class="overview-status">Click to scale</div>
+</div>
+<div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
+    <div class="overview-card" id="scale-cost">
+      <div class="overview-label">Cost</div>
+      <div class="overview-value" id="overview-cost">–</div>
+      <div class="overview-status" id="status-cost">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-emissions">
+      <div class="overview-label">Emissions</div>
+      <div class="overview-value" id="overview-emissions">–</div>
+      <div class="overview-status" id="status-emissions">Click to scale</div>
+    </div>
+  </div>
+  </div>
+  <div id="overview-task-section">
+    <div class="task-card">
+  <div class="task-title">Scenario Task</div>
+  <div class="task-subtitle">Requirements and constraints will appear here.</div>
+</div>
+  </div>
+</div>
+
+<div id="map-legend">
+  <div class="legend-title">Legend</div>
+  <div class="legend-item"><span class="legend-symbol generator-on"></span> Generator (On)</div>
+  <div class="legend-item"><span class="legend-symbol generator-off"></span> Generator (Off)</div>
+  <div class="legend-item"><span class="legend-line"></span> Bus</div>
+  <div class="legend-item"><span class="legend-triangle"></span> Load</div>
+  <div class="legend-item"><span class="legend-chevron">➤</span> Line Load</div>
+</div>
+
+
+<div class="bubble" id="bubble"></div>
+
+<div class="admin-panel collapsed" id="adminPanel">
+  <button class="admin-toggle-btn" id="toggleBtn">Show Admin Controls</button>
+  <div class="admin-body" id="adminBody">
+    <label>
+      Scenario:
+      <select id="scenario-select">
+        <!-- Populated by JS -->
+      </select>
+    </label>
+    <button id="reset-button">🔁 Reset</button>
+    <button onclick="window.location.href='/list'">Switch to List View</button>
+    <button id="theme-toggle">🌙 Dark Mode</button>
+  </div>
+</div>
