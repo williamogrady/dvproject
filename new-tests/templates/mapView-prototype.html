@@ -178,19 +178,6 @@
    SPECIFIC CARD LAYOUTS
 ---------------------------------------- */
 
-#overview-power {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-#overview-power .overview-value {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
 #scale-power {
   grid-column: 1 / 2;
   display: flex;
@@ -357,31 +344,59 @@
 /* ----------------------------------------
    BLOCKS
 ---------------------------------------- */
-.blocks {
+/* Container for power value */
+#overview-power {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-family: "Figtree", sans-serif;
+  font-size: 12px;
+}
+
+/* Block container */
+#overview-power .blocks {
   display: flex;
   gap: 2px;
   flex-wrap: nowrap;
-  margin-bottom: 0.25rem;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+  max-width: 200px; /* Adjust as needed for exact width */
 }
 
 .block {
-  width: 10px;
-  height: 18px;
-  background: var(--green, #6EB25A);
-  border-radius: 3px;
-  text-align: center;
-  font-size: 0.7rem;
-  font-weight: bold;
+  width: 18px;      /* 10 blocks * (width + gap) ≈ container width */
+  height: 20px;
+  background: #ccc;
+  border-radius: 2px;
+}
+
+.block.full {
+  background-color: #4caf50;
+}
+
+.block.partial {
+  background-color: #a5d6a7;
+}
+
+.block.goal {
+  background-color: #e0e0e0;
+}
+
+.block.over {
+  background-color: #ef5350;
   color: white;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.fraction {
-  font-size: 0.8rem;
-  text-align: center;
-  font-weight: bold;
 }
 
 
@@ -541,7 +556,6 @@
   opacity: 0;
   pointer-events: none;
 }
-
 
 
   </style>
@@ -734,15 +748,19 @@ async function fetchAllScenarios() {
 
 function renderOverview(gens, scenarioData = {}) {
   totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  console.log("in renderOverview with totalPower:", totalPower)
   totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
   totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
   const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
   const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
 
-  //updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   
-  document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
+  
+  const powerFraction = document.querySelector("#overview-power .fraction");
+if (powerFraction) {
+  powerFraction.textContent = `${Math.round(totalPower)} MW`;
+}
   document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
   document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
@@ -758,9 +776,10 @@ function renderOverview(gens, scenarioData = {}) {
   currentGenerators = data.generators;
 
 
-
+  console.log("calling renderOverview");
   renderOverview(currentGenerators, currentScenarioData || {});
   setupTaskSection(currentScenarioData);
+  updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   updateMapGeneratorsFromScenario(); // Make sure this is called too
   refreshChevrons(data.lines);
 
@@ -1083,6 +1102,7 @@ if (match.pg > 0) {
       .then(res => res.json())
       .then(data => {
         currentGenerators = data.generators;
+          console.log("calling renderOverview");
         renderOverview(data.generators, currentScenarioData, data.total_cost, data.solved);
         updateMapGeneratorsFromScenario();
         updateGeneratorHalos();
@@ -1412,6 +1432,7 @@ function createBlock(level, isHalf, gen) {
     .then(res => res.json())
     .then(data => {
       currentGenerators = data.generators;
+      console.log("calling renderOverview");
       renderOverview(data.generators, currentScenarioData, data.total_cost, data.solved);
       updateMapGeneratorsFromScenario();
       updateGeneratorHalos();
@@ -1462,20 +1483,44 @@ function updateMapGeneratorsFromScenario() {
 });
   
 function updatePowerBlocks(totalPower, targetPower) {
+  console.log("🧪 updatePowerBlocks called");
+  console.log("   ⚡ totalPower:", totalPower);
+  console.log("   🎯 targetPower:", targetPower);
+
   const container = document.querySelector("#overview-power .blocks");
-  if (!container) return;
+  const label = document.querySelector("#overview-power .fraction");
+
+  if (!container) {
+    console.warn("⚠️ .blocks container not found in #overview-power");
+    return;
+  } else {
+    console.log("✅ Found .blocks container");
+  }
+
+  if (!label) {
+    console.warn("⚠️ .fraction label not found in #overview-power");
+  } else {
+    console.log("✅ Found .fraction label");
+  }
+
   container.innerHTML = "";
 
-  const blockCount = Math.ceil(targetPower);
+  const blockSize = 100; // MW per block
+  const blockCount = Math.ceil(targetPower / blockSize);
+  const scaledTotal = totalPower / blockSize;
   const overAmount = totalPower - targetPower;
   const showOver = overAmount > 0;
+
+  console.log("🔢 blockCount:", blockCount);
+  console.log("📈 overAmount:", overAmount);
+  console.log("📦 showOver:", showOver);
 
   for (let i = 0; i < blockCount; i++) {
     const block = document.createElement("div");
     block.className = "block";
-    if (totalPower >= i + 1) {
+    if (scaledTotal >= i + 1) {
       block.classList.add("full");
-    } else if (totalPower > i) {
+    } else if (scaledTotal > i) {
       block.classList.add("partial");
     } else {
       block.classList.add("goal");
@@ -1483,22 +1528,18 @@ function updatePowerBlocks(totalPower, targetPower) {
     container.appendChild(block);
   }
 
-  // Turn last block red if overfilled
   if (showOver && blockCount > 0) {
     const lastBlock = container.lastElementChild;
     if (lastBlock) {
       lastBlock.className = "block over";
-      lastBlock.textContent = overAmount > 20 ? "!!!" : `+${Math.ceil(overAmount)}`;
+      lastBlock.textContent = overAmount > 2000 ? "!!!" : `+${Math.ceil(overAmount / 100)}`;
     }
   }
 
-  // Optional label update
-  const label = document.querySelector("#overview-power .fraction");
   if (label) {
     label.textContent = `${Math.round(totalPower)} / ${targetPower}`;
   }
 
-  evaluateScenarioState(currentScenarioData, data.lines)
 }
 
 function setupTaskSection(scenario) {
@@ -1546,8 +1587,6 @@ function setupTaskSection(scenario) {
     </div>
   `;
 
-  // Wire up evaluation logic
-  evaluateScenarioState(scenario, data.lines);
 }
 
 
