@@ -6,6 +6,7 @@
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
 
     .power-block-row {
   display: flex;
@@ -100,7 +101,7 @@
   gap: 1rem;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
   box-sizing: border-box;
-  width: 1204px;
+  width: 1500px;
   margin: auto;
   opacity: 0.95;
   align-items: stretch; /* ensures both columns match height */
@@ -111,15 +112,20 @@
   display: grid;
   grid-template-columns: 3fr 2fr 2fr;
   gap: 1rem;
-  flex: 1 1 auto;
+  flex: 0 0 68%;
 }
 
 #overview-task-section {
   width: 220px;
-  flex: 0 0 220px;
+  flex: 1 1 32%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+}
+
+#overview-task-section, 
+#overview-task-section * {
+  font-family: 'Figtree', sans-serif;
 }
 
 /* ----------------------------------------
@@ -127,6 +133,7 @@
 ---------------------------------------- */
 
 .overview-card {
+  font-family: "Figtree", sans-serif;
   background: white;
   border-radius: 12px;
   box-shadow: 0 3px 6px rgba(0,0,0,0.1);
@@ -221,26 +228,106 @@
 .task-card {
   background: #f8f8f8;
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0.8rem 1rem;
   box-sizing: border-box;
   color: #333;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.task-content {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.task-left,
+.task-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Specific styling for task section title card */
+.overview-card.task-card {
+  padding: 0.6rem 0.75rem;
   gap: 0.5rem;
-  min-height: 100%;
-   flex: 1;
 }
 
-.task-title {
-  font-size: 1rem;
-  font-weight: bold;
-  margin-bottom: 0.25rem;
+.task-card .task-title {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
 }
-
 .task-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  color: #777;
+  margin-bottom: 0.3rem;
+}
+
+#task-requirements .task-title,
+#task-constraints .task-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+#task-requirements {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+#task-requirements li {
+  font-weight: bold;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+#task-constraints div {
+  font-weight: bold;
+  font-size: 0.75rem;
+  color: #333;
+  margin: 0.2rem 0;
+}
+
+.task-submit-row {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+#submit-button {
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  background-color: #ccc;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  font-size: 0.75rem;
+  cursor: not-allowed;
+  transition: background-color 0.2s ease;
+}
+
+#submit-button.enabled {
+  background-color: #4caf50;
+  cursor: pointer;
+}
+
+.task-placeholder {
+  font-style: italic;
+  font-size: 0.85rem;
   color: #666;
+  padding: 0.5rem 0;
 }
 /* ----------------------------------------
    VISUAL FEEDBACK (SELECTED STATES)
@@ -495,11 +582,21 @@
   </div>
   </div>
   <div id="overview-task-section">
-    <div class="task-card">
-  <div class="task-title">Scenario Task</div>
-  <div class="task-subtitle">Requirements and constraints will appear here.</div>
-</div>
+  <div class="task-card">
+    <div class="overview-label">Scenario Task</div>
+    <div id="task-placeholder" class="task-placeholder">
+      No Scenario Loaded
+    </div>
   </div>
+</div>
+    </div>
+
+    <div class="task-submit-row">
+      <button id="submit-button" disabled>Submit Solution</button>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <div id="map-legend">
@@ -537,6 +634,10 @@ const zoomGroup = svg.append("g").attr("id", "zoom-group");
 
 const bubble = d3.select("#bubble");
 let selectedGeneratorId = null;
+
+let totalPower = 0;
+let totalCost = 0;
+let totalEmissions = 0;
 
 let currentScaleMode = null;
 let currentGenerators = [];
@@ -632,14 +733,14 @@ async function fetchAllScenarios() {
     }
 
 function renderOverview(gens, scenarioData = {}) {
-  const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
-  const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
-  const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+  totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+  totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
   const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
   const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
 
-  updatePowerBlocks(totalPower, currentScenarioData.target_mw);
+  //updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   
   document.getElementById("overview-power").textContent = `${totalPower.toFixed(0)} MW`;
   document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
@@ -659,6 +760,7 @@ function renderOverview(gens, scenarioData = {}) {
 
 
   renderOverview(currentGenerators, currentScenarioData || {});
+  setupTaskSection(currentScenarioData);
   updateMapGeneratorsFromScenario(); // Make sure this is called too
   refreshChevrons(data.lines);
 
@@ -1395,8 +1497,83 @@ function updatePowerBlocks(totalPower, targetPower) {
   if (label) {
     label.textContent = `${Math.round(totalPower)} / ${targetPower}`;
   }
+
+  evaluateScenarioState(currentScenarioData, data.lines)
 }
 
+function setupTaskSection(scenario) {
+  const container = document.getElementById("overview-task-section");
+  const hasBudget = scenario.max_cost !== undefined && scenario.max_cost !== null;
+  const hasDisabledGens = Array.isArray(scenario.disabled_gens) && scenario.disabled_gens.length > 0;
+
+  container.innerHTML = `
+    <div class="task-card">
+      <div class="overview-label">Scenario Task</div>
+      <div class="task-card" id="task-checklist">
+        <div class="task-content">
+          <!-- LEFT COLUMN: REQUIREMENTS -->
+          <div class="task-left">
+            <div class="task-title">Requirements</div>
+            <ul id="task-requirements">
+              <li><input type="checkbox" disabled id="check-power" /> Meet target power</li>
+              <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
+              ${hasBudget
+                ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>`
+                : ``}
+            </ul>
+          </div>
+
+          <!-- RIGHT COLUMN: CONSTRAINTS -->
+          <div class="task-right">
+            <div class="task-title">Scenario Constraints</div>
+            <div class="task-subtitle" id="task-constraints">
+              <div>Target: <span id="constraint-power">${scenario.target_mw ?? "–"}</span> MW</div>
+              ${hasBudget
+                ? `<div id="constraint-cost-container">Max Cost: <span id="constraint-cost">${scenario.max_cost}</span> $</div>`
+                : ``}
+              ${hasDisabledGens
+                ? `<div><img src="img/locked.png" style="height: 14px; vertical-align: middle;" /> Certain generators are locked</div>`
+                : ``}
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        <div class="task-submit-row">
+          <button id="submit-button" disabled>Submit Solution</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up evaluation logic
+  evaluateScenarioState(scenario, data.lines);
+}
+
+
+function evaluateScenarioState(scenario, lines) {
+  const meetsPower = totalPower >= scenario.target_mw;
+  const meetsLines = !lines.some(line => line.flow > line.rate_a);
+  const meetsBudget = !scenario.max_cost || totalCost <= scenario.max_cost;
+
+  // Update checkboxes
+  document.getElementById("check-power").checked = meetsPower;
+  document.getElementById("check-lines").checked = meetsLines;
+  if (scenario.max_cost !== undefined && document.getElementById("check-budget")) {
+    document.getElementById("check-budget").checked = meetsBudget;
+  }
+
+  // Enable submit if all required are met
+  const allMet = meetsPower && meetsLines && (scenario.max_cost ? meetsBudget : true);
+  const submitBtn = document.getElementById("submit-button");
+  submitBtn.disabled = !allMet;
+
+  if (allMet) {
+    submitBtn.classList.add("active");
+  } else {
+    submitBtn.classList.remove("active");
+  }
+}
 
 
 
