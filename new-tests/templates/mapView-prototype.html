@@ -707,7 +707,9 @@ function drawSelectedGeneratorHalo() {
 
   const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
   if (!selected.empty()) {
-    const { cx, cy } = selected.node();
+    const node = selected.node();
+    const cx = +node.getAttribute("cx");
+    const cy = +node.getAttribute("cy");
     const r = +selected.attr("r");
 
     zoomGroup
@@ -715,9 +717,8 @@ function drawSelectedGeneratorHalo() {
       .attr("class", "map-gen-highlight")
       .attr("cx", cx)
       .attr("cy", cy)
-      .attr("r", r + 6)
-      .attr("opacity", 0)
       .attr("r", 0)
+      .attr("opacity", 0)
       .attr("stroke", "blue")
       .attr("fill", "none")
       .attr("stroke-width", 2)
@@ -764,7 +765,8 @@ if (powerFraction) {
   document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
   document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
-
+  updatePowerBlocks(totalPower, currentScenarioData.target_mw)
+  
 }
 
  async function loadScenario(scenarioId) {
@@ -777,11 +779,10 @@ if (powerFraction) {
 
 
   console.log("calling renderOverview");
-  renderOverview(currentGenerators, currentScenarioData || {});
   setupTaskSection(currentScenarioData);
-  updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   updateMapGeneratorsFromScenario(); // Make sure this is called too
   refreshChevrons(data.lines);
+  renderOverview(currentGenerators, currentScenarioData || {});
 
 }
 
@@ -829,7 +830,7 @@ function updateMapGeneratorsFromScenario() {
   });
 
   drawSelectedGeneratorHalo();
-
+  
 }
 
 function drawChevrons(lines, nodes) {
@@ -1516,17 +1517,22 @@ function updatePowerBlocks(totalPower, targetPower) {
   console.log("📦 showOver:", showOver);
 
   for (let i = 0; i < blockCount; i++) {
-    const block = document.createElement("div");
-    block.className = "block";
-    if (scaledTotal >= i + 1) {
-      block.classList.add("full");
-    } else if (scaledTotal > i) {
-      block.classList.add("partial");
-    } else {
-      block.classList.add("goal");
-    }
-    container.appendChild(block);
+  const block = document.createElement("div");
+  block.className = "block";
+
+  if (totalPower >= (i + 1) * 100) {
+    block.classList.add("full");
+    console.log(`🟩 Block ${i + 1}: full`);
+  } else if (totalPower > i * 100) {
+    block.classList.add("partial");
+    console.log(`🟨 Block ${i + 1}: partial`);
+  } else {
+    block.classList.add("goal");
+    console.log(`⬜ Block ${i + 1}: goal`);
   }
+
+  container.appendChild(block);
+}
 
   if (showOver && blockCount > 0) {
     const lastBlock = container.lastElementChild;
@@ -1595,24 +1601,49 @@ function evaluateScenarioState(scenario, lines) {
   const meetsLines = !lines.some(line => line.flow > line.rate_a);
   const meetsBudget = !scenario.max_cost || totalCost <= scenario.max_cost;
 
-  // Update checkboxes
-  document.getElementById("check-power").checked = meetsPower;
-  document.getElementById("check-lines").checked = meetsLines;
-  if (scenario.max_cost !== undefined && document.getElementById("check-budget")) {
-    document.getElementById("check-budget").checked = meetsBudget;
+  console.log("🔎 Evaluating scenario state:");
+  console.log("   ⚡ totalPower:", totalPower, "→ meetsPower:", meetsPower);
+  console.log("   🔌 line overload check:", meetsLines ? "✅ OK" : "❌ Overloaded");
+  console.log("   💸 totalCost:", totalCost, "/", scenario.max_cost, "→ meetsBudget:", meetsBudget);
+
+  const powerCheckbox = document.getElementById("check-power");
+  const linesCheckbox = document.getElementById("check-lines");
+  const budgetCheckbox = document.getElementById("check-budget");
+
+  if (powerCheckbox) {
+    powerCheckbox.checked = meetsPower;
+    console.log("   📥 check-power checkbox updated:", meetsPower);
+  } else {
+    console.warn("⚠️ check-power checkbox not found");
   }
 
-  // Enable submit if all required are met
+  if (linesCheckbox) {
+    linesCheckbox.checked = meetsLines;
+    console.log("   📥 check-lines checkbox updated:", meetsLines);
+  } else {
+    console.warn("⚠️ check-lines checkbox not found");
+  }
+
+  if (budgetCheckbox && scenario.max_cost !== undefined) {
+    budgetCheckbox.checked = meetsBudget;
+    console.log("   📥 check-budget checkbox updated:", meetsBudget);
+  } else if (scenario.max_cost !== undefined) {
+    console.warn("⚠️ check-budget checkbox not found");
+  }
+
   const allMet = meetsPower && meetsLines && (scenario.max_cost ? meetsBudget : true);
   const submitBtn = document.getElementById("submit-button");
-  submitBtn.disabled = !allMet;
 
-  if (allMet) {
-    submitBtn.classList.add("active");
+  if (submitBtn) {
+    submitBtn.disabled = !allMet;
+    submitBtn.classList.toggle("active", allMet);
+    console.log("   🚀 submit button active:", allMet);
   } else {
-    submitBtn.classList.remove("active");
+    console.warn("⚠️ submit-button not found");
   }
 }
+
+
 
 
 
