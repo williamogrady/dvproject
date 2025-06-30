@@ -305,10 +305,21 @@
   transition: background-color 0.2s ease;
 }
 
-#submit-button.enabled {
-  background-color: #4caf50;
+#submit-button.active {
+  background-color: #4CAF50; /* Green */
+  color: white;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: all 0.2s ease-in-out;
 }
+
+#submit-button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 
 .task-placeholder {
   font-style: italic;
@@ -399,7 +410,49 @@
   justify-content: center;
 }
 
+/* ----------------------------------------
+   RESULTS
+---------------------------------------- */
 
+.results-box {
+  background: white;
+  color: #222;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  font-family: "Figtree", sans-serif;
+  text-align: center;
+  width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.results-title {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.results-summary p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.results-close {
+  margin-top: 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: "Figtree", sans-serif;
+}
+
+.results-close:hover {
+  background: #45a049;
+}
 
 
 </style>
@@ -655,6 +708,7 @@ let totalEmissions = 0;
 
 let currentScaleMode = null;
 let currentGenerators = [];
+let currentLines = [];
 
 let staticLines = [];
 let staticNodes = [];
@@ -663,7 +717,7 @@ let currentScenarioId = "";
 let currentScenarioData = null;
 let availableScenarios = [];
 
-let currentMapMode = "";
+let currentMapMode = "full";
 
 // Define zoom behavior — same as before
 const zoomBehavior = d3.zoom()
@@ -747,13 +801,13 @@ async function fetchAllScenarios() {
       }
     }
 
-function renderOverview(gens, scenarioData = {}) {
+function renderOverview(gens, scenarioData = {}, lines) {
   totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
   console.log("in renderOverview with totalPower:", totalPower)
   totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
   totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
-  const overloaded = (scenarioData.lines || []).filter(l => l.overloaded).length;
+  const overloaded = lines.filter(line => line.flow > line.rate_a).length;
   const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
 
   
@@ -766,6 +820,11 @@ if (powerFraction) {
   document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
   updatePowerBlocks(totalPower, currentScenarioData.target_mw)
+  evaluateScenarioState(scenarioData, lines)
+  if (lines) {
+    console.log("🔁 Refreshing chevrons with updated line data");
+    refreshChevrons(lines, currentMapMode);
+  }
   
 }
 
@@ -776,13 +835,13 @@ if (powerFraction) {
   currentScenarioId = scenarioId;
   currentScenarioData = data;
   currentGenerators = data.generators;
+  currentLines = data.lines;
 
 
   console.log("calling renderOverview");
   setupTaskSection(currentScenarioData);
   updateMapGeneratorsFromScenario(); // Make sure this is called too
-  refreshChevrons(data.lines);
-  renderOverview(currentGenerators, currentScenarioData || {});
+  renderOverview(currentGenerators, currentScenarioData || {}, currentLines);
 
 }
 
@@ -832,34 +891,21 @@ function updateMapGeneratorsFromScenario() {
   drawSelectedGeneratorHalo();
   
 }
-
-function drawChevrons(lines, nodes) {
-  console.log("in drawChevrons")
+function drawChevrons(lines, nodes, mode) {
+  console.log("drawChevrons with mode:", mode)
   const chevronGroup = zoomGroup.append("g").attr("id", "chevron-layer");
 
-lines.forEach(line => {
-  const fromId = line.source;
-  const toId = line.target;
+  lines.forEach(line => {
+    const fromId = line.source;
+    const toId = line.target;
+    if (!fromId || !toId) return;
 
-  if (!fromId || !toId) {
-    console.log("⚠️ Missing source or target for line:", line.id);
-    return;
-  }
+    const from = nodes.find(n => n.id === fromId);
+    const to = nodes.find(n => n.id === toId);
+    if (!from || !to || from.type !== "bus" || to.type !== "bus") return;
 
-  const from = nodes.find(n => n.id === fromId);
-  const to = nodes.find(n => n.id === toId);
-
-  if (!from || !to || from.type !== "bus" || to.type !== "bus") {
-    //console.log("⚠️ Skipping non-bus line:", line.id, from, to);
-    return;
-  }
-
-  const path = document.getElementById(line.id);
-  if (!path) {
-    console.log("⚠️ Line path not found in DOM for:", line.id);
-    return;
-  }
-
+    const path = document.getElementById(line.id);
+    if (!path) return;
 
     const totalLength = path.getTotalLength();
     const pointA = path.getPointAtLength(totalLength * 0.45);
@@ -869,26 +915,25 @@ lines.forEach(line => {
     const midX = (pointA.x + pointB.x) / 2;
     const midY = (pointA.y + pointB.y) / 2;
 
-    const baseSize = 10;
+    const load = line.rate_a > 0 ? line.flow / line.rate_a : 0;
+    const color = getLoadColor(load);
 
-    const pct = line.rate_a > 0 ? line.flow / line.rate_a : 0;
-    const color = getLoadColor(pct);
+    // 🔄 Logic based on string mode
+    const scale = mode === "lines" ? Math.min(1.5, load) : 1;
+    const baseSize = Math.max(10, 6 * scale);
 
-chevronGroup.append("path")
-  .datum(line) // ✅ This makes scaleChevronsByLoad() easier
-  .attr("class", "chevron")
-  .attr("d", chevronPath(baseSize))
-  .attr("data-pct", pct)  // Optional: store for later use if needed
-  .attr("fill", color)
-  .attr("opacity", 0.95)
-  .attr("stroke", "#111")
-  .attr("stroke-width", 0.4)
-  .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
-
-
-    console.log("has gone past the append part")
+    chevronGroup.append("path")
+      .datum(line)
+      .attr("class", "chevron")
+      .attr("d", chevronPath(baseSize))
+      .attr("fill", color)
+      .attr("opacity", 0.95)
+      .attr("stroke", "#111")
+      .attr("stroke-width", 0.4)
+      .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
   });
 }
+
 
 
 function chevronPath(scale) {
@@ -904,7 +949,9 @@ function chevronPath(scale) {
   `;
 }
 
-function refreshChevrons(liveLines) {
+function refreshChevrons(liveLines, currentMapMode) {
+  console.log("refreshChevrons called with mode:", currentMapMode);
+
   const enrichedLines = staticLines.map(line => {
     const live = liveLines.find(l =>
       `Bus${l.from_bus}` === line.source && `Bus${l.to_bus}` === line.target
@@ -918,8 +965,9 @@ function refreshChevrons(liveLines) {
   });
 
   d3.select("#chevron-layer").remove();
-  drawChevrons(enrichedLines, staticNodes);
+  drawChevrons(enrichedLines, staticNodes, currentMapMode); // Pass mode
 }
+
 
 
 
@@ -1103,12 +1151,11 @@ if (match.pg > 0) {
       .then(res => res.json())
       .then(data => {
         currentGenerators = data.generators;
+        currentLines = data.lines;
           console.log("calling renderOverview");
-        renderOverview(data.generators, currentScenarioData, data.total_cost, data.solved);
+        renderOverview(currentGenerators, currentScenarioData, currentLines);
         updateMapGeneratorsFromScenario();
         updateGeneratorHalos();
-
-        refreshChevrons(data.lines);
 
         const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
         if (!selected.empty()) {
@@ -1145,6 +1192,7 @@ function applyMapMode(mode) {
     mode = "full";
   }
   currentMapMode = mode;
+  console.log("Applying map mode:", mode);
 
   const isFull = mode === "full";
   const isLines = mode === "lines";
@@ -1433,8 +1481,9 @@ function createBlock(level, isHalf, gen) {
     .then(res => res.json())
     .then(data => {
       currentGenerators = data.generators;
+      currentLines = data.lines;
       console.log("calling renderOverview");
-      renderOverview(data.generators, currentScenarioData, data.total_cost, data.solved);
+      renderOverview(currentGenerators, currentScenarioData, currentLines);
       updateMapGeneratorsFromScenario();
       updateGeneratorHalos();
 
@@ -1484,9 +1533,9 @@ function updateMapGeneratorsFromScenario() {
 });
   
 function updatePowerBlocks(totalPower, targetPower) {
-  console.log("🧪 updatePowerBlocks called");
-  console.log("   ⚡ totalPower:", totalPower);
-  console.log("   🎯 targetPower:", targetPower);
+  //console.log("🧪 updatePowerBlocks called");
+  //console.log("   ⚡ totalPower:", totalPower);
+  //console.log("   🎯 targetPower:", targetPower);
 
   const container = document.querySelector("#overview-power .blocks");
   const label = document.querySelector("#overview-power .fraction");
@@ -1495,13 +1544,13 @@ function updatePowerBlocks(totalPower, targetPower) {
     console.warn("⚠️ .blocks container not found in #overview-power");
     return;
   } else {
-    console.log("✅ Found .blocks container");
+    //console.log("✅ Found .blocks container");
   }
 
   if (!label) {
     console.warn("⚠️ .fraction label not found in #overview-power");
   } else {
-    console.log("✅ Found .fraction label");
+    //console.log("✅ Found .fraction label");
   }
 
   container.innerHTML = "";
@@ -1512,9 +1561,9 @@ function updatePowerBlocks(totalPower, targetPower) {
   const overAmount = totalPower - targetPower;
   const showOver = overAmount > 0;
 
-  console.log("🔢 blockCount:", blockCount);
-  console.log("📈 overAmount:", overAmount);
-  console.log("📦 showOver:", showOver);
+  //console.log("🔢 blockCount:", blockCount);
+  //console.log("📈 overAmount:", overAmount);
+  //console.log("📦 showOver:", showOver);
 
   for (let i = 0; i < blockCount; i++) {
   const block = document.createElement("div");
@@ -1522,13 +1571,13 @@ function updatePowerBlocks(totalPower, targetPower) {
 
   if (totalPower >= (i + 1) * 100) {
     block.classList.add("full");
-    console.log(`🟩 Block ${i + 1}: full`);
+    //console.log(`🟩 Block ${i + 1}: full`);
   } else if (totalPower > i * 100) {
     block.classList.add("partial");
-    console.log(`🟨 Block ${i + 1}: partial`);
+    //console.log(`🟨 Block ${i + 1}: partial`);
   } else {
     block.classList.add("goal");
-    console.log(`⬜ Block ${i + 1}: goal`);
+    //console.log(`⬜ Block ${i + 1}: goal`);
   }
 
   container.appendChild(block);
@@ -1593,6 +1642,11 @@ function setupTaskSection(scenario) {
     </div>
   `;
 
+  document.getElementById("submit-button").addEventListener("click", () => {
+  if (document.getElementById("submit-button").disabled) return;
+
+  showResultOverlay(totalPower, totalCost, totalEmissions);
+});
 }
 
 
@@ -1601,10 +1655,10 @@ function evaluateScenarioState(scenario, lines) {
   const meetsLines = !lines.some(line => line.flow > line.rate_a);
   const meetsBudget = !scenario.max_cost || totalCost <= scenario.max_cost;
 
-  console.log("🔎 Evaluating scenario state:");
-  console.log("   ⚡ totalPower:", totalPower, "→ meetsPower:", meetsPower);
-  console.log("   🔌 line overload check:", meetsLines ? "✅ OK" : "❌ Overloaded");
-  console.log("   💸 totalCost:", totalCost, "/", scenario.max_cost, "→ meetsBudget:", meetsBudget);
+  console.log("🔎 Evaluating scenario state!");
+  //console.log("   ⚡ totalPower:", totalPower, "→ meetsPower:", meetsPower);
+  //console.log("   🔌 line overload check:", meetsLines ? "✅ OK" : "❌ Overloaded");
+  //console.log("   💸 totalCost:", totalCost, "/", scenario.max_cost, "→ meetsBudget:", meetsBudget);
 
   const powerCheckbox = document.getElementById("check-power");
   const linesCheckbox = document.getElementById("check-lines");
@@ -1612,21 +1666,21 @@ function evaluateScenarioState(scenario, lines) {
 
   if (powerCheckbox) {
     powerCheckbox.checked = meetsPower;
-    console.log("   📥 check-power checkbox updated:", meetsPower);
+    //console.log("   📥 check-power checkbox updated:", meetsPower);
   } else {
     console.warn("⚠️ check-power checkbox not found");
   }
 
   if (linesCheckbox) {
     linesCheckbox.checked = meetsLines;
-    console.log("   📥 check-lines checkbox updated:", meetsLines);
+    //console.log("   📥 check-lines checkbox updated:", meetsLines);
   } else {
     console.warn("⚠️ check-lines checkbox not found");
   }
 
   if (budgetCheckbox && scenario.max_cost !== undefined) {
     budgetCheckbox.checked = meetsBudget;
-    console.log("   📥 check-budget checkbox updated:", meetsBudget);
+    //console.log("   📥 check-budget checkbox updated:", meetsBudget);
   } else if (scenario.max_cost !== undefined) {
     console.warn("⚠️ check-budget checkbox not found");
   }
@@ -1634,18 +1688,48 @@ function evaluateScenarioState(scenario, lines) {
   const allMet = meetsPower && meetsLines && (scenario.max_cost ? meetsBudget : true);
   const submitBtn = document.getElementById("submit-button");
 
-  if (submitBtn) {
-    submitBtn.disabled = !allMet;
-    submitBtn.classList.toggle("active", allMet);
-    console.log("   🚀 submit button active:", allMet);
+    if (allMet) {
+    submitBtn.classList.add("active");
+    submitBtn.disabled = false;
   } else {
-    console.warn("⚠️ submit-button not found");
+    submitBtn.classList.remove("active");
+    submitBtn.disabled = true;
   }
 }
 
+function showResultOverlay() {
+  const overlay = document.createElement("div");
+  overlay.id = "result-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.background = "rgba(0, 0, 0, 0.6)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.zIndex = "999";
 
+  const box = document.createElement("div");
+  box.className = "results-box";
+  box.innerHTML = `
+    <h2 class="results-title">✅ Scenario Complete</h2>
+    <div class="results-summary">
+      <p><strong>⚡ Power:</strong> ${Math.round(totalPower)} MW</p>
+      <p><strong>💲 Cost:</strong> $${Math.round(totalCost)}</p>
+      <p><strong>🫧 Emissions:</strong> ${Math.round(totalEmissions)} tCO₂</p>
+    </div>
+    <button class="results-close" id="close-overlay">Close</button>
+  `;
 
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 
+  document.getElementById("close-overlay").addEventListener("click", () => {
+    overlay.remove();
+  });
+}
 
 
   </script>
