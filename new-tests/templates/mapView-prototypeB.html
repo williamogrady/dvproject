@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DV Project - MapView B</title>
+  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
+
+    .power-block-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.power-block {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--gen-off, #444);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.power-block-row .power-block[style*="background: var(--gen-on)"] {
+  background: var(--gen-on);
+}
+
+.map-load {
+  fill: #5878cf;
+}
+
+
+:root {
+  --gen-on: #4caf50;
+  --gen-off: #333;
+}
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    #map-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    svg#map {
+      width: 100%;
+      height: 100%;
+      background: #dfcfcf;
+    }
+
+#overview {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+  padding: 10px 20px;
+  background: rgba(40, 40, 40, 0.85); /* translucent wrapper */
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+#overview-top {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  align-items: stretch;
+  width: 100%;
+}
+
+#overview-bottom {
+  margin-top: 10px;
+}
+</style>
+
+<style>
+#overview {
+  display: flex;
+  flex-direction: row; /* just in case */
+  background: white;
+  border-radius: 20px;
+  padding: 1rem;
+  gap: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  box-sizing: border-box;
+  width: 1500px;
+  margin: auto;
+  opacity: 0.95;
+  align-items: stretch; /* ensures both columns match height */
+}
+
+
+#overview-status-section {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  flex: 0 0 68%;
+}
+
+#overview-task-section {
+  width: 220px;
+  flex: 1 1 32%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+#overview-task-section, 
+#overview-task-section * {
+  font-family: 'Figtree', sans-serif;
+}
+
+/* ----------------------------------------
+   GENERAL CARD STRUCTURE + TYPOGRAPHY
+---------------------------------------- */
+
+.overview-card {
+  font-family: "Figtree", sans-serif;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 100%;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.overview-card:hover {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+.overview-label {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.overview-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #000;
+}
+
+.overview-status {
+  font-size: 0.7rem;
+  text-align: center;
+  color: #666;
+  margin-top: auto;
+}
+
+
+
+/* ----------------------------------------
+   SPECIFIC CARD LAYOUTS
+---------------------------------------- */
+
+#scale-power {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-lines {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-cost,
+#scale-emissions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: calc(50% - 0.25rem);
+}
+
+#right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  grid-column: 3 / 4;
+}
+
+/* ----------------------------------------
+   TASK SECTION PLACEHOLDER
+---------------------------------------- */
+
+.task-card {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  box-sizing: border-box;
+  color: #333;
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.task-content {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.task-left,
+.task-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Specific styling for task section title card */
+.overview-card.task-card {
+  padding: 0.6rem 0.75rem;
+  gap: 0.5rem;
+}
+
+.task-card .task-title {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
+}
+.task-subtitle {
+  font-size: 0.7rem;
+  color: #777;
+  margin-bottom: 0.3rem;
+}
+
+#task-requirements .task-title,
+#task-constraints .task-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+#task-requirements {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+#task-requirements li {
+  font-weight: bold;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+#task-constraints div {
+  font-weight: bold;
+  font-size: 0.75rem;
+  color: #333;
+  margin: 0.2rem 0;
+}
+
+.task-submit-row {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+#submit-button {
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  background-color: #ccc;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  font-size: 0.75rem;
+  cursor: not-allowed;
+  transition: background-color 0.2s ease;
+}
+
+#submit-button.active {
+  background-color: #4CAF50; /* Green */
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: all 0.2s ease-in-out;
+}
+
+#submit-button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+.task-placeholder {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #666;
+  padding: 0.5rem 0;
+}
+/* ----------------------------------------
+   VISUAL FEEDBACK (SELECTED STATES)
+---------------------------------------- */
+
+.overview-card.selected {
+  border: 2px solid #42a5f5;
+}
+
+.overview-card.scale-lines.selected {
+  border-color: #42a5f5;
+}
+
+
+.overview-card.scale-power.selected {
+  border-color: #4caf50;
+}
+
+.overview-card.scale-cost.selected {
+  border-color: #f9a825;
+}
+
+.overview-card.scale-emissions.selected {
+  border-color: #c62828;
+}
+
+/* ----------------------------------------
+   BLOCKS
+---------------------------------------- */
+/* Container for power value */
+#overview-power {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-family: "Figtree", sans-serif;
+  font-size: 12px;
+}
+
+/* Block container */
+#overview-power .blocks {
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+  max-width: 200px; /* Adjust as needed for exact width */
+}
+
+.block {
+  width: 18px;      /* 10 blocks * (width + gap) ≈ container width */
+  height: 20px;
+  background: #ccc;
+  border-radius: 2px;
+}
+
+.block.full {
+  background-color: #4caf50;
+}
+
+.block.partial {
+  background-color: #a5d6a7;
+}
+
+.block.goal {
+  background-color: #e0e0e0;
+}
+
+.block.over {
+  background-color: #ef5350;
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ----------------------------------------
+   RESULTS
+---------------------------------------- */
+
+.results-box {
+  background: white;
+  color: #222;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  font-family: "Figtree", sans-serif;
+  text-align: center;
+  width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.results-title {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.results-summary p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.results-close {
+  margin-top: 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: "Figtree", sans-serif;
+}
+
+.results-close:hover {
+  background: #45a049;
+}
+
+
+</style>
+
+
+
+<style>
+
+    #admin-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 15;
+      background: var(--bg-card);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+
+
+#map-legend {
+  position: fixed;
+  left: 20px;
+  bottom: 80px; /* space above admin panel */
+  background: rgba(40, 40, 40, 0.85);
+  padding: 10px 14px;
+  border: 1px solid #bbb;
+  border-radius: 12px;
+  font-family: sans-serif;
+  font-size: 12px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 19;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin: 2px 0;
+}
+
+.legend-symbol,
+.legend-line,
+.legend-triangle,
+.legend-chevron {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.generator-on {
+  background-color: #4caf50;
+  border: 1px solid #333;
+}
+
+.generator-off {
+  background-color: white;
+  border: 1px solid #333;
+}
+
+.legend-line {
+  width: 18px;
+  height: 4px;
+  background-color: grey;
+  border-radius: 2px;
+}
+
+.legend-triangle {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 14px solid #201cdf;
+  margin-top: 2px;
+}
+
+.legend-chevron {
+  font-size: 16px;
+  color: red;
+  font-weight: bold;
+}
+
+.admin-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(40, 40, 40, 0.85); /* translucent wrapper */
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: width 0.4s ease, padding 0.4s ease;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.admin-panel.collapsed {
+  width: 190px;
+  padding: 10px 12px;
+}
+
+.admin-panel.expanded {
+  width: 900px;
+  padding: 10px 16px;
+}
+
+.admin-toggle-btn {
+  background: rgba(20, 20, 20, 0.95); /* darker than container */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: bold;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 14px;
+  white-space: nowrap;
+}
+
+.admin-body {
+  display: flex;
+  gap: 12px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.admin-panel.collapsed .admin-body {
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+  </style>
+</head>
+<body>
+  <div id="map-container">
+    <svg id="map">
+      <g id="zoom-layer"></g>
+    </svg>
+    
+
+<div id="overview">
+  <div id="overview-status-section">
+    <div class="overview-card" id="scale-power">
+  <div class="overview-label">Power</div>
+  <div class="overview-value" id="overview-power">
+    <div class="blocks"></div>
+    <div class="fraction">–</div>
+  </div>
+      <div class="overview-status" id="status-power">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-lines">
+  <div class="overview-label">Overloaded Lines</div>
+  <div class="overview-value" id="overview-lines">–</div>
+  <div class="overview-status" id="status-lines"> Click to scale</div>
+</div>
+<div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
+    <div class="overview-card" id="scale-cost">
+      <div class="overview-label">Cost</div>
+      <div class="overview-value" id="overview-cost">–</div>
+      <div class="overview-status" id="status-cost">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-emissions">
+      <div class="overview-label">Emissions</div>
+      <div class="overview-value" id="overview-emissions">–</div>
+      <div class="overview-status" id="status-emissions">Click to scale</div>
+    </div>
+  </div>
+  </div>
+  <div id="overview-task-section">
+  <div class="task-card">
+    <div class="overview-label">Scenario Task</div>
+    <div id="task-placeholder" class="task-placeholder">
+      No Scenario Loaded
+    </div>
+  </div>
+</div>
+    </div>
+
+    <div class="task-submit-row">
+      <button id="submit-button" disabled>Submit Solution</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div id="map-legend">
+  <div class="legend-title">Legend</div>
+  <div class="legend-item"><span class="legend-symbol generator-on"></span> Generator (On)</div>
+  <div class="legend-item"><span class="legend-symbol generator-off"></span> Generator (Off)</div>
+  <div class="legend-item"><span class="legend-line"></span> Bus</div>
+  <div class="legend-item"><span class="legend-triangle"></span> Load</div>
+  <div class="legend-item"><span class="legend-chevron">➤</span> Line Load</div>
+</div>
+
+
+<div class="admin-panel collapsed" id="adminPanel">
+  <button class="admin-toggle-btn" id="toggleBtn">Show Admin Controls</button>
+  <div class="admin-body" id="adminBody">
+    <label>
+      Scenario:
+      <select id="scenario-select">
+        <!-- Populated by JS -->
+      </select>
+    </label>
+    <button id="reset-button">🔁 Reset</button>
+    <button onclick="window.location.href='/list'">Switch to List View</button>
+    <button id="theme-toggle">🌙 Dark Mode</button>
+  </div>
+</div>
+
+  <script>
+const svg = d3.select("#map");
+const svgElement = svg.node();
+const zoomLayer = svg.select("#zoom-layer");
+const zoomGroup = svg.append("g").attr("id", "zoom-group");
+
+const bubble = d3.select("#bubble");
+let selectedGeneratorId = null;
+
+let totalPower = 0;
+let totalCost = 0;
+let totalEmissions = 0;
+
+let currentScaleMode = null;
+let currentGenerators = [];
+let currentLines = [];
+
+let staticLines = [];
+let staticNodes = [];
+
+let currentScenarioId = "";
+let currentScenarioData = null;
+let availableScenarios = [];
+
+let currentMapMode = "full";
+
+// Define zoom behavior — same as before
+const zoomBehavior = d3.zoom()
+  .scaleExtent([0.2, 2.0])  // Allow good zoom range
+  .on("zoom", (event) => {
+  zoomGroup.attr("transform", event.transform);
+  updateConnector();
+});
+
+svg.call(zoomBehavior);
+
+window.addEventListener("load", () => {
+  const initialScale = 0.3;
+  const centerX = svgElement.clientWidth / 2;
+  const centerY = svgElement.clientHeight / 2;
+
+  svg.call(
+    zoomBehavior.transform,
+    d3.zoomIdentity
+      .translate(centerX - 200, centerY - 150)
+      .scale(initialScale)
+      .translate(-centerX, -centerY)
+  );
+
+  // ✅ FIX: call fetchAllScenarios here
+  fetchAllScenarios();
+});
+
+function getLineLoadPct(line) {
+  return line.rate_a > 0 ? (line.flow / line.rate_a) : 0;
+}
+
+function getLoadColor(pct) {
+  return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
+}
+
+function drawSelectedGeneratorHalo(){
+  d3.selectAll(".map-gen-halo")
+    .attr("opacity", function(d){
+      // d here is the bound node object (bus/gen/meta node)
+      const parent = d3.select(this.parentNode);
+      const id = parent.select(".map-gen").attr("id");
+      return (id === selectedGeneratorId) ? 1 : 0;
+    });
+}
+
+async function fetchAllScenarios() {
+  console.log("fetchAllScenarios")
+      const res = await fetch("/api/scenarios");
+      const data = await res.json();
+
+      availableScenarios = data;
+
+      // Find default scenario
+      const defaultScenario = data.find(s => s.scenario_id === "clean_north_power");
+
+        if (defaultScenario) {
+    currentScenarioId = defaultScenario.scenario_id;
+    currentScenarioData = defaultScenario;
+
+        populateScenarioDropdown(data, currentScenarioId);
+        loadScenario(currentScenarioId);
+      } else {
+        console.error("No scenario with ID 'default' found.");
+      }
+    }
+
+function renderOverview(gens, scenarioData = {}, lines) {
+  totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+  console.log("in renderOverview with totalPower:", totalPower)
+  totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+  totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+
+  const overloaded = lines.filter(line => line.flow > line.rate_a).length;
+  const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
+
+  
+  
+  const powerFraction = document.querySelector("#overview-power .fraction");
+if (powerFraction) {
+  powerFraction.textContent = `${Math.round(totalPower)} MW`;
+}
+  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
+  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  document.getElementById("overview-lines").textContent = overloaded;
+  updatePowerBlocks(totalPower, currentScenarioData.target_mw)
+  evaluateScenarioState(scenarioData, lines)
+  if (lines) {
+    console.log("🔁 Refreshing chevrons with updated line data");
+    refreshChevrons(lines, currentMapMode);
+  }
+  
+}
+
+ async function loadScenario(scenarioId) {
+  console.log("loadScenario")
+  const res = await fetch(`/api/scenario/${scenarioId}`);
+  const data = await res.json();
+  currentScenarioId = scenarioId;
+  currentScenarioData = data;
+  currentGenerators = data.generators;
+  currentLines = data.lines;
+
+
+  console.log("calling renderOverview");
+  setupTaskSection(currentScenarioData);
+  updateMapGeneratorsFromScenario(); // Make sure this is called too
+  renderOverview(currentGenerators, currentScenarioData || {}, currentLines);
+
+}
+
+    function populateScenarioDropdown(scenarios, selectedId) {
+        const select = document.getElementById("scenario-select");
+        select.innerHTML = "";
+
+        scenarios.forEach(s => {
+          const option = document.createElement("option");
+          option.value = s.scenario_id;
+          option.textContent = s.title || s.scenario_id;
+          if (s.scenario_id === selectedId) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      }
+
+document.getElementById("scenario-select").addEventListener("change", (e) => {
+    previousLineFlows = {}; // reset previous flows
+    loadScenario(e.target.value);
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+      previousLineFlows = {}; // reset previous flows
+      loadScenario(currentScenarioId); // reload current scenario
+    });
+
+function updateMapGeneratorsFromScenario() {
+  // If a scale mode is active, use it
+  if (currentScaleMode) {
+    scaleGeneratorsBy(currentScaleMode);
+  } else {
+    resetGeneratorSizes();
+  }
+
+  // Also reapply stroke and highlight logic
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const isSelected = d.id === selectedGeneratorId;
+    d3.select(this)
+      .attr("stroke", isSelected ? "blue" : "black")
+      .attr("stroke-width", isSelected ? 2.5 : 3); // ✅ consistent width
+  });
+
+  drawSelectedGeneratorHalo();
+  
+}
+function drawChevrons(lines, nodes, mode) {
+  console.log("drawChevrons with mode:", mode)
+  const chevronGroup = zoomGroup.append("g").attr("id", "chevron-layer");
+
+  lines.forEach(line => {
+    const fromId = line.source;
+    const toId = line.target;
+    if (!fromId || !toId) return;
+
+    const from = nodes.find(n => n.id === fromId);
+    const to = nodes.find(n => n.id === toId);
+    if (!from || !to || from.type !== "bus" || to.type !== "bus") return;
+
+    const path = document.getElementById(line.id);
+    if (!path) return;
+
+    const totalLength = path.getTotalLength();
+    const pointA = path.getPointAtLength(totalLength * 0.45);
+    const pointB = path.getPointAtLength(totalLength * 0.55);
+
+    const angle = Math.atan2(pointB.y - pointA.y, pointB.x - pointA.x) * 180 / Math.PI + 180;
+    const midX = (pointA.x + pointB.x) / 2;
+    const midY = (pointA.y + pointB.y) / 2;
+
+    const load = line.rate_a > 0 ? line.flow / line.rate_a : 0;
+    const color = getLoadColor(load);
+
+    // 🔄 Logic based on string mode
+    const scale = mode === "lines" ? Math.min(1.5, load) : 1;
+    const baseSize = Math.max(10, 6 * scale);
+
+    chevronGroup.append("path")
+      .datum(line)
+      .attr("class", "chevron")
+      .attr("d", chevronPath(baseSize))
+      .attr("fill", color)
+      .attr("opacity", 0.95)
+      .attr("stroke", "#111")
+      .attr("stroke-width", 0.4)
+      .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
+  });
+}
+
+
+
+function chevronPath(scale) {
+    const length = scale * 2;
+  const width = scale;
+
+  return `
+    M 0 0
+    L ${length} ${-width}
+    L ${length * 0.8} 0
+    L ${length} ${width}
+    Z
+  `;
+}
+
+function refreshChevrons(liveLines, currentMapMode) {
+  console.log("refreshChevrons called with mode:", currentMapMode);
+
+  const enrichedLines = staticLines.map(line => {
+    const live = liveLines.find(l =>
+      `Bus${l.from_bus}` === line.source && `Bus${l.to_bus}` === line.target
+    );
+    return {
+      ...line,
+      id: line.id,
+      flow: live?.flow ?? 0,
+      rate_a: live?.rate_a ?? 1
+    };
+  });
+
+  d3.select("#chevron-layer").remove();
+  drawChevrons(enrichedLines, staticNodes, currentMapMode); // Pass mode
+}
+
+// === Rect Gen Settings ===
+const BLOCK_UNIT = 100;      // MW per block
+const HALF_STEP = BLOCK_UNIT / 2;
+const BASE_BLOCK_H = 28;     // max chunky block height (px)
+const BLOCK_GAP = 4;         // vertical gap between blocks (px)
+const PAD_INNER = 10;        // inner padding inside frame (px)
+const HALO_PAD = 8;          // halo padding around frame (px)
+const MIN_GEN_W = 50;        // min rect width (px) for clickability
+const WIDTH_VARIATION = 80;  // width spread from low→high cost (px)
+const MAX_GEN_W = MIN_GEN_W + WIDTH_VARIATION;
+const MAX_GEN_H = 220;       // tallest generator (px) = your cap
+
+// Quantize helpers (half-blocks only)
+const roundCapToHalf = pmax => Math.ceil(pmax / HALF_STEP) * HALF_STEP;
+const capBlocks = p => Math.max(1, Math.floor(roundCapToHalf(p) / BLOCK_UNIT) + ((roundCapToHalf(p) % BLOCK_UNIT) ? 1 : 0));
+
+// Compute block height globally so the tallest fits MAX_GEN_H
+function computeBlockH(gens){
+  const pmaxExtent = d3.extent(gens, g => g.pmax || 0);
+  const maxBlocks = capBlocks(pmaxExtent[1] || 0);
+  const available = MAX_GEN_H - PAD_INNER*2 - (maxBlocks - 1) * BLOCK_GAP;
+  return Math.min(BASE_BLOCK_H, available / maxBlocks);
+}
+
+
+
+
+   // === Fetch and Draw Map ===
+Promise.all([
+  fetch("/new-tests/full_nodes.json").then(res => res.json()),
+  fetch("/new-tests/full_lines.json").then(res => res.json()),
+  fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
+]).then(([nodes, lines, generatorData]) => {
+  currentGenerators = generatorData;
+  staticNodes = nodes;
+  staticLines = lines;
+
+  zoomGroup.selectAll("path.map-line")
+    .data(lines)
+    .enter()
+    .append("path")
+    .attr("class", "map-line")
+    .attr("id", d => d.id)
+    .attr("d", d => d.d)
+    .attr("stroke", "#888")
+    .attr("stroke-width", 1.5)
+    .attr("fill", "none");
+
+zoomGroup.selectAll("rect.map-bus")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("rect")
+  .attr("class", "map-bus")
+  .attr("id", d => d.id)
+  .attr("x", d => d.x - d.width / 2)
+  .attr("y", d => d.y - d.height / 2)
+  .attr("width", d => d.width)
+  .attr("height", d => d.height)
+  .attr("fill", "#666")
+  .attr("stroke", "#000")
+  .attr("stroke-width", 0.8)
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+zoomGroup.selectAll("path.map-load")
+  .data(nodes.filter(d => d.type === "load"))
+  .enter()
+  .append("path")
+  .attr("class", "map-load")
+  .attr("id", d => d.id)
+  .attr("d", d => {
+    const size = 20;
+    const x = d.x;
+    const y = d.y;
+    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
+  })
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+    // Generators - drawn last to ensure they are on top
+
+// === Generators — Rectangles with top→down blocks ===
+const generatorNodes = nodes.filter(d => d.type === "generator");
+
+// Scales that depend on currentGenerators
+const costExtent = d3.extent(currentGenerators, g => g.cost_per_mw || 0);
+const emisExtent = d3.extent(currentGenerators, g => g.emissions_per_mw || 0);
+
+const widthScale = d3.scaleLinear()
+  .domain([Math.max(1, costExtent[0] || 1), costExtent[1] || 1])
+  .range([MIN_GEN_W, MAX_GEN_W]);
+
+const blockColor = d3.scaleLinear() // low emis → green, high → grey
+  .domain([emisExtent[0] || 0, emisExtent[1] || 1])
+  .range(["#2e7d32", "#bdbdbd"]);
+
+const SCALED_BLOCK_H = computeBlockH(currentGenerators);
+
+// Helpers for per-generator layout
+function capacityBoundsTopDown(pmax){
+  const roundedCap = roundCapToHalf(pmax);
+  const fullBlocks = Math.floor(roundedCap / BLOCK_UNIT);
+  const hasHalfTop = (roundedCap % BLOCK_UNIT) === HALF_STEP;
+  const bounds = [];
+  let remaining = roundedCap;
+
+  if (hasHalfTop){
+    bounds.push({ size: HALF_STEP, upper: remaining, lower: remaining - HALF_STEP }); // TOP half
+    remaining -= HALF_STEP;
+  }
+  for (let i=0; i<fullBlocks; i++){
+    bounds.push({ size: BLOCK_UNIT, upper: remaining, lower: remaining - BLOCK_UNIT });
+    remaining -= BLOCK_UNIT;
+  }
+  return bounds; // index 0 = TOP
+}
+
+function genDims(gen){
+  const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw));
+  const caps = capacityBoundsTopDown(gen.pmax);
+  const n = caps.length;
+  const H = n * SCALED_BLOCK_H + (n-1) * BLOCK_GAP + PAD_INNER*2;
+  const innerW = W - PAD_INNER*2;
+  return { W, H, innerW, caps };
+}
+
+const genGroups = zoomGroup.selectAll("g.map-gen-group")
+  .data(generatorNodes)
+  .enter()
+  .append("g")
+  .attr("class", "map-gen-group")
+  .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+// HALO (rounded rect)
+genGroups.append("rect")
+  .attr("class", "map-gen-halo")     // keep same class name used elsewhere
+  .attr("fill", "none")
+  .attr("stroke", "#42a5f5")
+  .attr("stroke-width", 3)
+  .attr("opacity", 0)
+  .attr("rx", 12).attr("ry", 12)
+  .style("pointer-events", "none");
+
+// MAIN RECT (this carries the ID and .map-gen class so existing code still finds it)
+genGroups.append("rect")
+  .attr("class", "map-gen")
+  .attr("id", d => d.id)
+  .attr("fill", "#ffffff")
+  .attr("stroke", "black")
+  .attr("stroke-width", 3);
+
+// Clip path to keep fills inside padded frame
+genGroups.append("clipPath")
+  .attr("id", d => `clip-${d.id}`)
+  .append("rect");
+
+// Blocks holder (clipped)
+genGroups.append("g")
+  .attr("class", "blocks")
+  .attr("clip-path", d => `url(#clip-${d.id})`);
+
+// Size + draw content per generator
+function drawRectGenerators(){
+  genGroups.each(function(d){
+    const g = d3.select(this);
+    const gen = currentGenerators.find(x => `Gen${x.bus}` === d.id) || { pmax: 0, cost_per_mw: 1, emissions_per_mw: 0, pg: 0 };
+    const { W, H, innerW, caps } = genDims(gen);
+    const topY = -H/2 + PAD_INNER;
+
+    // main rect
+    g.select(".map-gen")
+      .attr("x", -W/2)
+      .attr("y", -H/2)
+      .attr("width", W)
+      .attr("height", H)
+      .attr("fill", gen.pg > 0 ? "#fff" : "#fff"); // frame stays white; fills indicate output
+
+    // halo
+    g.select(".map-gen-halo")
+      .attr("x", -W/2 - HALO_PAD)
+      .attr("y", -H/2 - HALO_PAD)
+      .attr("width", W + HALO_PAD*2)
+      .attr("height", H + HALO_PAD*2);
+
+    // clip
+    g.select(`#clip-${CSS.escape(d.id)} rect`)
+      .attr("x", -W/2 + PAD_INNER)
+      .attr("y", -H/2 + PAD_INNER)
+      .attr("width", innerW)
+      .attr("height", H - PAD_INNER*2);
+
+    // capacity backgrounds (TOP→DOWN)
+    const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
+      .data(caps, (b,i)=>i);
+
+    bgs.join(
+      e=>e.append("rect").attr("class","gen-block-bg"),
+      u=>u,
+      x=>x.remove()
+    )
+    .attr("x", -innerW/2)
+    .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+    .attr("width", b => (b.size === HALF_STEP ? innerW/2 : innerW))
+    .attr("height", SCALED_BLOCK_H)
+    .attr("rx", 6).attr("ry", 6)
+    .attr("fill", "transparent")
+    .attr("stroke", "#000").attr("stroke-width", .8);
+
+    // binary fills (0, half, full) from left
+    const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
+      .data(caps, (b,i)=>i);
+
+    fills.join(
+      e=>e.append("rect").attr("class","gen-block-fill"),
+      u=>u,
+      x=>x.remove()
+    )
+    .attr("x", -innerW/2)
+    .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+    .attr("height", SCALED_BLOCK_H)
+    .attr("rx", 6).attr("ry", 6)
+    .attr("width", b => {
+      const filled = gen.pg >= b.upper;
+      if (!filled) return 0;
+      return (b.size === HALF_STEP) ? (innerW/2) : innerW;
+    })
+    .attr("fill", blockColor(gen.emissions_per_mw));
+
+    // hover halo (rect version)
+    g.on("mouseover", function(){
+      d3.select(this).select(".map-gen-halo").transition().duration(120).attr("opacity", .6);
+    }).on("mouseout", function(){
+      const sel = (d.id === selectedGeneratorId);
+      d3.select(this).select(".map-gen-halo").transition().duration(120).attr("opacity", sel ? 1 : 0);
+    });
+
+    // click → select + show your existing bubble UI
+    g.on("click", (event) => {
+      event.stopPropagation();
+      selectedGeneratorId = d.id;
+      updateGeneratorStrokes();
+      updateGeneratorHalos();
+
+      // reuse your bubble code path; it already builds blocks with /api call
+      const bubbleX = event.pageX + 10;
+      const bubbleY = event.pageY - 20;
+      const bubbleEl = document.getElementById("bubble");
+      bubbleEl.style.display = "block";
+      bubbleEl.style.left = `${bubbleX}px`;
+      bubbleEl.style.top = `${bubbleY}px`;
+      bubbleEl.innerHTML = "";
+      // (we keep the existing bubble builder further down unchanged)
+      // Trigger the old “click” handler logic by dispatching on the rect element’s ID:
+      // (we’ll simulate the old path using the same function that builds the bubble)
+      // For cleanliness, we’ll just replicate the old inline code: see step 3.
+    });
+  });
+}
+
+drawRectGenerators(); 
+
+function showGeneratorBubbleFromEvent(event, d){
+  const bubbleX = event.pageX + 10;
+  const bubbleY = event.pageY - 20;
+  const bubbleEl = document.getElementById("bubble");
+  bubbleEl.style.display = "block";
+  bubbleEl.style.left = `${bubbleX}px`;
+  bubbleEl.style.top = `${bubbleY}px`;
+  bubbleEl.innerHTML = "";
+
+  // (PASTE the rest of your existing bubble DOM build here: header, power-block-row,
+  //   match lookup, levels array, off block, block creation, footer label, etc.)
+}
+
+function applyMapMode(mode) {
+  // === Reset if the same button is clicked again ===
+  if (mode === currentMapMode) {
+    mode = "full";
+  }
+  currentMapMode = mode;
+  console.log("Applying map mode:", mode);
+
+  const isFull = mode === "full";
+  const isLines = mode === "lines";
+  const isMetricMode = ["pmax", "cost_per_mw", "emissions_per_mw", "lines"].includes(mode);
+
+  const baseRadius = 30;
+  const maxRadius = 75;
+
+  const metricColors = {
+    pmax: "#9ccc65",
+    cost_per_mw: "#f9a825",
+    emissions_per_mw: "#ef5350"
+  };
+
+  const strokeColor = metricColors[mode] || "black";
+
+  const sizeScale = isMetricMode
+    ? d3.scaleLinear()
+        .domain([0, d3.max(currentGenerators.map(g => g[mode]))])
+        .range([baseRadius, maxRadius])
+    : null;
+
+  // === Generators ===
+  d3.selectAll(".map-gen")
+    .transition().duration(500)
+      .attr("r", d => {
+  if (mode === "lines") {
+    return baseRadius;
+  }
+
+  if (isMetricMode) {
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    return gen ? sizeScale(gen[mode]) : baseRadius;
+  }
+
+  return baseRadius;
+})
+    .attr("opacity", mode === "lines" ? 0.2 : 1)
+    .attr("stroke", strokeColor)
+    .attr("stroke-width", isMetricMode ? 5 : 3);
+
+  // === Generator Halos ===
+  d3.selectAll(".map-gen-halo")
+    .transition().duration(500)
+    .attr("r", d => {
+      const genCircle = d3.select(`#${CSS.escape(d.id)}`);
+      const r = +genCircle.attr("r") || baseRadius;
+      return r + 6;
+    })
+    .attr("opacity", d => d.id === selectedGeneratorId && !isLines ? 1 : 0);
+
+  // === Lines ===
+  d3.selectAll(".map-line")
+    .transition().duration(300)
+    .attr("opacity", isLines ? 1 : (isFull ? 1 : 0.2));
+
+  // === Buses and Loads ===
+  const busLoadOpacity = isFull ? 1 : 0.2;
+
+  d3.selectAll(".map-bus")
+    .transition().duration(300)
+    .attr("opacity", busLoadOpacity);
+
+  d3.selectAll(".map-load")
+    .transition().duration(300)
+    .attr("opacity", busLoadOpacity);
+
+  // === Chevrons ===
+  d3.selectAll(".chevron")
+    .transition().duration(500)
+    .attr("opacity", isLines || isFull ? 1 : 0.2)
+    .attr("d", function(d) {
+      if (!isLines) return chevronPath(10);
+      const pct = +d3.select(this).attr("data-pct") || 0;
+      const size = 15 + 6 * pct;
+      return chevronPath(size);
+    });
+
+  // === Visual button update ===
+  const buttonIds = {
+  pmax: "scale-power",
+  cost_per_mw: "scale-cost",
+  emissions_per_mw: "scale-emissions",
+  lines: "scale-lines"
+};
+
+const statusIds = {
+  pmax: "status-power",
+  cost_per_mw: "status-cost",
+  emissions_per_mw: "status-emissions",
+  lines: "status-lines"
+};
+
+  Object.keys(buttonIds).forEach(key => {
+    const btn = document.getElementById(buttonIds[key]);
+    const status = document.getElementById(statusIds[key]);
+    if (btn) btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions", "scale-lines");
+    if (status) status.textContent = "Click to scale";
+  });
+
+  if (isMetricMode) {
+    const btn = document.getElementById(buttonIds[mode]);
+    const status = document.getElementById(statusIds[mode]);
+    if (btn) {
+      btn.classList.add("selected");
+      if (mode === "pmax") btn.classList.add("scale-power");
+      if (mode === "cost_per_mw") btn.classList.add("scale-cost");
+      if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
+      if (mode === "lines") btn.classList.add("scale-lines");
+    }
+    if (status) status.textContent = "Currently scaling";
+  }
+}
+
+
+function resetGeneratorSizes() {
+  currentScaleMode = null;
+
+  d3.selectAll(".map-gen")
+    .transition()
+    .duration(500)
+    .attr("r", 30)
+    .attr("stroke", "black")
+.attr("stroke-width", 3)
+    .attr("fill", d => {
+      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+      return match && match.pg > 0 ? "#4caf50" : "#ffffff";
+    });
+
+  d3.selectAll(".map-gen-halo")
+    .transition()
+    .duration(500)
+    .attr("r", 36)
+    .attr("opacity", d => d.id === selectedGeneratorId ? 1 : 0);
+
+  updateGeneratorStrokes();
+}
+
+
+
+
+
+  // === Hover & Selection Sync
+  d3.selectAll(".map-gen")
+    .on("mouseenter", function (event, d) {
+      d3.select(this).classed("hovered", true);
+    })
+    .on("mouseleave", function () {
+      d3.select(this).classed("hovered", false);
+    });
+
+  // Optional: add generator label
+  /*
+  zoomGroup.selectAll("text.map-gen-label")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("text")
+    .attr("x", d => d.x + 6)
+    .attr("y", d => d.y + 3)
+    .attr("font-size", "6px")
+    .text(d => d.id); */
+
+        document.getElementById("scale-lines").onclick = () => applyMapMode("lines");
+        document.getElementById("scale-power").onclick = () => applyMapMode("pmax");
+        document.getElementById("scale-cost").onclick = () => applyMapMode("cost_per_mw");
+        document.getElementById("scale-emissions").onclick = () => applyMapMode("emissions_per_mw");
+
+});
+
+
+const connectorLine = svg.append("line")
+  .attr("class", "connector-line")
+  .attr("stroke", "#42a5f5")
+  .attr("stroke-width", 2)
+  .attr("pointer-events", "none")
+  .style("display", "none");
+
+function updateConnector() {
+  if (!selectedGeneratorId) return;
+
+  const d = d3.select(`#${CSS.escape(selectedGeneratorId)}`).datum();
+  if (!d) return;
+
+  const transform = d3.zoomTransform(svg.node());
+  const bubbleRect = bubble.node().getBoundingClientRect();
+
+  const genX = transform.applyX(d.x);
+  const genY = transform.applyY(d.y);
+  const bubbleX = bubbleRect.left + bubbleRect.width / 2;
+  const bubbleY = bubbleRect.top + bubbleRect.height / 2;
+
+  connectorLine
+    .attr("x1", genX)
+    .attr("y1", genY)
+    .attr("x2", bubbleX)
+    .attr("y2", bubbleY)
+    .style("display", "block");
+}
+  
+function updateGeneratorStrokes() {
+  d3.selectAll(".map-gen").each(function(d) {
+    const el = d3.select(this);
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+
+    let strokeColor = "black";  // Default stroke
+    let strokeWidth = 3;
+
+    if (d.id === selectedGeneratorId) {
+      strokeColor = "#42a5f5"; // Blue if selected
+      strokeWidth = 4;
+    } else if (currentScaleMode && gen) {
+      switch (currentScaleMode) {
+        case "pmax":
+          strokeColor = "#9ccc65";
+          break;
+        case "cost_per_mw":
+          strokeColor = "#f9a825";
+          break;
+        case "emissions_per_mw":
+          strokeColor = "#ef5350";
+          break;
+      }
+      strokeWidth = 3;
+    }
+
+    el.attr("stroke", strokeColor)
+      .attr("stroke-width", strokeWidth);
+  });
+}
+
+
+function updateGeneratorHalos() {
+  d3.selectAll(".map-gen-halo")
+    .transition().duration(300)
+    .attr("opacity", function(){
+      const id = d3.select(this.parentNode).select(".map-gen").attr("id");
+      return id === selectedGeneratorId ? 1 : 0;
+    });
+}
+
+function createBlock(level, isHalf, gen) {
+  const block = document.createElement("div");
+  block.className = "power-block";
+  block.style.width = isHalf ? `10px` : `20px`;
+  block.style.height = "20px";
+  block.style.borderRadius = "4px";
+  const updated = currentGenerators.find(g => g.index === gen.index);
+  block.style.background = updated && updated.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+  block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
+  block.title = `${level} MW`;
+
+  block.style.cursor = "pointer";
+  block.addEventListener("mousedown", (event) => {
+  event.stopPropagation(); // prevent bubble from closing
+
+  const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+  fetch(`/api/set_generation/${gen.index}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ percent, user_active: true })
+  })
+    .then(res => res.json())
+    .then(data => {
+      currentGenerators = data.generators;
+      currentLines = data.lines;
+      console.log("calling renderOverview");
+      renderOverview(currentGenerators, currentScenarioData, currentLines);
+      updateMapGeneratorsFromScenario();
+      updateGeneratorHalos();
+
+      // 🔁 Redraw the generator bubble to reflect the updated gen.pg
+      const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+      if (!selected.empty()) {
+        selected.dispatch("click");
+      }
+    });
+});
+
+  return block;
+}
+
+
+// === Update generator colors on scenario load ===
+function updateMapGeneratorsFromScenario() {
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const isOn = match && match.pg > 0;
+    const isSelected = d.id === selectedGeneratorId;
+
+    d3.select(this)
+    .attr("fill", isOn ? "#4caf50" : "white");
+    
+  });
+
+  updateGeneratorStrokes();
+  drawSelectedGeneratorHalo();
+}
+
+  document.getElementById("toggleBtn").addEventListener("click", () => {
+  const panel = document.getElementById("adminPanel");
+  const isCollapsed = panel.classList.contains("collapsed");
+
+  if (isCollapsed) {
+    panel.classList.remove("collapsed");
+    panel.classList.add("expanded");
+    toggleBtn.textContent = "Hide Admin Controls";
+  } else {
+    panel.classList.add("collapsed");
+    panel.classList.remove("expanded");
+    toggleBtn.textContent = "Show Admin Controls";
+  }
+});
+  
+function updatePowerBlocks(totalPower, targetPower) {
+  //console.log("🧪 updatePowerBlocks called");
+  //console.log("   ⚡ totalPower:", totalPower);
+  //console.log("   🎯 targetPower:", targetPower);
+
+  const container = document.querySelector("#overview-power .blocks");
+  const label = document.querySelector("#overview-power .fraction");
+
+  if (!container) {
+    console.warn("⚠️ .blocks container not found in #overview-power");
+    return;
+  } else {
+    //console.log("✅ Found .blocks container");
+  }
+
+  if (!label) {
+    console.warn("⚠️ .fraction label not found in #overview-power");
+  } else {
+    //console.log("✅ Found .fraction label");
+  }
+
+  container.innerHTML = "";
+
+  const blockSize = 100; // MW per block
+  const blockCount = Math.ceil(targetPower / blockSize);
+  const scaledTotal = totalPower / blockSize;
+  const overAmount = totalPower - targetPower;
+  const showOver = overAmount > 0;
+
+  //console.log("🔢 blockCount:", blockCount);
+  //console.log("📈 overAmount:", overAmount);
+  //console.log("📦 showOver:", showOver);
+
+  for (let i = 0; i < blockCount; i++) {
+  const block = document.createElement("div");
+  block.className = "block";
+
+  if (totalPower >= (i + 1) * 100) {
+    block.classList.add("full");
+    //console.log(`🟩 Block ${i + 1}: full`);
+  } else if (totalPower > i * 100) {
+    block.classList.add("partial");
+    //console.log(`🟨 Block ${i + 1}: partial`);
+  } else {
+    block.classList.add("goal");
+    //console.log(`⬜ Block ${i + 1}: goal`);
+  }
+
+  container.appendChild(block);
+}
+
+  if (showOver && blockCount > 0) {
+    const lastBlock = container.lastElementChild;
+    if (lastBlock) {
+      lastBlock.className = "block over";
+      lastBlock.textContent = overAmount > 2000 ? "!!!" : `+${Math.ceil(overAmount / 100)}`;
+    }
+  }
+
+  if (label) {
+    label.textContent = `${Math.round(totalPower)} / ${targetPower}`;
+  }
+
+}
+
+function setupTaskSection(scenario) {
+  const container = document.getElementById("overview-task-section");
+  const hasBudget = scenario.max_cost !== undefined && scenario.max_cost !== null;
+  const hasDisabledGens = Array.isArray(scenario.disabled_gens) && scenario.disabled_gens.length > 0;
+
+  container.innerHTML = `
+    <div class="task-card">
+      <div class="overview-label">Scenario Task</div>
+      <div class="task-card" id="task-checklist">
+        <div class="task-content">
+          <!-- LEFT COLUMN: REQUIREMENTS -->
+          <div class="task-left">
+            <div class="task-title">Requirements</div>
+            <ul id="task-requirements">
+              <li><input type="checkbox" disabled id="check-power" /> Meet target power</li>
+              <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
+              ${hasBudget
+                ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>`
+                : ``}
+            </ul>
+          </div>
+
+          <!-- RIGHT COLUMN: CONSTRAINTS -->
+          <div class="task-right">
+            <div class="task-title">Scenario Constraints</div>
+            <div class="task-subtitle" id="task-constraints">
+              <div>Target: <span id="constraint-power">${scenario.target_mw ?? "–"}</span> MW</div>
+              ${hasBudget
+                ? `<div id="constraint-cost-container">Max Cost: <span id="constraint-cost">${scenario.max_cost}</span> $</div>`
+                : ``}
+              ${hasDisabledGens
+                ? `<div><img src="img/locked.png" style="height: 14px; vertical-align: middle;" /> Certain generators are locked</div>`
+                : ``}
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        <div class="task-submit-row">
+          <button id="submit-button" disabled>Submit Solution</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("submit-button").addEventListener("click", () => {
+  if (document.getElementById("submit-button").disabled) return;
+
+  showResultOverlay(totalPower, totalCost, totalEmissions);
+});
+}
+
+
+function evaluateScenarioState(scenario, lines) {
+  const meetsPower = totalPower >= scenario.target_mw;
+  const meetsLines = !lines.some(line => line.flow > line.rate_a);
+  const meetsBudget = !scenario.max_cost || totalCost <= scenario.max_cost;
+
+  console.log("🔎 Evaluating scenario state!");
+  //console.log("   ⚡ totalPower:", totalPower, "→ meetsPower:", meetsPower);
+  //console.log("   🔌 line overload check:", meetsLines ? "✅ OK" : "❌ Overloaded");
+  //console.log("   💸 totalCost:", totalCost, "/", scenario.max_cost, "→ meetsBudget:", meetsBudget);
+
+  const powerCheckbox = document.getElementById("check-power");
+  const linesCheckbox = document.getElementById("check-lines");
+  const budgetCheckbox = document.getElementById("check-budget");
+
+  if (powerCheckbox) {
+    powerCheckbox.checked = meetsPower;
+    //console.log("   📥 check-power checkbox updated:", meetsPower);
+  } else {
+    console.warn("⚠️ check-power checkbox not found");
+  }
+
+  if (linesCheckbox) {
+    linesCheckbox.checked = meetsLines;
+    //console.log("   📥 check-lines checkbox updated:", meetsLines);
+  } else {
+    console.warn("⚠️ check-lines checkbox not found");
+  }
+
+  if (budgetCheckbox && scenario.max_cost !== undefined) {
+    budgetCheckbox.checked = meetsBudget;
+    //console.log("   📥 check-budget checkbox updated:", meetsBudget);
+  } else if (scenario.max_cost !== undefined) {
+    console.warn("⚠️ check-budget checkbox not found");
+  }
+
+  const allMet = meetsPower && meetsLines && (scenario.max_cost ? meetsBudget : true);
+  const submitBtn = document.getElementById("submit-button");
+
+    if (allMet) {
+    submitBtn.classList.add("active");
+    submitBtn.disabled = false;
+  } else {
+    submitBtn.classList.remove("active");
+    submitBtn.disabled = true;
+  }
+}
+
+function showResultOverlay() {
+  const overlay = document.createElement("div");
+  overlay.id = "result-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.background = "rgba(0, 0, 0, 0.6)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.zIndex = "999";
+
+  const box = document.createElement("div");
+  box.className = "results-box";
+  box.innerHTML = `
+    <h2 class="results-title">✅ Scenario Complete</h2>
+    <div class="results-summary">
+      <p><strong>⚡ Power:</strong> ${Math.round(totalPower)} MW</p>
+      <p><strong>💲 Cost:</strong> $${Math.round(totalCost)}</p>
+      <p><strong>🫧 Emissions:</strong> ${Math.round(totalEmissions)} tCO₂</p>
+    </div>
+    <button class="results-close" id="close-overlay">Close</button>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  document.getElementById("close-overlay").addEventListener("click", () => {
+    overlay.remove();
+  });
+}
+
+
+  </script>
+</body>
+</html>

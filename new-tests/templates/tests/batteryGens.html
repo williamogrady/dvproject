@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Generators — Upward Blocks, Half‑Step Capacity, Full‑Width OFF, No Overlap</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --bg:#111; --panel:#1c1c1c; --text:#eee; --muted:#aaa; --accent:#42a5f5; }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  #wrap{height:100%;display:grid;grid-template-rows:auto 1fr}
+  header{padding:10px 14px;background:var(--panel);border-bottom:1px solid #333;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  header .title{font-weight:700}
+  header .hint{color:var(--muted);font-size:12px}
+  svg{width:100%;height:100%;background:#202020}
+  .gen-group{cursor:pointer}
+  .gen-rect{fill:#fff;stroke:#111;stroke-width:2;rx:10;ry:10}
+  .gen-halo{fill:none;stroke:var(--accent);stroke-width:3;opacity:0;pointer-events:none;rx:12;ry:12}
+  .gen-block-bg{fill:transparent;stroke:#000;stroke-width:0.8;rx:6;ry:6}
+  .gen-block-fill{stroke:none;rx:6;ry:6}
+  .off-block{fill:#2b2b2b;stroke:#555;stroke-width:1.2;rx:8;ry:8}
+  .off-label{font-size:14px;fill:#eee;pointer-events:none;text-anchor:middle;dominant-baseline:middle;font-weight:700}
+  .gen-label{font-size:12px;fill:#ddd;text-anchor:middle;dominant-baseline:hanging}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <div class="title">Generators — Upward Blocks, Half‑Steps, Full‑Width OFF</div>
+    <div class="hint">Blocks = 100 MW. Capacity uses only full/half. Click LEFT half of a block for half‑step, RIGHT for full. OFF = full width below.</div>
+  </header>
+  <div id="stage"></div>
+</div>
+
+<script>
+(function(){
+
+  // -----------------------------
+  // KNOBS (your settings)
+  // -----------------------------
+  const BLOCK_UNIT       = 100; // MW per block
+  const BASE_BLOCK_H     = 28;  // px (upper bound; real height derived to fit MAX_GEN_H)
+  const BLOCK_GAP        = 4;   // px vertical gap
+  const PAD_INNER        = 10;  // px inner padding (top/bottom inside the frame)
+  const HALO_PAD         = 8;   // px around the frame
+  const MIN_GEN_W        = 50;  // px minimum width for clickability
+  const WIDTH_VARIATION  = 80;  // px subtle width variation by cost
+  const MAX_GEN_W        = MIN_GEN_W + WIDTH_VARIATION;
+  const MAX_GEN_H        = 220; // px -> tallest generator fits this height
+  const FRAME_MARGIN     = 18;  // px invisible margin to avoid overlaps
+  const OFF_SPACING      = 12;  // px gap between generator and OFF block
+
+  // -----------------------------
+  // Demo data
+  // -----------------------------
+  let generators = [
+    { id:"GenA", pmax:150, cost_per_mw:12, emissions_per_mw:0.10, pg:100 }, // 1.5 cap blocks
+    { id:"GenB", pmax:820, cost_per_mw:22, emissions_per_mw:0.45, pg:500 }, // ~8.2 cap blocks
+    { id:"GenC", pmax:100, cost_per_mw: 8, emissions_per_mw:0.05, pg:  0 }, // 1 block
+    { id:"GenD", pmax:700, cost_per_mw:35, emissions_per_mw:0.70, pg:350 },
+    { id:"GenE", pmax:300, cost_per_mw:18, emissions_per_mw:0.25, pg:100 },
+    { id:"GenF", pmax:600, cost_per_mw:42, emissions_per_mw:0.85, pg:250 },
+    { id:"GenG", pmax:200, cost_per_mw:10, emissions_per_mw:0.12, pg: 50 },
+    { id:"GenH", pmax:520, cost_per_mw:27, emissions_per_mw:0.55, pg:200 },
+  ];
+
+  // Utility: quantize a value to nearest half‑block step
+  const HALF_STEP = BLOCK_UNIT / 2;
+  function quantizeHalf(val){ return Math.round(val / HALF_STEP) * HALF_STEP; }
+
+  // Capacity rounding: round UP to nearest half‑block so capacity is full/half only
+  function roundCapToHalf(pmax){
+    const steps = Math.ceil(pmax / HALF_STEP);
+    return steps * HALF_STEP;
+  }
+
+  // -----------------------------
+  // Stage & zoom
+  // -----------------------------
+  const w = window.innerWidth, h = window.innerHeight - 60;
+  const svg = d3.select("#stage").append("svg").attr("viewBox", [0,0,w,h]);
+  const root = svg.append("g").attr("id","zoom-root");
+  const zoom = d3.zoom().scaleExtent([0.6, 2.0]).on("zoom", ev => root.attr("transform", ev.transform));
+  svg.call(zoom);
+  svg.call(zoom.transform, d3.zoomIdentity.translate(60, 60).scale(1.0));
+
+  // -----------------------------
+  // Scales
+  // -----------------------------
+  const pmaxExtent = d3.extent(generators, d => d.pmax);
+  const costExtent = d3.extent(generators, d => d.cost_per_mw);
+  const emisExtent = d3.extent(generators, d => d.emissions_per_mw);
+
+  const widthScale = d3.scaleLinear()
+    .domain([Math.max(1, costExtent[0]), costExtent[1]])
+    .range([MIN_GEN_W, MAX_GEN_W]);
+
+  const blockColor = d3.scaleLinear()
+    .domain([emisExtent[0], emisExtent[1]])
+    .range(["#2e7d32", "#bdbdbd"]); // low emis → green, high → grey
+
+  // -----------------------------
+  // Block sizing from MAX_GEN_H
+  // -----------------------------
+  function capBlocks(p){ return Math.max(1, Math.ceil(p / BLOCK_UNIT)); } // full blocks (ignores half)
+  const maxCapRounded = roundCapToHalf(pmaxExtent[1] || 0);
+  const maxBlocksGlobal = capBlocks(maxCapRounded); // full blocks count for tallest
+  const AVAILABLE_FOR_BLOCKS = MAX_GEN_H - PAD_INNER*2 - (maxBlocksGlobal - 1) * BLOCK_GAP;
+  const SCALED_BLOCK_H = Math.min(BASE_BLOCK_H, AVAILABLE_FOR_BLOCKS / maxBlocksGlobal);
+
+  // -----------------------------
+  // Layout helpers
+  // -----------------------------
+  // Capacity bounds TOP→DOWN. Top block size is either full or half.
+  function capacityBoundsTopDown(gen){
+    const roundedCap = roundCapToHalf(gen.pmax);
+    const fullBlocks = Math.floor(roundedCap / BLOCK_UNIT); // number of full blocks
+    const hasHalfTop = (roundedCap % BLOCK_UNIT) === HALF_STEP;
+    const totalBlocks = fullBlocks + (hasHalfTop ? 1 : 0);
+
+    const bounds = [];
+    let remaining = roundedCap;
+
+    // If there is a half, it's the TOP block
+    if (hasHalfTop){
+      const upper = remaining;
+      const lower = upper - HALF_STEP;
+      bounds.push({ lower, upper, size: HALF_STEP }); // index 0 = top half
+      remaining = lower;
+    }
+    // Then the full blocks under it
+    for (let i = 0; i < fullBlocks; i++){
+      const upper = remaining;
+      const lower = upper - BLOCK_UNIT;
+      bounds.push({ lower, upper, size: BLOCK_UNIT });
+      remaining = lower;
+    }
+    return bounds; // top→down order
+  }
+
+  // Main rectangle dims from capacity
+  function genDims(gen){
+    const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw));
+    const caps = capacityBoundsTopDown(gen);
+    const n = caps.length;
+    const H = n * SCALED_BLOCK_H + (n-1) * BLOCK_GAP + PAD_INNER*2;
+    const innerW = W - PAD_INNER*2;
+    return { W, H, innerW, caps };
+  }
+
+  function blockY(topY, idx){ return topY + idx * (SCALED_BLOCK_H + BLOCK_GAP); }
+
+  // -----------------------------
+  // Non-overlapping grid layout
+  // -----------------------------
+  function footprint(gen){
+    const { W, H } = genDims(gen);
+    const offH = SCALED_BLOCK_H; // OFF = one block tall
+    const footW = W + FRAME_MARGIN*2;
+    const footH = H + OFF_SPACING + offH + FRAME_MARGIN*2; // reserve OFF even if pg=0
+    return { footW, footH };
+  }
+  const maxFootW = d3.max(generators, g => footprint(g).footW);
+  const maxFootH = d3.max(generators, g => footprint(g).footH);
+
+  const COLS = Math.max(3, Math.floor((w-120) / maxFootW));
+  const XG = maxFootW, YG = maxFootH;
+  generators.forEach((d,i)=>{
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    d.x = col * XG;
+    d.y = row * YG;
+  });
+  const gridWidth  = Math.max(1, Math.min(COLS, generators.length)) * XG;
+  const gridHeight = Math.ceil(generators.length / COLS) * YG;
+  const gridOffsetX = (w - gridWidth) / 2;
+  const gridOffsetY = 20;
+
+  // -----------------------------
+  // Draw
+  // -----------------------------
+  const groups = root.selectAll(".gen-group")
+    .data(generators, d=>d.id)
+    .enter().append("g")
+    .attr("class","gen-group")
+    .attr("transform", d => `translate(${gridOffsetX + d.x + XG/2}, ${gridOffsetY + d.y + YG/2})`);
+
+  groups.append("rect").attr("class","gen-halo");
+  groups.append("rect").attr("class","gen-rect");
+
+  groups.append("clipPath")
+    .attr("id", d => `clip-${d.id}`)
+    .append("rect");
+
+  groups.append("g")
+    .attr("class","blocks")
+    .attr("clip-path", d => `url(#clip-${d.id})`);
+
+  const offG = groups.append("g").attr("class","off-group");
+  offG.append("rect").attr("class","off-block");
+  offG.append("text").attr("class","off-label").text("OFF");
+
+  groups.append("text").attr("class","gen-label")
+    .text(d => `${d.id} | pmax ${roundCapToHalf(d.pmax)} MW (rounded) | cost ${d.cost_per_mw} | emis ${d.emissions_per_mw}`);
+
+  // hover/selection halo
+  let selectedId = null;
+  groups
+    .on("mouseover", function(){ d3.select(this).select(".gen-halo").transition().duration(120).style("opacity", .5); })
+    .on("mouseout",  function(e,d){ d3.select(this).select(".gen-halo").transition().duration(120).style("opacity", d.id===selectedId?1:0); })
+    .on("click",    function(e,d){ selectedId = (selectedId===d.id?null:d.id); d3.selectAll(".gen-halo").style("opacity", x=>x.id===selectedId?1:0); });
+
+  offG.on("click", (ev,d)=>{ d.pg = 0; update(); ev.stopPropagation(); });
+
+  // -----------------------------
+  // Update (draw everything)
+  // -----------------------------
+  update();
+
+  function update(){
+    // Quantize current pg to half‑steps and clamp to rounded capacity
+    generators.forEach(g => {
+      const cap = roundCapToHalf(g.pmax);
+      g.pg = Math.max(0, Math.min(quantizeHalf(g.pg || 0), cap));
+    });
+
+    groups.each(function(d){
+      const g = d3.select(this);
+      const { W, H, innerW, caps } = genDims(d);
+      const topY = -H/2 + PAD_INNER;
+
+      // frame + halo
+      g.select(".gen-rect")
+        .attr("x", -W/2).attr("y", -H/2)
+        .attr("width", W).attr("height", H);
+
+      g.select(".gen-halo")
+        .attr("x", -W/2 - HALO_PAD)
+        .attr("y", -H/2 - HALO_PAD)
+        .attr("width",  W + HALO_PAD*2)
+        .attr("height", H + HALO_PAD*2);
+
+      g.select(`#clip-${CSS.escape(d.id)} rect`)
+        .attr("x", -W/2 + PAD_INNER)
+        .attr("y", -H/2 + PAD_INNER)
+        .attr("width",  Math.max(0, innerW))
+        .attr("height", H - PAD_INNER*2);
+
+      // OFF (full width of main rectangle, one block high)
+      const isOn = (d.pg||0) > 0;
+      const offW = W;
+      const offH = SCALED_BLOCK_H;
+      const offY = H/2 + OFF_SPACING;
+      g.select(".off-group").style("display", isOn ? null : "none");
+      g.select(".off-block")
+        .attr("x", -offW/2).attr("y", offY)
+        .attr("width", offW).attr("height", offH);
+      g.select(".off-label").attr("x", 0).attr("y", offY + offH/2);
+
+      g.select(".gen-label")
+        .attr("y", isOn ? offY + offH + 10 : H/2 + 10)
+        .attr("x", 0);
+
+      // --- Capacity BACKGROUNDS (TOP → DOWN) ---
+      const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
+        .data(caps, (b,i) => i);
+
+      bgs.join(
+        enter => enter.append("rect")
+          .attr("class","gen-block-bg")
+          .attr("x", -innerW/2)
+          .attr("y", (b,i) => blockY(topY, i))
+          .attr("width", (b,i) => (b.size === HALF_STEP ? innerW/2 : innerW))
+          .attr("height", SCALED_BLOCK_H)
+          .on("click", function(ev, b){
+            // Decide half/full by click X within the background rect
+            const [mx] = d3.pointer(ev, this);
+            const left = -innerW/2;
+            const w = (b.size === HALF_STEP ? innerW/2 : innerW);
+            const rel = (mx - left) / Math.max(1, w); // 0..1
+            const half = (b.size === HALF_STEP) || (rel < 0.5); // if top half block, only half possible
+            const target = b.upper;             // always snap to the block's upper bound
+            d.pg = Math.min(roundCapToHalf(d.pmax), target);
+            update();
+            ev.stopPropagation();
+          }),
+        updateSel => updateSel
+          .attr("x", -innerW/2)
+          .attr("y", (b,i) => blockY(topY, i))
+          .attr("width", (b,i) => (b.size === HALF_STEP ? innerW/2 : innerW))
+          .attr("height", SCALED_BLOCK_H),
+        exit => exit.remove()
+      );
+
+      // --- FILLS (0, half, full only) ---
+      const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
+        .data(caps, (b,i) => i);
+
+      fills.join(
+        enter => enter.append("rect")
+          .attr("class","gen-block-fill")
+          .attr("x", -innerW/2)
+          .attr("y", (b,i) => blockY(topY, i))
+          .attr("height", SCALED_BLOCK_H)
+          .attr("width", b => {
+            const stepsInBlock = b.size / HALF_STEP; // 1 or 2
+            const active = Math.max(0, Math.min((d.pg - b.lower) / HALF_STEP, stepsInBlock));
+            // width per half‑step:
+            const halfW = (b.size === HALF_STEP ? innerW/2 : innerW/2);
+            if (active >= 2) return innerW;        // full block
+            if (active >= 1) return halfW;         // half block
+            return 0;
+          })
+          .attr("fill", blockColor(d.emissions_per_mw)),
+        updateSel => updateSel
+          .attr("x", -innerW/2)
+          .attr("y", (b,i) => blockY(topY, i))
+          .attr("height", SCALED_BLOCK_H)
+          .attr("width", b => {
+            const stepsInBlock = b.size / HALF_STEP; // 1 or 2
+            const active = Math.max(0, Math.min((d.pg - b.lower) / HALF_STEP, stepsInBlock));
+            const halfW = (b.size === HALF_STEP ? innerW/2 : innerW/2);
+            if (active >= 2) return innerW;
+            if (active >= 1) return halfW;
+            return 0;
+          })
+          .attr("fill", blockColor(d.emissions_per_mw)),
+        exit => exit.remove()
+      );
+    });
+  }
+
+})();
+</script>
+</body>
+</html>

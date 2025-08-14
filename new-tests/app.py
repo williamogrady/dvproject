@@ -24,6 +24,10 @@ def map_view():
 def scaling():
     return render_template("/tests/chevronScaling.html")
 
+@app.route("/mapB")
+def map_viewB():
+    return render_template("mapView-prototypeB.html")
+
 @app.route('/new-tests/<path:filename>')
 def serve_json_from_same_folder(filename):
     directory = os.path.dirname(os.path.abspath(__file__))  # points to /new-tests/
