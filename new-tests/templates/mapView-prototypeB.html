@@ -935,28 +935,54 @@ function refreshChevrons(liveLines, currentMapMode) {
   drawChevrons(enrichedLines, staticNodes, currentMapMode); // Pass mode
 }
 
-// === Rect Gen Settings ===
-const BLOCK_UNIT = 100;      // MW per block
-const HALF_STEP = BLOCK_UNIT / 2;
-const BASE_BLOCK_H = 28;     // max chunky block height (px)
-const BLOCK_GAP = 4;         // vertical gap between blocks (px)
-const PAD_INNER = 10;        // inner padding inside frame (px)
-const HALO_PAD = 8;          // halo padding around frame (px)
-const MIN_GEN_W = 50;        // min rect width (px) for clickability
-const WIDTH_VARIATION = 80;  // width spread from low→high cost (px)
-const MAX_GEN_W = MIN_GEN_W + WIDTH_VARIATION;
-const MAX_GEN_H = 220;       // tallest generator (px) = your cap
+// === Rect Generators: settings (tune freely) ================================
+const BLOCK_UNIT       = 100;      // MW per block
+const HALF_STEP        = BLOCK_UNIT / 2;
+const BASE_BLOCK_H     = 28;       // px (upper bound; will scale down to fit MAX_GEN_H)
+const BLOCK_GAP        = 4;        // px vertical gap
+const PAD_INNER        = 10;       // px inner padding
+const HALO_PAD         = 8;        // px halo padding
+const MIN_GEN_W        = 50;       // px minimum width (clickable)
+const WIDTH_VARIATION  = 80;       // px subtle width variation by cost
+const MAX_GEN_W        = MIN_GEN_W + WIDTH_VARIATION;
+const MAX_GEN_H        = 220;      // px tallest generator on screen
 
-// Quantize helpers (half-blocks only)
-const roundCapToHalf = pmax => Math.ceil(pmax / HALF_STEP) * HALF_STEP;
-const capBlocks = p => Math.max(1, Math.floor(roundCapToHalf(p) / BLOCK_UNIT) + ((roundCapToHalf(p) % BLOCK_UNIT) ? 1 : 0));
+// Round capacity to nearest half-block (capacity shown is full/half only)
+const roundCapToHalf = pmax => Math.ceil((pmax || 0) / HALF_STEP) * HALF_STEP;
 
-// Compute block height globally so the tallest fits MAX_GEN_H
+// Compute number of visual blocks (top can be half)
+function capBlocks(p){
+  const cap = roundCapToHalf(p);
+  const full = Math.floor(cap / BLOCK_UNIT);
+  const hasHalfTop = (cap % BLOCK_UNIT) === HALF_STEP;
+  return full + (hasHalfTop ? 1 : 0);
+}
+
+// Compute global block height so the tallest gen fits MAX_GEN_H
 function computeBlockH(gens){
   const pmaxExtent = d3.extent(gens, g => g.pmax || 0);
-  const maxBlocks = capBlocks(pmaxExtent[1] || 0);
-  const available = MAX_GEN_H - PAD_INNER*2 - (maxBlocks - 1) * BLOCK_GAP;
-  return Math.min(BASE_BLOCK_H, available / maxBlocks);
+  const maxBlocks  = capBlocks(pmaxExtent[1] || 0);
+  const available  = MAX_GEN_H - PAD_INNER*2 - (maxBlocks - 1) * BLOCK_GAP;
+  return Math.min(BASE_BLOCK_H, available / Math.max(1, maxBlocks));
+}
+
+// Build capacity blocks (TOP → DOWN). Top block may be HALF_STEP wide (half capacity).
+function capacityBoundsTopDown(pmax){
+  const cap = roundCapToHalf(pmax);
+  const fullBlocks = Math.floor(cap / BLOCK_UNIT);
+  const hasHalfTop = (cap % BLOCK_UNIT) === HALF_STEP;
+  const out = [];
+  let rem = cap;
+
+  if (hasHalfTop){
+    out.push({ size: HALF_STEP, upper: rem, lower: rem - HALF_STEP }); // TOP = half
+    rem -= HALF_STEP;
+  }
+  for (let i=0; i<fullBlocks; i++){
+    out.push({ size: BLOCK_UNIT, upper: rem, lower: rem - BLOCK_UNIT });
+    rem -= BLOCK_UNIT;
+  }
+  return out; // index 0 is TOP
 }
 
 
@@ -1024,10 +1050,10 @@ zoomGroup.selectAll("path.map-load")
 
     // Generators - drawn last to ensure they are on top
 
-// === Generators — Rectangles with top→down blocks ===
+// === Generators — Rectangles with top→down blocks ===========================
 const generatorNodes = nodes.filter(d => d.type === "generator");
 
-// Scales that depend on currentGenerators
+// Scales derived from currentGenerators (already populated after scenario load)
 const costExtent = d3.extent(currentGenerators, g => g.cost_per_mw || 0);
 const emisExtent = d3.extent(currentGenerators, g => g.emissions_per_mw || 0);
 
@@ -1041,28 +1067,9 @@ const blockColor = d3.scaleLinear() // low emis → green, high → grey
 
 const SCALED_BLOCK_H = computeBlockH(currentGenerators);
 
-// Helpers for per-generator layout
-function capacityBoundsTopDown(pmax){
-  const roundedCap = roundCapToHalf(pmax);
-  const fullBlocks = Math.floor(roundedCap / BLOCK_UNIT);
-  const hasHalfTop = (roundedCap % BLOCK_UNIT) === HALF_STEP;
-  const bounds = [];
-  let remaining = roundedCap;
-
-  if (hasHalfTop){
-    bounds.push({ size: HALF_STEP, upper: remaining, lower: remaining - HALF_STEP }); // TOP half
-    remaining -= HALF_STEP;
-  }
-  for (let i=0; i<fullBlocks; i++){
-    bounds.push({ size: BLOCK_UNIT, upper: remaining, lower: remaining - BLOCK_UNIT });
-    remaining -= BLOCK_UNIT;
-  }
-  return bounds; // index 0 = TOP
-}
-
 function genDims(gen){
-  const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw));
-  const caps = capacityBoundsTopDown(gen.pmax);
+  const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0));
+  const caps = capacityBoundsTopDown(gen.pmax || 0);
   const n = caps.length;
   const H = n * SCALED_BLOCK_H + (n-1) * BLOCK_GAP + PAD_INNER*2;
   const innerW = W - PAD_INNER*2;
@@ -1070,15 +1077,15 @@ function genDims(gen){
 }
 
 const genGroups = zoomGroup.selectAll("g.map-gen-group")
-  .data(generatorNodes)
+  .data(generatorNodes, d => d.id)
   .enter()
   .append("g")
   .attr("class", "map-gen-group")
   .attr("transform", d => `translate(${d.x}, ${d.y})`);
 
-// HALO (rounded rect)
+// Rect halo (selection/hover)
 genGroups.append("rect")
-  .attr("class", "map-gen-halo")     // keep same class name used elsewhere
+  .attr("class", "map-gen-halo")
   .attr("fill", "none")
   .attr("stroke", "#42a5f5")
   .attr("stroke-width", 3)
@@ -1086,123 +1093,132 @@ genGroups.append("rect")
   .attr("rx", 12).attr("ry", 12)
   .style("pointer-events", "none");
 
-// MAIN RECT (this carries the ID and .map-gen class so existing code still finds it)
+// Main generator rectangle (keeps .map-gen id/class for your existing selectors)
 genGroups.append("rect")
   .attr("class", "map-gen")
   .attr("id", d => d.id)
-  .attr("fill", "#ffffff")
-  .attr("stroke", "black")
-  .attr("stroke-width", 3);
+  .attr("fill", "#fff")
+  .attr("stroke", "#111")
+  .attr("stroke-width", 2);
 
-// Clip path to keep fills inside padded frame
+// Clip to keep fills inside the padded frame
 genGroups.append("clipPath")
   .attr("id", d => `clip-${d.id}`)
   .append("rect");
 
-// Blocks holder (clipped)
+// Block container (clipped)
 genGroups.append("g")
   .attr("class", "blocks")
   .attr("clip-path", d => `url(#clip-${d.id})`);
 
-// Size + draw content per generator
+// Draw once; update function will refresh sizes/fills later as pg/cost/pmax change
 function drawRectGenerators(){
-  genGroups.each(function(d){
+  genGroups.each(function(node){
     const g = d3.select(this);
-    const gen = currentGenerators.find(x => `Gen${x.bus}` === d.id) || { pmax: 0, cost_per_mw: 1, emissions_per_mw: 0, pg: 0 };
+    const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id) || { pmax:0, cost_per_mw:1, emissions_per_mw:0, pg:0 };
     const { W, H, innerW, caps } = genDims(gen);
     const topY = -H/2 + PAD_INNER;
 
-    // main rect
+    // main rect size + ON outline
+    const isOn = (gen.pg || 0) > 0;
     g.select(".map-gen")
       .attr("x", -W/2)
       .attr("y", -H/2)
-      .attr("width", W)
+      .attr("width",  W)
       .attr("height", H)
-      .attr("fill", gen.pg > 0 ? "#fff" : "#fff"); // frame stays white; fills indicate output
+      .attr("fill",  "#fff")
+      .attr("stroke", isOn ? "#2e7d32" : "#111")
+      .attr("stroke-width", isOn ? 5 : 2);
 
-    // halo
+    // halo box size
     g.select(".map-gen-halo")
       .attr("x", -W/2 - HALO_PAD)
       .attr("y", -H/2 - HALO_PAD)
-      .attr("width", W + HALO_PAD*2)
+      .attr("width",  W + HALO_PAD*2)
       .attr("height", H + HALO_PAD*2);
 
     // clip
-    g.select(`#clip-${CSS.escape(d.id)} rect`)
+    g.select(`#clip-${CSS.escape(node.id)} rect`)
       .attr("x", -W/2 + PAD_INNER)
       .attr("y", -H/2 + PAD_INNER)
-      .attr("width", innerW)
+      .attr("width",  innerW)
       .attr("height", H - PAD_INNER*2);
 
-    // capacity backgrounds (TOP→DOWN)
+    // Capacity block backgrounds (TOP → DOWN)
     const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
       .data(caps, (b,i)=>i);
 
     bgs.join(
-      e=>e.append("rect").attr("class","gen-block-bg"),
-      u=>u,
-      x=>x.remove()
+      e => e.append("rect").attr("class","gen-block-bg"),
+      u => u,
+      x => x.remove()
     )
     .attr("x", -innerW/2)
     .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-    .attr("width", b => (b.size === HALF_STEP ? innerW/2 : innerW))
+    .attr("width",  b => (b.size === HALF_STEP ? innerW/2 : innerW))
     .attr("height", SCALED_BLOCK_H)
     .attr("rx", 6).attr("ry", 6)
     .attr("fill", "transparent")
-    .attr("stroke", "#000").attr("stroke-width", .8);
+    .attr("stroke", "#000").attr("stroke-width", .8)
+    .on("click", (ev, b) => {
+      // Interaction: full blocks → full only; top half (if present) → half only
+      const targetMW = b.upper;                              // snap to this block's upper bound
+      const pmax = gen.pmax || 1;
+      const percent = Math.min(100, Math.round((targetMW / pmax) * 100));
+      fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent, user_active: true })
+      })
+      .then(res => res.json())
+      .then(data => {
+        currentGenerators = data.generators;
+        currentLines = data.lines;
+        renderOverview(currentGenerators, currentScenarioData, currentLines);
+        updateMapGeneratorsFromScenario(); // <-- refresh sizes/fills
+      })
+      .catch(console.error);
 
-    // binary fills (0, half, full) from left
+      ev.stopPropagation();
+    });
+
+    // Binary fills (0/half/full only), from left
     const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
       .data(caps, (b,i)=>i);
 
     fills.join(
-      e=>e.append("rect").attr("class","gen-block-fill"),
-      u=>u,
-      x=>x.remove()
+      e => e.append("rect").attr("class","gen-block-fill"),
+      u => u,
+      x => x.remove()
     )
     .attr("x", -innerW/2)
     .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
     .attr("height", SCALED_BLOCK_H)
     .attr("rx", 6).attr("ry", 6)
-    .attr("width", b => {
-      const filled = gen.pg >= b.upper;
+    .attr("width", b => {                  // filled if pg >= block upper bound
+      const filled = (gen.pg || 0) >= b.upper;
       if (!filled) return 0;
       return (b.size === HALF_STEP) ? (innerW/2) : innerW;
     })
-    .attr("fill", blockColor(gen.emissions_per_mw));
+    .attr("fill", blockColor(gen.emissions_per_mw || 0));
 
-    // hover halo (rect version)
+    // Hover/selection halo behaviour
     g.on("mouseover", function(){
-      d3.select(this).select(".map-gen-halo").transition().duration(120).attr("opacity", .6);
+      d3.select(this).select(".map-gen-halo").transition().duration(120).attr("opacity", .5);
     }).on("mouseout", function(){
-      const sel = (d.id === selectedGeneratorId);
+      const sel = (node.id === selectedGeneratorId);
       d3.select(this).select(".map-gen-halo").transition().duration(120).attr("opacity", sel ? 1 : 0);
-    });
-
-    // click → select + show your existing bubble UI
-    g.on("click", (event) => {
+    }).on("click", function(event){
       event.stopPropagation();
-      selectedGeneratorId = d.id;
+      selectedGeneratorId = node.id;
       updateGeneratorStrokes();
       updateGeneratorHalos();
-
-      // reuse your bubble code path; it already builds blocks with /api call
-      const bubbleX = event.pageX + 10;
-      const bubbleY = event.pageY - 20;
-      const bubbleEl = document.getElementById("bubble");
-      bubbleEl.style.display = "block";
-      bubbleEl.style.left = `${bubbleX}px`;
-      bubbleEl.style.top = `${bubbleY}px`;
-      bubbleEl.innerHTML = "";
-      // (we keep the existing bubble builder further down unchanged)
-      // Trigger the old “click” handler logic by dispatching on the rect element’s ID:
-      // (we’ll simulate the old path using the same function that builds the bubble)
-      // For cleanliness, we’ll just replicate the old inline code: see step 3.
     });
   });
 }
 
-drawRectGenerators(); 
+drawRectGenerators();
+
 
 function showGeneratorBubbleFromEvent(event, d){
   const bubbleX = event.pageX + 10;
@@ -1507,22 +1523,87 @@ function createBlock(level, isHalf, gen) {
 
 
 // === Update generator colors on scenario load ===
+// === Replace old updateMapGeneratorsFromScenario() ==========================
 function updateMapGeneratorsFromScenario() {
-  const genNodes = d3.selectAll(".map-gen");
+  const SCALED_BLOCK_H = computeBlockH(currentGenerators);
 
-  genNodes.each(function(d) {
-    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-    const isOn = match && match.pg > 0;
-    const isSelected = d.id === selectedGeneratorId;
+  // Quick helpers reused here
+  function genById(id){
+    return currentGenerators.find(x => `Gen${x.bus}` === id) || { pmax:0, cost_per_mw:1, emissions_per_mw:0, pg:0 };
+  }
+  function dimsFor(gen){
+    const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0));
+    const caps = capacityBoundsTopDown(gen.pmax || 0);
+    const n = caps.length;
+    const H = n * SCALED_BLOCK_H + (n-1) * BLOCK_GAP + PAD_INNER*2;
+    const innerW = W - PAD_INNER*2;
+    return { W, H, innerW, caps };
+  }
 
-    d3.select(this)
-    .attr("fill", isOn ? "#4caf50" : "white");
-    
+  d3.selectAll(".map-gen-group").each(function(node){
+    const g = d3.select(this);
+    const id = g.select(".map-gen").attr("id");
+    const gen = genById(id);
+    const { W, H, innerW, caps } = dimsFor(gen);
+    const topY = -H/2 + PAD_INNER;
+    const isOn = (gen.pg || 0) > 0;
+
+    // frame + outline
+    g.select(".map-gen")
+      .attr("x", -W/2).attr("y", -H/2)
+      .attr("width", W).attr("height", H)
+      .attr("fill",  "#fff")
+      .attr("stroke", isOn ? "#2e7d32" : "#111")
+      .attr("stroke-width", isOn ? 5 : 2);
+
+    // halo + clip
+    g.select(".map-gen-halo")
+      .attr("x", -W/2 - HALO_PAD).attr("y", -H/2 - HALO_PAD)
+      .attr("width", W + HALO_PAD*2).attr("height", H + HALO_PAD*2);
+    g.select(`#clip-${CSS.escape(id)} rect`)
+      .attr("x", -W/2 + PAD_INNER).attr("y", -H/2 + PAD_INNER)
+      .attr("width", innerW).attr("height", H - PAD_INNER*2);
+
+    // backgrounds
+    const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
+      .data(caps, (b,i)=>i);
+    bgs.join(
+      e => e.append("rect").attr("class","gen-block-bg"),
+      u => u,
+      x => x.remove()
+    )
+    .attr("x", -innerW/2)
+    .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+    .attr("width", b => (b.size === HALF_STEP ? innerW/2 : innerW))
+    .attr("height", SCALED_BLOCK_H)
+    .attr("rx", 6).attr("ry", 6)
+    .attr("fill", "transparent")
+    .attr("stroke", "#000").attr("stroke-width", .8);
+
+    // fills (binary 0/half/full)
+    const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
+      .data(caps, (b,i)=>i);
+    fills.join(
+      e => e.append("rect").attr("class","gen-block-fill"),
+      u => u,
+      x => x.remove()
+    )
+    .attr("x", -innerW/2)
+    .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+    .attr("height", SCALED_BLOCK_H)
+    .attr("rx", 6).attr("ry", 6)
+    .attr("width", b => {
+      const filled = (gen.pg || 0) >= b.upper;
+      if (!filled) return 0;
+      return (b.size === HALF_STEP) ? (innerW/2) : innerW;
+    })
+    .attr("fill", blockColor(gen.emissions_per_mw || 0));
   });
 
   updateGeneratorStrokes();
-  drawSelectedGeneratorHalo();
+  updateGeneratorHalos();
 }
+
 
   document.getElementById("toggleBtn").addEventListener("click", () => {
   const panel = document.getElementById("adminPanel");
