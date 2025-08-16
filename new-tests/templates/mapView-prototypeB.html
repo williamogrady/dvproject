@@ -702,6 +702,13 @@ let availableScenarios = [];
 
 let currentMapMode = "full";
 
+const activeFilters = new Set(); // 'power' | 'cost' | 'emissions'
+function appliedSet(){
+  return activeFilters.size === 0
+    ? new Set(['power','cost','emissions'])
+    : new Set(activeFilters);
+}
+
 
 function getWidthScale() {
   const costExtent = d3.extent(currentGenerators, g => g.cost_per_mw || 0);
@@ -712,9 +719,19 @@ function getWidthScale() {
 
 function getBlockColor() {
   const emisExtent = d3.extent(currentGenerators, g => g.emissions_per_mw || 0);
-  return d3.scaleLinear()
+  const sat = d3.scaleLinear()
     .domain([emisExtent[0] || 0, emisExtent[1] || 1])
-    .range(["#2e7d32", "#bdbdbd"]);
+    .range([18, 92])
+    .clamp(true);
+
+  // Keep the call style: blockColor(value)
+  return function(emisValue){
+    const a = appliedSet();
+    if (a.has('emissions')) {
+      return `hsl(0, ${sat(emisValue)}%, 52%)`;  // red, saturation = emissions
+    }
+    return '#d2d7e2'; // neutral when Emissions filter not active
+  };
 }
 
 
@@ -1114,14 +1131,27 @@ const generatorNodes = nodes.filter(d => d.type === "generator");
   const blockColor = getBlockColor();
   const SCALED_BLOCK_H = computeBlockH(currentGenerators);
 
-  function genDims(gen){
-    const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0));
-    const caps = capacityBoundsTopDown(gen.pmax || 0);
-    const n = Math.max(1, caps.length);  // <- ensure ≥ 1
-    const H = n * SCALED_BLOCK_H + (n-1) * BLOCK_GAP + PAD_INNER*2;
-    const innerW = W - PAD_INNER*2;
-    return { W, H, innerW, caps };
-  }
+function genDims(gen){
+  const a = appliedSet();
+  const widthActive = a.has('cost');
+  const powerActive = a.has('power');
+
+  // Width: scaled by cost only if Cost filter is applied; otherwise minimal width
+  const W = widthActive
+    ? Math.max(MIN_GEN_W, getWidthScale()(gen.cost_per_mw || 0))
+    : MIN_GEN_W;
+
+  // Height: scaled by capacity only if Power filter is applied; otherwise a neutral height (~3 slots)
+  const caps = capacityBoundsTopDown(gen.pmax || 0);
+  const n = Math.max(1, caps.length);
+  const scaledH  = n * SCALED_BLOCK_H + (n - 1) * BLOCK_GAP + PAD_INNER * 2;
+  const NEUTRAL_H = PAD_INNER * 2 + SCALED_BLOCK_H * 3 + BLOCK_GAP * 2;
+  const H = powerActive ? scaledH : NEUTRAL_H;
+
+  const innerW = W - PAD_INNER * 2;
+  return { W, H, innerW, caps };
+}
+
 
   const genGroups = zoomGroup.selectAll("g.map-gen-group")
     .data(generatorNodes.filter(d => currentGenerators.some(g => `Gen${g.bus}` === d.id)), d => d.id)
@@ -1825,6 +1855,26 @@ function showResultOverlay() {
     overlay.remove();
   });
 }
+
+[
+  { key:'power',     id:'scale-power',     status:'status-power',     cls:'scale-power' },
+  { key:'cost',      id:'scale-cost',      status:'status-cost',      cls:'scale-cost' },
+  { key:'emissions', id:'scale-emissions', status:'status-emissions', cls:'scale-emissions' },
+].forEach(({key,id,status,cls}) => {
+  const el = document.getElementById(id);
+  const st = document.getElementById(status);
+  if (!el) return;
+
+  el.addEventListener('click', () => {
+    if (activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
+    el.classList.toggle('selected');
+    if (el.classList.contains('selected')) el.classList.add(cls); else el.classList.remove(cls);
+    if (st) st.textContent = el.classList.contains('selected') ? 'Active' : 'Click to scale';
+
+    // Re-render gens with new scaling rules
+    updateMapGeneratorsFromScenario();
+  });
+});
 
 
   </script>

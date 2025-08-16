@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DV Project - MapView B (Multi-Filter Cues)</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
+
+/* ————— existing styles trimmed to what we touch ————— */
+:root {
+  --gen-on: #4caf50;
+  --gen-off: #333;
+}
+
+body { margin: 0; padding: 0; height: 100vh; font-family: sans-serif; background: #1e1e1e; color: #eee; overflow: hidden; }
+#map-container { position: relative; width: 100%; height: 100%; }
+svg#map { width: 100%; height: 100%; background: #dfcfcf; }
+
+/* Overview */
+#overview { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; background: white; border-radius: 20px; padding: 1rem; gap: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.2); box-sizing: border-box; width: 1500px; margin: auto; opacity: 0.95; align-items: stretch; z-index: 20; }
+#overview-status-section { display: grid; grid-template-columns: 3fr 2fr 2fr; gap: 1rem; flex: 0 0 68%; }
+#right-column { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; grid-column: 3 / 4; }
+.overview-card { font-family: "Figtree", sans-serif; background: white; border-radius: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; padding: 0.6rem 0.75rem; box-sizing: border-box; cursor: pointer; height: 100%; transition: background 0.2s ease, transform 0.2s ease; }
+.overview-card:hover { background: #f5f5f5; transform: translateY(-1px); }
+.overview-label { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; color: #333; }
+.overview-value { font-size: 1.1rem; font-weight: bold; color: #000; }
+.overview-status { font-size: 0.7rem; text-align: center; color: #666; margin-top: auto; }
+
+/* Selected states (we reuse) */
+.overview-card.selected { border: 2px solid #42a5f5; }
+.overview-card.scale-power.selected { border-color: #4caf50; }
+.overview-card.scale-cost.selected { border-color: #f9a825; }
+.overview-card.scale-emissions.selected { border-color: #c62828; }
+
+/* Legend + admin unchanged (omitted for brevity in this embed) */
+
+/* Generator cues */
+.cue-left { fill: #43b36d; }
+.cue-bottom { fill: #ffd54f; }
+
+  </style>
+</head>
+<body>
+  <div id="map-container">
+    <svg id="map"><g id="zoom-layer"></g></svg>
+
+    <div id="overview">
+      <div id="overview-status-section">
+        <div class="overview-card" id="scale-power">
+          <div class="overview-label">Power</div>
+          <div class="overview-value" id="overview-power">
+            <div class="blocks"></div>
+            <div class="fraction">–</div>
+          </div>
+          <div class="overview-status" id="status-power">Click to scale</div>
+        </div>
+        <div class="overview-card" id="scale-lines">
+          <div class="overview-label">Overloaded Lines</div>
+          <div class="overview-value" id="overview-lines">–</div>
+          <div class="overview-status" id="status-lines">Click to scale</div>
+        </div>
+        <div class="column" style="display:flex;flex-direction:column;gap:0.5rem;">
+          <div class="overview-card" id="scale-cost">
+            <div class="overview-label">Cost</div>
+            <div class="overview-value" id="overview-cost">–</div>
+            <div class="overview-status" id="status-cost">Click to scale</div>
+          </div>
+          <div class="overview-card" id="scale-emissions">
+            <div class="overview-label">Emissions</div>
+            <div class="overview-value" id="overview-emissions">–</div>
+            <div class="overview-status" id="status-emissions">Click to scale</div>
+          </div>
+        </div>
+      </div>
+      <div id="overview-task-section">
+        <div class="overview-card task-card">
+          <div class="overview-label">Scenario Task</div>
+          <div id="task-placeholder" class="task-placeholder">No Scenario Loaded</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const svg = d3.select('#map');
+const svgElement = svg.node();
+const zoomLayer = svg.select('#zoom-layer');
+const zoomGroup = svg.append('g').attr('id','zoom-group');
+
+let selectedGeneratorId = null;
+let totalPower = 0, totalCost = 0, totalEmissions = 0;
+let currentGenerators = [], currentLines = [], staticLines = [], staticNodes = [];
+let currentScenarioId = '', currentScenarioData = null, availableScenarios = [];
+let currentMapMode = 'full';
+
+// NEW: multi-filter state (cards). 0 active = scale ALL (no cues). 1..3 active = scale those (show cues)
+const activeFilters = new Set(); // 'power' | 'cost' | 'emissions'
+function appliedSet(){ return activeFilters.size === 0 ? new Set(['power','cost','emissions']) : new Set(activeFilters); }
+
+// Scales & constants (block rectangles)
+const BLOCK_UNIT = 100, HALF_STEP = BLOCK_UNIT/2;
+const BASE_BLOCK_H = 28, BLOCK_GAP = 4, PAD_INNER = 10, HALO_PAD = 8;
+const MIN_GEN_W = 50, WIDTH_VARIATION = 80, MAX_GEN_W = MIN_GEN_W + WIDTH_VARIATION;
+const MAX_GEN_H = 220;
+
+function getWidthScale(){
+  const costExtent = d3.extent(currentGenerators, g => g.cost_per_mw || 0);
+  return d3.scaleLinear().domain([Math.max(1, costExtent[0]||1), costExtent[1]||1]).range([MIN_GEN_W, MAX_GEN_W]);
+}
+function emisSatScale(){
+  const emisExtent = d3.extent(currentGenerators, g => g.emissions_per_mw || 0);
+  const lo = emisExtent[0] ?? 0, hi = emisExtent[1] ?? 1;
+  return d3.scaleLinear().domain([lo, hi]).range([18, 92]).clamp(true);
+}
+
+const zoomBehavior = d3.zoom().scaleExtent([0.2, 2.0]).on('zoom', (event)=>{ zoomGroup.attr('transform', event.transform); });
+svg.call(zoomBehavior);
+
+window.addEventListener('load', ()=>{
+  const initialScale = 0.3;
+  const centerX = svgElement.clientWidth/2, centerY = svgElement.clientHeight/2;
+  svg.call(zoomBehavior.transform, d3.zoomIdentity.translate(centerX-200, centerY-150).scale(initialScale).translate(-centerX, -centerY));
+  fetchAllScenarios();
+});
+
+function roundCapToHalf(pmax){ return Math.ceil((pmax||0)/HALF_STEP)*HALF_STEP; }
+function capBlocks(p){ const cap = roundCapToHalf(p); const full = Math.floor(cap/BLOCK_UNIT); const hasHalfTop = (cap % BLOCK_UNIT)===HALF_STEP; return full + (hasHalfTop?1:0); }
+function computeBlockH(gens){ const pmaxExtent = d3.extent(gens, g=>g.pmax||0); const maxBlocks = capBlocks(pmaxExtent[1]||0); const available = MAX_GEN_H - PAD_INNER*2 - (maxBlocks-1)*BLOCK_GAP; return Math.min(BASE_BLOCK_H, available/Math.max(1,maxBlocks)); }
+function capacityBoundsTopDown(pmax){ const cap = roundCapToHalf(pmax); const fullBlocks = Math.floor(cap/BLOCK_UNIT); const hasHalfTop = (cap % BLOCK_UNIT) === HALF_STEP; const out=[]; let rem=cap; if(hasHalfTop){ out.push({size:HALF_STEP, upper:rem, lower:rem-HALF_STEP}); rem-=HALF_STEP;} for(let i=0;i<fullBlocks;i++){ out.push({size:BLOCK_UNIT, upper:rem, lower:rem-BLOCK_UNIT}); rem-=BLOCK_UNIT;} return out; }
+
+// API & scenario boot
+async function fetchAllScenarios(){
+  const res = await fetch('/api/scenarios');
+  const data = await res.json();
+  availableScenarios = data;
+  const def = data.find(s => s.scenario_id === 'clean_north_power') || data[0];
+  if(def){ currentScenarioId = def.scenario_id; currentScenarioData = def; populateScenarioDropdown(data, currentScenarioId); loadScenario(currentScenarioId); }
+}
+function populateScenarioDropdown(scenarios, selectedId){ const sel = document.createElement('select'); sel.id='scenario-select'; sel.innerHTML = scenarios.map(s=>`<option value="${s.scenario_id}" ${s.scenario_id===selectedId?'selected':''}>${s.title||s.scenario_id}</option>`).join(''); const task = document.getElementById('overview-task-section'); const old = task.querySelector('#scenario-select'); if(old) old.replaceWith(sel); else task.prepend(sel); sel.addEventListener('change', e=>loadScenario(e.target.value)); }
+async function loadScenario(id){ const res = await fetch(`/api/scenario/${id}`); const data = await res.json(); currentScenarioId=id; currentScenarioData=data; currentGenerators=data.generators; currentLines=data.lines; drawAll(); renderOverview(currentGenerators, currentScenarioData, currentLines); }
+
+// Draw map
+function drawAll(){
+  // Clear
+  zoomGroup.selectAll('*').remove();
+  // Paths
+  zoomGroup.selectAll('path.map-line').data(staticLines).enter().append('path').attr('class','map-line').attr('id', d=>d.id).attr('d', d=>d.d).attr('stroke','#888').attr('stroke-width',1.5).attr('fill','none');
+  // Buses
+  zoomGroup.selectAll('rect.map-bus').data(staticNodes.filter(d=>d.type==='bus')).enter().append('rect').attr('class','map-bus').attr('id', d=>d.id).attr('x', d=>d.x-d.width/2).attr('y', d=>d.y-d.height/2).attr('width',d=>d.width).attr('height',d=>d.height).attr('fill','#666').attr('stroke','#000').attr('stroke-width',0.8).attr('transform', d=> (d.rotate && d.rotateX!=null && d.rotateY!=null) ? `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})` : null);
+  // Loads
+  zoomGroup.selectAll('path.map-load').data(staticNodes.filter(d=>d.type==='load')).enter().append('path').attr('class','map-load').attr('id', d=>d.id).attr('d', d=>{ const s=20,x=d.x,y=d.y; return `M ${x},${y-s/2} L ${x-s/2},${y+s/2} L ${x+s/2},${y+s/2} Z`; }).attr('transform', d=> (d.rotate && d.rotateX!=null && d.rotateY!=null) ? `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})` : null).attr('fill','#201cdf');
+
+  // Generators as groups
+  const generatorNodes = staticNodes.filter(d=>d.type==='generator' && currentGenerators.some(g=>`Gen${g.bus}`===d.id));
+  const genGroups = zoomGroup.selectAll('g.map-gen-group').data(generatorNodes, d=>d.id).enter().append('g').attr('class','map-gen-group').attr('transform', d=>`translate(${d.x},${d.y})`);
+
+  // Halo
+  genGroups.append('rect').attr('class','map-gen-halo').attr('fill','none').attr('stroke','#42a5f5').attr('stroke-width',3).attr('opacity',0).attr('rx',12).attr('ry',12).style('pointer-events','none');
+  // Frame
+  genGroups.append('rect').attr('class','map-gen').attr('id', d=>d.id).attr('fill','#fff').attr('stroke','#111').attr('stroke-width',2);
+  // Cues layer
+  genGroups.append('rect').attr('class','cue-left');
+  genGroups.append('rect').attr('class','cue-bottom');
+  // Clip
+  genGroups.append('clipPath').attr('id', d=>`clip-${d.id}`).append('rect');
+  // Blocks container
+  genGroups.append('g').attr('class','blocks').attr('clip-path', d=>`url(#clip-${d.id})`);
+
+  updateMapGeneratorsFromScenario();
+}
+
+// Helper lookup
+function genById(id){ return currentGenerators.find(x=>`Gen${x.bus}`===id) || { pmax:0, cost_per_mw:1, emissions_per_mw:0, pg:0 }; }
+
+// Update sizes/fills/cues
+function updateMapGeneratorsFromScenario(){
+  const widthScale = getWidthScale();
+  const SCALED_BLOCK_H = computeBlockH(currentGenerators);
+  const eScale = emisSatScale();
+  const applied = appliedSet();
+  const showPowerCue = activeFilters.has('power');
+  const showCostCue  = activeFilters.has('cost');
+
+  function dimsFor(gen){
+    const widthActive = applied.has('cost'); // cost scaling
+    const W = Math.max(MIN_GEN_W, widthActive ? widthScale(gen.cost_per_mw || 0) : MIN_GEN_W);
+    const caps = capacityBoundsTopDown(gen.pmax || 0);
+    const n = Math.max(1, caps.length);
+    const H = n * SCALED_BLOCK_H + (n-1)*BLOCK_GAP + PAD_INNER*2; // (power scaling kept for now)
+    const innerW = W - PAD_INNER*2;
+    return { W, H, innerW, caps };
+  }
+
+  d3.selectAll('.map-gen-group').each(function(node){
+    const g = d3.select(this);
+    const id = g.select('.map-gen').attr('id');
+    const gen = genById(id);
+    const { W, H, innerW, caps } = dimsFor(gen);
+    const topY = -H/2 + PAD_INNER;
+    const isOn = (gen.pg || 0) > 0;
+
+    // frame
+    g.select('.map-gen').attr('x', -W/2).attr('y', -H/2).attr('width', W).attr('height', H).attr('fill','#fff').attr('stroke', isOn ? '#2e7d32' : '#111').attr('stroke-width', isOn ? 5 : 2);
+    // halo
+    g.select('.map-gen-halo').attr('x', -W/2 - HALO_PAD).attr('y', -H/2 - HALO_PAD).attr('width', W + HALO_PAD*2).attr('height', H + HALO_PAD*2);
+    // clip
+    g.select(`#clip-${CSS.escape(id)} rect`).attr('x', -W/2 + PAD_INNER).attr('y', -H/2 + PAD_INNER).attr('width', innerW).attr('height', Math.max(0, H - PAD_INNER*2));
+
+    // cues
+    g.select('.cue-left').attr('x', -W/2 - 5).attr('y', -H/2).attr('width', showPowerCue ? 5 : 0).attr('height', H).attr('opacity', showPowerCue ? 1 : 0);
+    g.select('.cue-bottom').attr('x', -W/2).attr('y', H/2).attr('width', showCostCue ? W : 0).attr('height', showCostCue ? 5 : 0).attr('opacity', showCostCue ? 1 : 0);
+
+    // backgrounds
+    const bgs = g.select('.blocks').selectAll('rect.gen-block-bg').data(caps, (b,i)=>i);
+    bgs.join(e=>e.append('rect').attr('class','gen-block-bg'), u=>u, x=>x.remove())
+      .attr('x', -innerW/2)
+      .attr('y', (b,i)=> topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+      .attr('width', b => (b.size === HALF_STEP ? innerW/2 : innerW))
+      .attr('height', SCALED_BLOCK_H)
+      .attr('rx',6).attr('ry',6)
+      .attr('fill','transparent')
+      .attr('stroke','#000').attr('stroke-width',.8)
+      .on('click', (ev,b)=>onBlockClick(ev,b,node));
+
+    // fills
+    const fills = g.select('.blocks').selectAll('rect.gen-block-fill').data(caps, (b,i)=>i);
+    fills.join(e=>e.append('rect').attr('class','gen-block-fill'), u=>u, x=>x.remove())
+      .attr('x', -innerW/2)
+      .attr('y', (b,i)=> topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+      .attr('height', SCALED_BLOCK_H)
+      .attr('rx',6).attr('ry',6)
+      .attr('width', b => ((gen.pg||0) >= Math.min(b.upper, gen.pmax||0)) ? (b.size===HALF_STEP ? innerW/2 : innerW) : 0)
+      .attr('fill', () => {
+        if (!applied.has('emissions')) return '#d2d7e2'; // neutral when emissions filter not active OR none are active cues
+        const sat = eScale(gen.emissions_per_mw || 0);
+        return `hsl(0, ${sat}%, 52%)`;
+      })
+      .on('click', (ev,b)=>onBlockClick(ev,b,node));
+  });
+
+  updateGeneratorStrokes();
+}
+
+function onBlockClick(ev, b, node){
+  const gen = currentGenerators.find(x => `Gen${x.bus}`===node.id);
+  if(!gen) return;
+  const upper = Math.min(b.upper, gen.pmax||0);
+  const lower = Math.min(b.lower, gen.pmax||0);
+  let targetMW = ((gen.pg||0) >= upper) ? lower : upper; // toggle down if clicked filled
+  targetMW = Math.round(targetMW / HALF_STEP) * HALF_STEP; // quantize to 0.5 blocks
+  targetMW = Math.max(0, Math.min(targetMW, gen.pmax||0));
+  gen.pg = targetMW; // optimistic UI
+  updateMapGeneratorsFromScenario();
+  const percent = Math.min(100, Math.round((targetMW / (gen.pmax || 1)) * 100));
+  fetch(`/api/set_generation/${gen.index}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ percent, user_active:true })})
+   .then(r=>r.json()).then(data=>{ currentGenerators = data.generators; currentLines = data.lines; renderOverview(currentGenerators, currentScenarioData, currentLines); updateMapGeneratorsFromScenario(); }).catch(console.error);
+  ev.stopPropagation();
+}
+
+// Overview + metrics (power/cost/emissions numbers kept as-is, simplified here)
+function renderOverview(gens, scenarioData={}, lines){
+  totalPower = gens.reduce((s,g)=>s+(g.pg||0),0);
+  totalCost = gens.reduce((s,g)=>s+(g.pg||0)*(g.cost_per_mw||0),0);
+  totalEmissions = gens.reduce((s,g)=>s+(g.pg||0)*(g.emissions_per_mw||0),0);
+  const overloaded = (lines||[]).filter(l=>l.flow>l.rate_a).length;
+  document.getElementById('overview-lines').textContent = overloaded;
+  document.getElementById('overview-cost').textContent = `$${totalCost.toFixed(0)}`;
+  document.getElementById('overview-emissions').textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  const frac = document.querySelector('#overview-power .fraction'); if(frac) frac.textContent = `${Math.round(totalPower)} MW`;
+  updatePowerBlocks(totalPower, scenarioData.target_mw||0);
+}
+
+function updatePowerBlocks(totalPower, targetPower){
+  const container = document.querySelector('#overview-power .blocks'); if(!container) return; container.innerHTML='';
+  const blockSize = 100; const blockCount = Math.ceil((targetPower||0)/blockSize); const over = totalPower - (targetPower||0);
+  for(let i=0;i<blockCount;i++){ const div=document.createElement('div'); div.className='block'; if(totalPower >= (i+1)*100) div.classList.add('full'); else if(totalPower > i*100) div.classList.add('partial'); else div.classList.add('goal'); container.appendChild(div);} 
+  if(over>0 && container.lastElementChild){ container.lastElementChild.className='block over'; container.lastElementChild.textContent = over>2000? '!!!' : `+${Math.ceil(over/100)}`; }
+}
+
+// UI: filter toggles
+const btnPower = document.getElementById('scale-power');
+const btnCost = document.getElementById('scale-cost');
+const btnEmis = document.getElementById('scale-emissions');
+const statusPower = document.getElementById('status-power');
+const statusCost = document.getElementById('status-cost');
+const statusEmis = document.getElementById('status-emissions');
+
+toggleCard(btnPower, 'power', statusPower, 'scale-power');
+toggleCard(btnCost, 'cost', statusCost, 'scale-cost');
+toggleCard(btnEmis, 'emissions', statusEmis, 'scale-emissions');
+
+function toggleCard(el, key, statusEl, cls){
+  el.addEventListener('click', ()=>{
+    if(activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
+    // visual
+    el.classList.toggle('selected');
+    if(el.classList.contains('selected')) el.classList.add(cls); else el.classList.remove(cls);
+    statusEl.textContent = el.classList.contains('selected') ? 'Active' : 'Click to scale';
+    updateMapGeneratorsFromScenario();
+  });
+}
+
+// Lines (keep your previous chevron logic if needed). For brevity we skip here.
+// You can wire #scale-lines to a function that dims other layers and refreshes chevrons if desired.
+
+function updateGeneratorStrokes(){ /* optional highlight logic */ }
+
+// Bootstrap static map assets + live generators
+Promise.all([
+  fetch('/new-tests/full_nodes.json').then(r=>r.json()),
+  fetch('/new-tests/full_lines.json').then(r=>r.json()),
+  fetch('/api/generators').then(r=>r.json())
+]).then(([nodes, lines, gens])=>{ staticNodes=nodes; staticLines=lines; currentGenerators=gens; drawAll(); renderOverview(currentGenerators, currentScenarioData||{}, currentLines); });
+</script>
+</body>
+</html>

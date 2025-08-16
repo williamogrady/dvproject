@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Click → Expand (Two Generators) – Minimal Test</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #151a24;
+      --stroke: #2a3244;
+      --stroke-strong: #5f6c88;
+      --muted: #95a2bb;
+      --text: #e6ebf4;
+      --ok: #43b36d;      /* power cue (left) */
+      --warn: #ffd54f;    /* cost cue (bottom) */
+      --neutralFill: #d2d7e2; /* neutral block fill (no emissions filter) */
+      --chipBg: #0e1420;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--text); background:var(--bg); }
+    .wrap { max-width: 980px; margin: 20px auto 56px; padding: 0 16px; }
+    h1 { font-size: 18px; margin: 8px 0 14px; letter-spacing:.2px; }
+
+    .stage { border:1px solid var(--stroke); background:var(--panel); border-radius:14px; padding:12px; height:520px; position:relative; overflow:hidden; }
+
+    .controls { display:grid; gap:10px; grid-template-columns: repeat(5, minmax(0,1fr)); background:var(--panel); border:1px solid var(--stroke); border-radius:12px; padding:12px; margin-top:12px; align-items:center; }
+    .controls label { font-size:12px; color:var(--muted); display:grid; gap:6px; }
+    .controls input[type="number"], .controls input[type="range"], .controls select { width:100%; background: var(--chipBg); color: var(--text); border:1px solid var(--stroke); border-radius:8px; padding:6px 8px; }
+    .btns { display:flex; gap:8px; justify-content:flex-end; grid-column: 1 / -1; }
+    .btn { appearance:none; border:1px solid var(--stroke); background:var(--chipBg); color:var(--text); padding:8px 12px; border-radius:999px; font-weight:600; cursor:pointer; }
+    .btn.active { background:#162036; }
+    .btn.ok.active { outline:2px solid var(--ok); }
+    .btn.warn.active { outline:2px solid var(--warn); }
+    .btn.bad.active { outline:2px solid hsl(0,70%,55%); }
+
+    .hint { color:var(--muted); font-size:12px; margin-top:8px; }
+
+    /* minimizer button (positioned inside stage, relative) */
+    .minibtn { position:absolute; width:22px; height:22px; display:grid; place-items:center; font-weight:800; font-size:14px; background:#0e1420; border:1px solid var(--stroke); border-radius:6px; cursor:pointer; }
+
+    /* emissions chip (always visible when Emissions filter is active, even if 0 blocks) */
+    .echip { position:absolute; width:10px; height:18px; border:1px solid var(--stroke); border-radius:3px; background:#2a2f3d; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Click → Expand (Two Generators) – Minimal Test</h1>
+    <div class="stage" id="stage">
+      <svg id="svg" viewBox="0 0 900 480" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="controls">
+      <label>Active generator
+        <select id="activeSel">
+          <option value="G1">G1</option>
+          <option value="G2">G2</option>
+        </select>
+      </label>
+      <label>Max blocks (0..8.5)
+        <input id="maxb" type="number" min="0" max="8.5" step="0.5" value="3.5">
+      </label>
+      <label>Current blocks (≤ max)
+        <input id="curb" type="number" min="0" max="8.5" step="0.5" value="2">
+      </label>
+      <label>Cost
+        <input id="cost" type="range" min="1" max="100" step="1" value="50">
+      </label>
+      <label>Emissions
+        <input id="emissions" type="range" min="0" max="100" step="1" value="60">
+      </label>
+      <label style="grid-column: 1 / span 2">Height uses
+        <select id="heightMode">
+          <option value="max">Max power</option>
+          <option value="current">Current power</option>
+        </select>
+      </label>
+      <div class="btns">
+        <button class="btn ok" data-dim="power">Power</button>
+        <button class="btn warn" data-dim="cost">Cost</button>
+        <button class="btn bad" data-dim="emissions">Emissions</button>
+      </div>
+    </div>
+
+    <div class="hint">
+     DV Project, William O'Grady, August 16th 2025.    </div>
+  </div>
+
+  <script>
+    // --- Generators (two) ---
+    const gens = {
+      G1: { id:'G1', x: 320, y: 270, maxBlocks: 3.5, curBlocks: 2, cost: 50, emissions: 60, expanded: false },
+      G2: { id:'G2', x: 580, y: 270, maxBlocks: 4.0, curBlocks: 1.0, cost: 30, emissions: 30, expanded: false }
+    };
+    let activeGen = 'G1';
+
+    const activeFilters = new Set(); // 'power' | 'cost' | 'emissions'
+
+    // --- DOM references ---
+    const stage = document.getElementById('stage');
+    const svg = document.getElementById('svg');
+    const gRoot = make('g'); svg.appendChild(gRoot);
+
+    // layout constants
+    const diceSize = 54;      // larger compact square for bigger pips
+    const blockHBase = 14;    // base per-block height
+    const baseWidth = 56;     // neutral width when cost OFF
+
+    // helpers
+    function make(tag){ return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+    function rect(x,y,w,h,rx=0,ry=0){ const r=make('rect'); r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',w); r.setAttribute('height',h); if(rx) r.setAttribute('rx',rx); if(ry) r.setAttribute('ry',ry); return r; }
+    function circle(cx,cy,r){ const c=make('circle'); c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r',r); return c; }
+    function text(x,y,t){ const tx=make('text'); tx.setAttribute('x',x); tx.setAttribute('y',y); tx.textContent=t; return tx; }
+    function map(v,a,b,A,B){ return A + ((v-a)/(b-a))*(B-A); }
+
+    function appliedSet(){
+      // 0 filters → scale all, but NO cues
+      return activeFilters.size === 0 ? new Set(['power','cost','emissions']) : new Set(activeFilters);
+    }
+
+    function render(){
+      gRoot.innerHTML = '';
+      stage.querySelectorAll('.minibtn, .echip').forEach(n => n.remove());
+
+      const applied = appliedSet();
+      const heightMode = document.getElementById('heightMode').value; // 'max' | 'current'
+
+      Object.values(gens).forEach(g => {
+        const group = make('g');
+        gRoot.appendChild(group);
+
+        // Auto-expand if any filters toggled while minimized
+        if (!g.expanded && activeFilters.size > 0) g.expanded = true;
+
+        if (!g.expanded) {
+          // DICE (compact square)
+          const sq = rect(g.x - diceSize/2, g.y - diceSize/2, diceSize, diceSize, 10, 10);
+          sq.setAttribute('fill', '#0f1522');
+          sq.setAttribute('stroke', '#2a3244');
+          group.appendChild(sq);
+
+          drawPipsByMax(group, g.x, g.y, diceSize, g.curBlocks, g.maxBlocks);
+
+          // emissions chip (visible when Emissions filter active)
+          if (activeFilters.has('emissions')) placeEChip(g, g.x + diceSize/2 + 6, g.y - diceSize/2 - 2, g.emissions);
+
+          // click to expand
+          const hit = rect(g.x - diceSize/2 - 6, g.y - diceSize/2 - 6, diceSize+12, diceSize+12, 12, 12);
+          hit.setAttribute('fill', 'transparent');
+          hit.style.cursor = 'pointer';
+          hit.addEventListener('click', () => { g.expanded = true; activeGen = g.id; syncPanel(); render(); });
+          group.appendChild(hit);
+        } else {
+          // EXPANDED (bars) – centered on the dice
+          const heightSource = (heightMode === 'current' ? g.curBlocks : g.maxBlocks);
+
+          // capacity slots: half-slot frame when max has .5
+          const fullMax    = Math.floor(g.maxBlocks);
+          const hasHalfMax = (g.maxBlocks - fullMax) >= 0.5;
+          const slots      = fullMax + (hasHalfMax ? 1 : 0);
+
+          const contHScaled = Math.max(0, heightSource) * blockHBase;
+          const contHNeutral = 80; // when Power filter is OFF
+          const contH = applied.has('power') ? contHScaled : contHNeutral;
+
+          const width  = applied.has('cost')  ? map(g.cost, 1, 100, 42, 200) : baseWidth;
+          const sat    = applied.has('emissions') ? Math.round(map(g.emissions, 0, 100, 18, 92)) : null; // null → neutral
+
+          // position: CENTERED around the dice's Y coordinate
+          const xLeft = g.x - width/2;
+          const topY  = g.y - contH/2;
+          const baseY = topY + contH;
+
+          // OUTER CONTAINER (visible border)
+          const container = rect(xLeft, topY, width, contH, 8, 8);
+          container.setAttribute('fill', 'rgba(10,14,22,0.35)');
+          container.setAttribute('stroke', 'var(--stroke-strong)');
+          container.setAttribute('stroke-width', '1.5');
+          group.appendChild(container);
+
+          // cues
+          if (activeFilters.has('power')) {
+            const cueL = rect(xLeft - 5, topY, 5, contH, 3, 3);
+            cueL.setAttribute('fill', 'var(--ok)');
+            group.appendChild(cueL);
+          }
+          if (activeFilters.has('cost')) {
+            const cueB = rect(xLeft, baseY, width, 5, 3, 3);
+            cueB.setAttribute('fill', 'var(--warn)');
+            group.appendChild(cueB);
+          }
+
+          // per-slot height based on capacity slots; stable even if current is 0
+          const perH = Math.max(10, Math.floor((contHScaled || slots * blockHBase) / Math.max(1, slots)));
+
+          const fullCur    = Math.floor(g.curBlocks);
+          const hasHalfCur = (g.curBlocks - fullCur) >= 0.5;
+
+          for (let i = 0; i < Math.max(1, slots); i++) {
+            const y = baseY - (i + 1) * perH;
+
+            // capacity for this slot (top slot may be half width)
+            const isHalfCapacitySlot = hasHalfMax && (i === fullMax);
+            const frameW = isHalfCapacitySlot ? (width - 4) / 2 : (width - 4);
+
+            // slot frame
+            const frame = rect(xLeft + 2, y + 2, frameW, perH - 4, 6, 6);
+            frame.setAttribute('fill', 'rgba(220, 226, 238, 0.10)');
+            frame.setAttribute('stroke', 'rgba(95,108,136,0.95)');
+            frame.setAttribute('stroke-width', '1');
+            group.appendChild(frame);
+
+            // FILL obeys current but is clamped to slot capacity
+            if (i < fullCur) {
+              const fillR = rect(xLeft + 2, y + 2, frameW, perH - 4, 6, 6);
+              fillR.setAttribute('fill', sat == null ? 'var(--neutralFill)' : `hsl(0, ${sat}%, 52%)`);
+              group.appendChild(fillR);
+            } else if (i === fullCur && hasHalfCur) {
+              const fillW = Math.min((width - 4) / 2, frameW); // clamp to capacity
+              const halfR = rect(xLeft + 2, y + 2, fillW, perH - 4, 6, 6);
+              halfR.setAttribute('fill', sat == null ? 'var(--neutralFill)' : `hsl(0, ${sat}%, 52%)`);
+              group.appendChild(halfR);
+            }
+
+            // click to set current level for this slot (binary full blocks; half only if capacity is half)
+            const hit = rect(xLeft + 2, y + 2, frameW, perH - 4, 6, 6);
+            hit.setAttribute('fill', 'transparent');
+            hit.style.cursor = 'pointer';
+            hit.addEventListener('click', () => {
+              let newLevel;
+              if (i === 0) {
+                // toggle bottom block: if any power set, clicking lowest clears to 0
+                newLevel = (g.curBlocks > 0) ? 0 : (hasHalfMax && fullMax === 0 ? 0.5 : 1);
+              } else if (isHalfCapacitySlot) {
+                // top half-capacity slot → sets to fullMax + 0.5
+                newLevel = fullMax + 0.5;
+              } else {
+                // regular full-capacity slot i → sets to i+1
+                newLevel = i + 1;
+              }
+              gens[g.id].curBlocks = clamp(0, g.maxBlocks, newLevel);
+              if (activeGen === g.id) document.getElementById('curb').value = gens[g.id].curBlocks;
+              render();
+            });
+            group.appendChild(hit);
+          }
+
+          // emissions chip (always visible if Emissions filter active)
+          if (activeFilters.has('emissions')) placeEChip(g, xLeft + width + 6, topY - 2, g.emissions);
+
+          // minimizer button (attached to top-right corner)
+          placeMini(g, xLeft + width, topY);
+
+          // caption
+          const cap = text(g.x, baseY + 20, `${g.id} · Max: ${g.maxBlocks} · Current: ${g.curBlocks} · Cost: ${g.cost} · Emissions: ${g.emissions}`);
+          cap.setAttribute('fill', 'var(--muted)');
+          cap.setAttribute('font-size', '12');
+          cap.setAttribute('text-anchor', 'middle');
+          group.appendChild(cap);
+
+          // click guard overlay (non-interactive) to keep layout stable but not intercept clicks
+          const hitExp = rect(xLeft - 6, topY - 6, width + 12, contH + 12, 6, 6);
+          hitExp.setAttribute('fill', 'transparent');
+          // IMPORTANT: prevent this overlay from swallowing block clicks
+          hitExp.style.pointerEvents = 'none';
+          group.appendChild(hitExp);
+        }
+      });
+    }
+
+    function clamp(a,b,v){ return Math.max(a, Math.min(b, v)); }
+
+    function clientToSvg(cx, cy){
+      const pt = svg.createSVGPoint(); pt.x = cx; pt.y = cy; return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function placeMini(g, svgX, svgY){
+      const id = `mini-${g.id}`;
+      const old = stage.querySelector(`#${id}`); if (old) old.remove();
+      const mini = document.createElement('div');
+      mini.id = id; mini.className = 'minibtn'; mini.textContent = '−';
+      const pt = svg.createSVGPoint(); pt.x = svgX; pt.y = svgY;
+      const scr = pt.matrixTransform(svg.getScreenCTM());
+      const bbox = stage.getBoundingClientRect();
+      mini.style.left = `${scr.x - bbox.left - 12}px`; // nudge to straddle the corner
+      mini.style.top  = `${scr.y - bbox.top - 28}px`;
+      mini.addEventListener('click', (e) => { e.stopPropagation(); gens[g.id].expanded = false; render(); });
+      stage.appendChild(mini);
+    }
+
+    function placeEChip(g, svgX, svgY, emissions){
+      const id = `echip-${g.id}`;
+      const old = stage.querySelector(`#${id}`); if (old) old.remove();
+      const chip = document.createElement('div'); chip.id = id; chip.className = 'echip';
+      const sat = Math.round(map(emissions, 0, 100, 18, 92));
+      chip.style.background = `hsl(0, ${sat}%, 52%)`;
+      const pt = svg.createSVGPoint(); pt.x = svgX; pt.y = svgY;
+      const scr = pt.matrixTransform(svg.getScreenCTM());
+      const bbox = stage.getBoundingClientRect();
+      chip.style.left = `${scr.x - bbox.left}px`;
+      chip.style.top  = `${scr.y - bbox.top}px`;
+      stage.appendChild(chip);
+    }
+
+    // Draw pips by CAPACITY (maxBlocks) and fill by CURRENT (curBlocks). Supports half dots.
+    function drawPipsByMax(group, cx, cy, size, cur, max){
+      const grid = 3; const cell = size / grid; const r = Math.max(3.6, cell * 0.30);
+      const fullMax = Math.floor(max);
+      const hasHalfMax = (max - fullMax) >= 0.5;
+      const totalPips = fullMax + (hasHalfMax ? 1 : 0);
+
+      const fullCur = Math.floor(Math.min(cur, max));
+      const hasHalfCur = ((Math.min(cur, max) - fullCur) >= 0.5);
+
+      let drawn = 0;
+      for (let i=0; i<9 && drawn<totalPips; i++){
+        const row = Math.floor(i / grid), col = i % grid;
+        const px = cx - size/2 + cell*(col + 0.5);
+        const py = cy - size/2 + cell*(row + 0.5);
+        const pip = circle(px, py, r);
+        pip.setAttribute('stroke', '#2a3244'); pip.setAttribute('stroke-width', '1');
+
+        if (i < fullCur){
+          // filled
+          pip.setAttribute('fill', '#c3cbe0');
+          group.appendChild(pip);
+        } else if (i === fullCur && hasHalfCur){
+          // left-half filled
+          pip.setAttribute('fill', '#c3cbe0');
+          group.appendChild(pip);
+          const mask = rect(px, py - r, r, 2*r); // cover right half
+          mask.setAttribute('fill', '#0f1522');
+          group.appendChild(mask);
+        } else {
+          // unfilled (hollow)
+          pip.setAttribute('fill', 'transparent');
+          group.appendChild(pip);
+        }
+        drawn++;
+      }
+
+      // If capacity has a half dot beyond the full dots and we haven't drawn it yet
+      if (hasHalfMax && drawn === fullMax){
+        const i = drawn; // next position
+        const row = Math.floor(i / grid), col = i % grid;
+        const px = cx - size/2 + cell*(col + 0.5);
+        const py = cy - size/2 + cell*(row + 0.5);
+        const pip = circle(px, py, r);
+        pip.setAttribute('stroke', '#2a3244'); pip.setAttribute('stroke-width', '1');
+        // show half-hollow (left-half outline only)
+        pip.setAttribute('fill', 'transparent');
+        group.appendChild(pip);
+        const mask = rect(px, py - r, r, 2*r); // hide right half of stroke to suggest half dot
+        mask.setAttribute('fill', '#0f1522');
+        group.appendChild(mask);
+      }
+    }
+
+    function syncPanel(){
+      const g = gens[activeGen];
+      document.getElementById('activeSel').value = activeGen;
+      document.getElementById('maxb').value = g.maxBlocks;
+      document.getElementById('curb').value = g.curBlocks;
+      document.getElementById('cost').value = g.cost;
+      document.getElementById('emissions').value = g.emissions;
+    }
+
+    // controls wiring
+    document.getElementById('activeSel').addEventListener('change', (e)=>{ activeGen = e.target.value; syncPanel(); });
+    document.getElementById('maxb').addEventListener('input', (e)=>{
+      const v = clamp(0, 8.5, +e.target.value);
+      const g = gens[activeGen];
+      g.maxBlocks = v;
+      if (g.curBlocks > v) { g.curBlocks = v; document.getElementById('curb').value = g.curBlocks; }
+      render();
+    });
+    document.getElementById('curb').addEventListener('input', (e)=>{
+      const g = gens[activeGen];
+      g.curBlocks = clamp(0, g.maxBlocks, +e.target.value);
+      e.target.value = g.curBlocks; // reflect clamp
+      render();
+    });
+    document.getElementById('cost').addEventListener('input', (e)=>{ gens[activeGen].cost = +e.target.value; render(); });
+    document.getElementById('emissions').addEventListener('input', (e)=>{ gens[activeGen].emissions = +e.target.value; render(); });
+    document.getElementById('heightMode').addEventListener('change', render);
+
+    document.querySelectorAll('.btn[data-dim]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dim = btn.getAttribute('data-dim');
+        if (activeFilters.has(dim)) activeFilters.delete(dim); else activeFilters.add(dim);
+        btn.classList.toggle('active');
+        render();
+      });
+    });
+
+    // init
+    syncPanel();
+    render();
+
+    // keep overlays aligned on resize
+    window.addEventListener('resize', () => render());
+  </script>
+</body>
+</html>
