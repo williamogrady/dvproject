@@ -596,6 +596,18 @@
 }
 
 
+.echip {
+  position: absolute;
+  width: 10px;
+  height: 18px;
+  border: 1px solid #5f6c88;
+  border-radius: 3px;
+  background: #2a2f3d;
+  pointer-events: none;
+  z-index: 999;
+}
+
+
   </style>
 </head>
 <body>
@@ -702,6 +714,19 @@ let availableScenarios = [];
 
 let currentMapMode = "full";
 
+// collapsed on startup; expands when filters are active
+// collapsed on startup; expands when filters are active
+const expandedById = new Map();
+function isExpanded(id){
+  // any *explicit* active filter means all gens expand
+  if (activeFilters.size > 0) return true;
+  return expandedById.get(id) === true;
+}
+function setExpanded(id, val=true){ expandedById.set(id, !!val); }
+function setExpandedForAll(val){
+  d3.selectAll(".map-gen").each(function(d){ expandedById.set(d.id, !!val); });
+}
+
 const activeFilters = new Set(); // 'power' | 'cost' | 'emissions'
 function appliedSet(){
   return activeFilters.size === 0
@@ -715,7 +740,14 @@ function getWidthScale() {
   return d3.scaleLinear()
     .domain([Math.max(1, costExtent[0] || 1), costExtent[1] || 1])
     .range([MIN_GEN_W, MAX_GEN_W]);
+
+    
 }
+
+function map(value, inMin, inMax, outMin, outMax) {
+  return outMin + ((value - inMin) / (inMax - inMin)) * (outMax - outMin);
+}
+
 
 function getBlockColor() {
   const emisExtent = d3.extent(currentGenerators, g => g.emissions_per_mw || 0);
@@ -736,13 +768,31 @@ function getBlockColor() {
 
 
 // Define zoom behavior — same as before
+// ===== Zoom behavior (SVG chips don't need manual reposition) =====
 const zoomBehavior = d3.zoom()
-  .scaleExtent([0.2, 2.0])  // Allow good zoom range
+  .scaleExtent([0.2, 2.0])
   .on("zoom", (event) => {
-  zoomGroup.attr("transform", event.transform);
-});
+    zoomGroup.attr("transform", event.transform);
+  });
 
 svg.call(zoomBehavior);
+
+
+function resetFilters() {
+  activeFilters.clear();
+
+  ["scale-power","scale-cost","scale-emissions"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("selected","scale-power","scale-cost","scale-emissions");
+  });
+  ["status-power","status-cost","status-emissions"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "Click to scale";
+  });
+
+  updateMapGeneratorsFromScenario();
+}
+
 
 window.addEventListener("load", () => {
   const initialScale = 0.3;
@@ -869,71 +919,109 @@ document.getElementById("scenario-select").addEventListener("change", (e) => {
       loadScenario(currentScenarioId); // reload current scenario
     });
 
-function updateMapGeneratorsFromScenario() {
-  // If a scale mode is active, use it
-  if (currentScaleMode) {
-    scaleGeneratorsBy(currentScaleMode);
-  } else {
-    resetGeneratorSizes();
-  }
+    // ===== Chevrons =====
 
-  // Also reapply stroke and highlight logic
-  const genNodes = d3.selectAll(".map-gen");
-
-  genNodes.each(function(d) {
-    const isSelected = d.id === selectedGeneratorId;
-    d3.select(this)
-      .attr("stroke", isSelected ? "blue" : "black")
-      .attr("stroke-width", isSelected ? 2.5 : 3); // ✅ consistent width
-  });
-
-  drawSelectedGeneratorHalo();
-  
-}
+// Draws a fresh chevron layer from enriched line data
 function drawChevrons(lines, nodes, mode) {
-  console.log("drawChevrons with mode:", mode)
-  const chevronGroup = zoomGroup.append("g").attr("id", "chevron-layer");
+  // Remove old layer
+  d3.select("#chevron-layer").remove();
+  const chevronGroup = d3.select("#zoom-group").append("g").attr("id", "chevron-layer");
+
+  const isLinesMode = mode === "lines";
 
   lines.forEach(line => {
-    const fromId = line.source;
-    const toId = line.target;
+    const fromId = line.source, toId = line.target;
     if (!fromId || !toId) return;
 
     const from = nodes.find(n => n.id === fromId);
-    const to = nodes.find(n => n.id === toId);
+    const to   = nodes.find(n => n.id === toId);
     if (!from || !to || from.type !== "bus" || to.type !== "bus") return;
 
-    const path = document.getElementById(line.id);
-    if (!path) return;
+    const pathEl = document.getElementById(line.id);
+    if (!pathEl || !pathEl.getTotalLength) return;
 
-    const totalLength = path.getTotalLength();
-    const pointA = path.getPointAtLength(totalLength * 0.45);
-    const pointB = path.getPointAtLength(totalLength * 0.55);
+    const totalLen = pathEl.getTotalLength();
+    const A = pathEl.getPointAtLength(totalLen * 0.45);
+    const B = pathEl.getPointAtLength(totalLen * 0.55);
 
-    const angle = Math.atan2(pointB.y - pointA.y, pointB.x - pointA.x) * 180 / Math.PI + 180;
-    const midX = (pointA.x + pointB.x) / 2;
-    const midY = (pointA.y + pointB.y) / 2;
+    const angleDeg = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI + 180;
+    const midX = (A.x + B.x) / 2;
+    const midY = (A.y + B.y) / 2;
 
-    const load = line.rate_a > 0 ? line.flow / line.rate_a : 0;
-    const color = getLoadColor(load);
+    const loadPct = (line.rate_a > 0) ? (line.flow / line.rate_a) : 0;
+    const color = getLoadColor ? getLoadColor(loadPct) : d3.interpolateYlOrRd(Math.max(0, Math.min(1, loadPct)));
 
-    // 🔄 Logic based on string mode
-    const scale = mode === "lines" ? Math.min(1.5, load) : 1;
-    const baseSize = Math.max(10, 6 * scale);
+    // Slight size boost in Lines mode
+    const scale = isLinesMode ? (1 + 0.6 * Math.max(0, loadPct)) : 1;
+    const base = 10;
+    const size = Math.max(8, base * scale);
 
     chevronGroup.append("path")
       .datum(line)
       .attr("class", "chevron")
-      .attr("d", chevronPath(baseSize))
+      .attr("d", chevronPath ? chevronPath(size) : defaultChevronPath(size))
       .attr("fill", color)
       .attr("opacity", 0.95)
       .attr("stroke", "#111")
       .attr("stroke-width", 0.4)
-      .attr("transform", `translate(${midX}, ${midY}) rotate(${angle})`);
+      .attr("transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`);
   });
 }
 
+// Enriches live lines with geometry ids, then calls drawChevrons
+function refreshChevrons(liveLines, mode) {
+  // Map live (API) lines -> static (SVG) geometry
+  const enriched = (staticLines || []).map(lineGeom => {
+    const live = (liveLines || []).find(l =>
+      `Bus${l.from_bus}` === lineGeom.source && `Bus${l.to_bus}` === lineGeom.target
+    );
+    return {
+      ...lineGeom,
+      flow:  live?.flow   ?? 0,
+      rate_a: live?.rate_a ?? 1
+    };
+  });
 
+  drawChevrons(enriched, staticNodes || [], mode || "full");
+}
+
+// Fallback chevron path if your existing chevronPath() isn’t present
+function defaultChevronPath(scale) {
+  const L = scale * 2, W = scale;
+  return `M 0 0 L ${L} ${-W} L ${L*0.8} 0 L ${L} ${W} Z`;
+}
+
+
+function placeEChip(gen, svgX, svgY, emissions) {
+  const id = `echip-${gen.id}`;
+  const old = document.getElementById(id);
+  if (old) old.remove();
+
+  const chip = document.createElement('div');
+  chip.id = id;
+  chip.className = 'echip';
+
+  const sat = Math.round(map(emissions, 0, 100, 18, 92));
+  chip.style.background = `hsl(0, ${sat}%, 52%)`;
+
+  const pt = svgElement.createSVGPoint(); pt.x = svgX; pt.y = svgY;
+  const screenCoords = pt.matrixTransform(svgElement.getScreenCTM());
+  const containerRect = document.getElementById("map-container").getBoundingClientRect();
+
+  chip.style.left = `${screenCoords.x - containerRect.left}px`;
+  chip.style.top  = `${screenCoords.y - containerRect.top}px`;
+
+  document.getElementById("map-container").appendChild(chip);
+}
+
+function echipFill(emisValue, gens = currentGenerators) {
+  const extent = d3.extent(gens, g => g.emissions_per_mw || 0);
+  const sat = d3.scaleLinear()
+    .domain([extent[0] || 0, extent[1] || 1])
+    .range([18, 92])
+    .clamp(true);
+  return `hsl(0, ${sat(emisValue || 0)}%, 52%)`;
+}
 
 function chevronPath(scale) {
     const length = scale * 2;
@@ -1012,6 +1100,102 @@ function capacityBoundsTopDown(pmax){
   return out; // index 0 is TOP
 }
 
+function updateGeneratorStrokes() {
+  d3.selectAll(".map-gen").each(function(d) {
+    const el = d3.select(this);
+    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+
+    let strokeColor = "black";
+    let strokeWidth = 3;
+
+    if (d.id === selectedGeneratorId) {
+      strokeColor = "#42a5f5";
+      strokeWidth = 4;
+    }
+
+    el.attr("stroke", strokeColor).attr("stroke-width", strokeWidth);
+  });
+}
+
+function updateGeneratorHalos() {
+  d3.selectAll(".map-gen-halo")
+    .transition().duration(300)
+    .attr("opacity", function(){
+      const id = d3.select(this.parentNode).select(".map-gen").attr("id");
+      return id === selectedGeneratorId ? 1 : 0;
+    });
+}
+
+
+// Draw pips by capacity (max) and fill by current (pg). Supports half-dots.
+function drawPipsByMaxD3(containerSel, cx, cy, size, currentMW, maxMW){
+  const grid = 3;
+  const cell = size / grid;
+  const r = Math.max(3.6, cell * 0.30);
+
+  const maxBlocks = (maxMW || 0) / 100;             // 100 MW per block in your rect view
+  const curBlocks = Math.min(maxBlocks, (currentMW || 0) / 100);
+
+  const fullMax = Math.floor(maxBlocks);
+  const hasHalfMax = (maxBlocks - fullMax) >= 0.5;
+  const totalPips = fullMax + (hasHalfMax ? 1 : 0);
+
+  const fullCur = Math.floor(curBlocks);
+  const hasHalfCur = ((curBlocks - fullCur) >= 0.5);
+
+  const g = containerSel.append("g").attr("class", "dice-pips");
+
+  let drawn = 0;
+  for (let i=0; i<9 && drawn<totalPips; i++){
+    const row = Math.floor(i / grid), col = i % grid;
+    const px = cx - size/2 + cell*(col + 0.5);
+    const py = cy - size/2 + cell*(row + 0.5);
+
+    const pip = g.append("circle")
+      .attr("cx", px).attr("cy", py).attr("r", r)
+      .attr("stroke", "#2a3244").attr("stroke-width", 1);
+
+    if (i < fullCur){
+      pip.attr("fill", "#c3cbe0");
+    } else if (i === fullCur && hasHalfCur){
+      pip.attr("fill", "#c3cbe0");
+      // mask right half → simple overlay rect
+      g.append("rect")
+        .attr("x", px).attr("y", py - r)
+        .attr("width", r).attr("height", 2*r)
+        .attr("fill", "#0f1522");
+    } else {
+      pip.attr("fill", "transparent");
+    }
+    drawn++;
+  }
+
+  if (hasHalfMax && drawn === fullMax){
+    const i = drawn;
+    const row = Math.floor(i / grid), col = i % grid;
+    const px = cx - size/2 + cell*(col + 0.5);
+    const py = cy - size/2 + cell*(row + 0.5);
+
+    g.append("circle")
+      .attr("cx", px).attr("cy", py).attr("r", r)
+      .attr("stroke", "#2a3244").attr("stroke-width", 1)
+      .attr("fill", "transparent");
+
+    g.append("rect")
+      .attr("x", px).attr("y", py - r)
+      .attr("width", r).attr("height", 2*r)
+      .attr("fill", "#0f1522");
+  }
+}
+
+
+// Ensure a child UI layer inside each generator group
+function ensureUiLayer(gSel){
+  let ui = gSel.selectChild("g.gen-ui");
+  if (ui.empty()) ui = gSel.append("g").attr("class","gen-ui");
+  return ui;
+}
+
 
 
 
@@ -1028,6 +1212,9 @@ Promise.all([
   // Helper: logical upper bound for this block = min(display upper, real pmax)
 function logicalUpper(b, gen) { return Math.min(b.upper, gen.pmax || 0); }
 function logicalLower(b, gen) { return Math.min(b.lower, gen.pmax || 0); }
+
+
+
 
 function onBlockClick(ev, b, node) {
   const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id);
@@ -1153,11 +1340,15 @@ function genDims(gen){
 }
 
 
-  const genGroups = zoomGroup.selectAll("g.map-gen-group")
-    .data(generatorNodes.filter(d => currentGenerators.some(g => `Gen${g.bus}` === d.id)), d => d.id)
-    .enter().append("g")
-    .attr("class", "map-gen-group")
-    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+ const genGroups = zoomGroup.selectAll("g.map-gen-group")
+  .data(generatorNodes.filter(d => currentGenerators.some(g => `Gen${g.bus}` === d.id)), d => d.id)
+  .enter().append("g")
+  .attr("class", "map-gen-group")
+  .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+// NEW: start collapsed (dice)
+genGroups.each(d => expandedById.set(d.id, false));
+
 
 // Rect halo (selection/hover)
 genGroups.append("rect")
@@ -1189,330 +1380,90 @@ genGroups.append("g")
 
 // Draw once; update function will refresh sizes/fills later as pg/cost/pmax change
 function drawRectGenerators(){
-
   const widthScale = getWidthScale();
   const blockColor = getBlockColor();
   const SCALED_BLOCK_H = computeBlockH(currentGenerators);
 
-
   genGroups.each(function(node){
     const g = d3.select(this);
-    const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id) || { pmax:0, cost_per_mw:1, emissions_per_mw:0, pg:0 };
-    const { W, H, innerW, caps } = genDims(gen);
-    const topY = -H/2 + PAD_INNER;
 
-    // main rect size + ON outline
-    const isOn = (gen.pg || 0) > 0;
+    // Just ensure basic sizing on the frame once; actual size handled in updater
     g.select(".map-gen")
-      .attr("x", -W/2)
-      .attr("y", -H/2)
-      .attr("width",  W)
-      .attr("height", H)
-      .attr("fill",  "#fff")
-      .attr("stroke", isOn ? "#2e7d32" : "#111")
-      .attr("stroke-width", isOn ? 5 : 2);
+      .attr("x", -25).attr("y", -25)
+      .attr("width", 50).attr("height", 50)
+      .attr("rx", 10).attr("ry", 10);
 
-    // halo box size
+    // Halo starts hidden; updater will size/show
     g.select(".map-gen-halo")
-      .attr("x", -W/2 - HALO_PAD)
-      .attr("y", -H/2 - HALO_PAD)
-      .attr("width",  W + HALO_PAD*2)
-      .attr("height", H + HALO_PAD*2);
+      .attr("x", -0).attr("y", -0)
+      .attr("width", 0).attr("height", 0);
 
-    // clip
+    // Clip rect exists; updater will size it
     g.select(`#clip-${CSS.escape(node.id)} rect`)
-      .attr("x", -W/2 + PAD_INNER)
-      .attr("y", -H/2 + PAD_INNER)
-      .attr("width",  innerW)
-      .attr("height", Math.max(0, H - PAD_INNER*2))
+      .attr("x", 0).attr("y", 0)
+      .attr("width", 0).attr("height", 0);
 
-    const HALF_STEP = BLOCK_UNIT / 2;
-    function quantizeHalf(val){ return Math.round(val / HALF_STEP) * HALF_STEP; }
+    // Ensure a blocks container exists (no drawing here)
+    const blocks = g.select(".blocks");
+    blocks.selectAll("rect.gen-block-bg").data([]).join("rect").attr("class","gen-block-bg");
+    blocks.selectAll("rect.gen-block-fill").data([]).join("rect").attr("class","gen-block-fill");
 
-    const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
-  .data(caps, (b,i)=>i);
-
-bgs.join(
-  e => e.append("rect").attr("class","gen-block-bg"),
-  u => u,
-  x => x.remove()
-)
-.attr("x", -innerW/2)
-.attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-.attr("width", b => {
-  const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id);
-  const filled = (gen?.pg || 0) >= logicalUpper(b, gen); // <-- use logicalUpper
-  if (!filled) return 0;
-  return (b.size === HALF_STEP) ? (innerW/2) : innerW;
-})
-
-.attr("height", SCALED_BLOCK_H)
-.attr("rx", 6).attr("ry", 6)
-.attr("fill", "transparent")
-.attr("stroke", "#000").attr("stroke-width", .8)
-.on("click", (ev, b) => onBlockClick(ev, b, node));   // <--- added
-
-const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
-  .data(caps, (b,i)=>i);
-
-fills.join(
-  e => e.append("rect").attr("class","gen-block-fill"),
-  u => u,
-  x => x.remove()
-)
-.attr("x", -innerW/2)
-.attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-.attr("height", SCALED_BLOCK_H)
-.attr("rx", 6).attr("ry", 6)
-.attr("width", b => {
-  const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id);
-  const filled = (gen?.pg || 0) >= logicalUpper(b, gen); // <-- use logicalUpper
-  if (!filled) return 0;
-  return (b.size === HALF_STEP) ? (innerW/2) : innerW;
-})
-
-.attr("fill", blockColor(gen.emissions_per_mw || 0))
-.on("click", (ev, b) => onBlockClick(ev, b, node));   // <--- added
+    // Clicks will be bound in the updater when we have actual block data
   });
-} // end drawRectGenerators
+}
 
 drawRectGenerators();
 updateMapGeneratorsFromScenario();
 
 
-function showGeneratorBubbleFromEvent(event, d){
-  const bubbleX = event.pageX + 10;
-  const bubbleY = event.pageY - 20;
-  const bubbleEl = document.getElementById("bubble");
-  bubbleEl.style.display = "block";
-  bubbleEl.style.left = `${bubbleX}px`;
-  bubbleEl.style.top = `${bubbleY}px`;
-  bubbleEl.innerHTML = "";
-
-  // (PASTE the rest of your existing bubble DOM build here: header, power-block-row,
-  //   match lookup, levels array, off block, block creation, footer label, etc.)
-}
-
 function applyMapMode(mode) {
-  // === Reset if the same button is clicked again ===
-  if (mode === currentMapMode) {
-    mode = "full";
-  }
-  currentMapMode = mode;
-  console.log("Applying map mode:", mode);
-
-  const isFull = mode === "full";
-  const isLines = mode === "lines";
-  const isMetricMode = ["pmax", "cost_per_mw", "emissions_per_mw", "lines"].includes(mode);
-
-  const baseRadius = 30;
-  const maxRadius = 75;
-
-  const metricColors = {
-    pmax: "#9ccc65",
-    cost_per_mw: "#f9a825",
-    emissions_per_mw: "#ef5350"
-  };
-
-  const strokeColor = metricColors[mode] || "black";
-
-  const sizeScale = isMetricMode
-    ? d3.scaleLinear()
-        .domain([0, d3.max(currentGenerators.map(g => g[mode]))])
-        .range([baseRadius, maxRadius])
-    : null;
-
-  // === Generators ===
-  d3.selectAll(".map-gen")
-    .transition().duration(500)
-      .attr("r", d => {
-  if (mode === "lines") {
-    return baseRadius;
+  // Only "lines" is a real mode now; power/cost/emissions are filters.
+  if (mode !== "lines") {
+    console.warn("applyMapMode only supports 'lines' now");
+    return;
   }
 
-  if (isMetricMode) {
-    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-    return gen ? sizeScale(gen[mode]) : baseRadius;
-  }
+  // Toggle Lines mode
+  const turningOn = currentMapMode !== "lines";
+  currentMapMode = turningOn ? "lines" : "full";
 
-  return baseRadius;
-})
-    .attr("opacity", mode === "lines" ? 0.2 : 1)
-    .attr("stroke", strokeColor)
-    .attr("stroke-width", isMetricMode ? 5 : 3);
+  const isLines = currentMapMode === "lines";
 
-  // === Generator Halos ===
-  d3.selectAll(".map-gen-halo")
-    .transition().duration(500)
-    .attr("r", d => {
-      const genCircle = d3.select(`#${CSS.escape(d.id)}`);
-      const r = +genCircle.attr("r") || baseRadius;
-      return r + 6;
-    })
-    .attr("opacity", d => d.id === selectedGeneratorId && !isLines ? 1 : 0);
-
-  // === Lines ===
+  // Lines always visible
   d3.selectAll(".map-line")
     .transition().duration(300)
-    .attr("opacity", isLines ? 1 : (isFull ? 1 : 0.2));
+    .attr("opacity", 1);
 
-  // === Buses and Loads ===
-  const busLoadOpacity = isFull ? 1 : 0.2;
-
-  d3.selectAll(".map-bus")
+  // Dim everything else while Lines mode is on
+  const faded = isLines ? 0.2 : 1;
+  d3.selectAll(".map-bus, .map-load, .map-gen-group, .map-gen-halo")
     .transition().duration(300)
-    .attr("opacity", busLoadOpacity);
+    .attr("opacity", faded);
 
-  d3.selectAll(".map-load")
-    .transition().duration(300)
-    .attr("opacity", busLoadOpacity);
+  // Redraw chevrons so they scale/emphasize in Lines mode
+  refreshChevrons(currentLines || [], currentMapMode);
 
-  // === Chevrons ===
-  d3.selectAll(".chevron")
-    .transition().duration(500)
-    .attr("opacity", isLines || isFull ? 1 : 0.2)
-    .attr("d", function(d) {
-      if (!isLines) return chevronPath(10);
-      const pct = +d3.select(this).attr("data-pct") || 0;
-      const size = 15 + 6 * pct;
-      return chevronPath(size);
-    });
+  // (Optional) keep emission chips unobtrusive in Lines mode
+  if (isLines) {
+    document.querySelectorAll(".echip").forEach(el => el.style.opacity = "0.2");
+  } else {
+    document.querySelectorAll(".echip").forEach(el => el.style.opacity = "1");
+    // If emissions filter is active, ensure chips are correctly placed after leaving Lines mode
+    if (appliedSet().has('emissions')) updateMapGeneratorsFromScenario();
+  }
 
-  // === Visual button update ===
-  const buttonIds = {
-  pmax: "scale-power",
-  cost_per_mw: "scale-cost",
-  emissions_per_mw: "scale-emissions",
-  lines: "scale-lines"
-};
-
-const statusIds = {
-  pmax: "status-power",
-  cost_per_mw: "status-cost",
-  emissions_per_mw: "status-emissions",
-  lines: "status-lines"
-};
-
-  Object.keys(buttonIds).forEach(key => {
-    const btn = document.getElementById(buttonIds[key]);
-    const status = document.getElementById(statusIds[key]);
-    if (btn) btn.classList.remove("selected", "scale-power", "scale-cost", "scale-emissions", "scale-lines");
-    if (status) status.textContent = "Click to scale";
-  });
-
-  if (isMetricMode) {
-    const btn = document.getElementById(buttonIds[mode]);
-    const status = document.getElementById(statusIds[mode]);
-    if (btn) {
-      btn.classList.add("selected");
-      if (mode === "pmax") btn.classList.add("scale-power");
-      if (mode === "cost_per_mw") btn.classList.add("scale-cost");
-      if (mode === "emissions_per_mw") btn.classList.add("scale-emissions");
-      if (mode === "lines") btn.classList.add("scale-lines");
-    }
-    if (status) status.textContent = "Currently scaling";
+  // Card UI feedback
+  const linesCard = document.getElementById("scale-lines");
+  const linesStatus = document.getElementById("status-lines");
+  if (linesCard) {
+    linesCard.classList.toggle("selected", isLines);
+    linesCard.classList.toggle("scale-lines", isLines);
+  }
+  if (linesStatus) {
+    linesStatus.textContent = isLines ? "Active" : "Click to scale";
   }
 }
 
-
-function resetGeneratorSizes() {
-  currentScaleMode = null;
-
-  d3.selectAll(".map-gen")
-    .transition()
-    .duration(500)
-    .attr("r", 30)
-    .attr("stroke", "black")
-.attr("stroke-width", 3)
-    .attr("fill", d => {
-      const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-      return match && match.pg > 0 ? "#4caf50" : "#ffffff";
-    });
-
-  d3.selectAll(".map-gen-halo")
-    .transition()
-    .duration(500)
-    .attr("r", 36)
-    .attr("opacity", d => d.id === selectedGeneratorId ? 1 : 0);
-
-  updateGeneratorStrokes();
-}
-
-
-
-
-
-  // === Hover & Selection Sync
-  d3.selectAll(".map-gen")
-    .on("mouseenter", function (event, d) {
-      d3.select(this).classed("hovered", true);
-    })
-    .on("mouseleave", function () {
-      d3.select(this).classed("hovered", false);
-    });
-
-  // Optional: add generator label
-  /*
-  zoomGroup.selectAll("text.map-gen-label")
-    .data(nodes.filter(d => d.type === "generator"))
-    .enter()
-    .append("text")
-    .attr("x", d => d.x + 6)
-    .attr("y", d => d.y + 3)
-    .attr("font-size", "6px")
-    .text(d => d.id); */
-
-        document.getElementById("scale-lines").onclick = () => applyMapMode("lines");
-        document.getElementById("scale-power").onclick = () => applyMapMode("pmax");
-        document.getElementById("scale-cost").onclick = () => applyMapMode("cost_per_mw");
-        document.getElementById("scale-emissions").onclick = () => applyMapMode("emissions_per_mw");
-
-});
-
-
-
-
-  
-function updateGeneratorStrokes() {
-  d3.selectAll(".map-gen").each(function(d) {
-    const el = d3.select(this);
-    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
-
-    let strokeColor = "black";  // Default stroke
-    let strokeWidth = 3;
-
-    if (d.id === selectedGeneratorId) {
-      strokeColor = "#42a5f5"; // Blue if selected
-      strokeWidth = 4;
-    } else if (currentScaleMode && gen) {
-      switch (currentScaleMode) {
-        case "pmax":
-          strokeColor = "#9ccc65";
-          break;
-        case "cost_per_mw":
-          strokeColor = "#f9a825";
-          break;
-        case "emissions_per_mw":
-          strokeColor = "#ef5350";
-          break;
-      }
-      strokeWidth = 3;
-    }
-
-    el.attr("stroke", strokeColor)
-      .attr("stroke-width", strokeWidth);
-  });
-}
-
-
-function updateGeneratorHalos() {
-  d3.selectAll(".map-gen-halo")
-    .transition().duration(300)
-    .attr("opacity", function(){
-      const id = d3.select(this.parentNode).select(".map-gen").attr("id");
-      return id === selectedGeneratorId ? 1 : 0;
-    });
-}
 
 function createBlock(level, isHalf, gen) {
   const block = document.createElement("div");
@@ -1554,54 +1505,150 @@ function createBlock(level, isHalf, gen) {
 
   return block;
 }
+});
 
 
-// === Update generator colors on scenario load ===
-// === Replace old updateMapGeneratorsFromScenario() ==========================
+// ===== Update (dice on startup → expand when filters are active) =====
 function updateMapGeneratorsFromScenario() {
+  const a = appliedSet();
   const widthScale = getWidthScale();
   const blockColor = getBlockColor();
   const SCALED_BLOCK_H = computeBlockH(currentGenerators);
+  const DICE = 54;
 
-  // Quick helpers reused here
+  // helpers local to this updater
   function genById(id){
     return currentGenerators.find(x => `Gen${x.bus}` === id) || { pmax:0, cost_per_mw:1, emissions_per_mw:0, pg:0 };
   }
   function dimsFor(gen){
-    const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0));
+    const widthActive = a.has('cost');
+    const powerActive = a.has('power');
+
+    const W = widthActive
+      ? Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0))
+      : MIN_GEN_W;
+
     const caps = capacityBoundsTopDown(gen.pmax || 0);
     const n = Math.max(1, caps.length);
-    const H = n * SCALED_BLOCK_H + (n - 1) * BLOCK_GAP + PAD_INNER * 2;
+
+    const scaledH  = n * SCALED_BLOCK_H + (n - 1) * BLOCK_GAP + PAD_INNER * 2;
+    const NEUTRAL_H = PAD_INNER * 2 + SCALED_BLOCK_H * 3 + BLOCK_GAP * 2;
+    const H = powerActive ? scaledH : NEUTRAL_H;
+
     const innerW = W - PAD_INNER*2;
     return { W, H, innerW, caps };
   }
+  function logicalUpper(b, gen){ return Math.min(b.upper, gen.pmax || 0); }
 
   d3.selectAll(".map-gen-group").each(function(node){
-    const g = d3.select(this);
+    const g  = d3.select(this);
     const id = g.select(".map-gen").attr("id");
     const gen = genById(id);
+    const ui  = ensureUiLayer(g);
+
+    // make sure blocks container exists
+    if (g.select(".blocks").empty()) g.append("g").attr("class","blocks");
+
+    // expanded vs dice
+    const expanded = (activeFilters.size > 0) || (expandedById.get(id) === true);
+
+    // clear hover/mini artifacts each pass; we'll re-add as needed
+    ui.selectAll("g.expand-plus, g.minibtn").remove();
+    g.selectAll(".dice, .dice-pips").remove();
+
+    if (!expanded) {
+      // === DICE (collapsed) ===
+      g.select(".blocks").style("display", "none");
+      g.select(".map-gen-halo").attr("width", 0).attr("height", 0);
+
+      // same centered rectangle as expanded, but compact
+      g.select(".map-gen")
+        .attr("x", -DICE/2).attr("y", -DICE/2)
+        .attr("width", DICE).attr("height", DICE)
+        .attr("rx", 10).attr("ry", 10)
+        .attr("fill", "#0f1522")
+        .attr("stroke", "#2a3244")
+        .attr("stroke-width", 1.2);
+
+      // pips (capacity = pmax, current = pg)
+      drawPipsByMaxD3(g, 0, 0, DICE, gen.pg || 0, gen.pmax || 0);
+
+      // echip only if Emissions filter is active
+      if (a.has('emissions')) {
+        const bb = g.select(".map-gen").node().getBBox();
+        g.selectAll("rect.echip")
+          .data([gen])
+          .join(e => e.append("rect")
+            .attr("class","echip")
+            .attr("rx",3).attr("ry",3)
+            .attr("width",10).attr("height",18)
+            .attr("stroke","#5f6c88").attr("stroke-width",1))
+          .attr("fill", echipFill(gen.emissions_per_mw))
+          .attr("x", bb.x + bb.width + 6)
+          .attr("y", bb.y - 4);
+      } else {
+        g.selectAll("rect.echip").remove();
+      }
+
+      // BIG FADED PLUS (same size as dice), shown on hover only
+      const plus = ui.append("g")
+        .attr("class","expand-plus")
+        .style("pointer-events","none")
+        .attr("opacity", 0);
+
+      // draw a large plus that spans most of the dice
+      const crossLen = DICE * 0.66;
+      const strokeW  = DICE * 0.12;
+      plus.append("line")
+        .attr("x1", -crossLen/2).attr("y1", 0).attr("x2", crossLen/2).attr("y2", 0)
+        .attr("stroke", "#c3cbe0").attr("stroke-width", strokeW).attr("stroke-linecap","round")
+        .attr("opacity", 0.12);
+      plus.append("line")
+        .attr("x1", 0).attr("y1", -crossLen/2).attr("x2", 0).attr("y2", crossLen/2)
+        .attr("stroke", "#c3cbe0").attr("stroke-width", strokeW).attr("stroke-linecap","round")
+        .attr("opacity", 0.12);
+
+      plus.attr("transform", `translate(0,0)`);
+
+      // hover to reveal big plus a bit more
+      g.on("mouseenter", () => plus.transition().duration(120).attr("opacity", 1))
+       .on("mouseleave", () => plus.transition().duration(140).attr("opacity", 0));
+
+      // clicking the dice expands
+      g.select(".map-gen")
+        .style("cursor","pointer")
+        .on("click", () => { setExpanded(id, true); updateMapGeneratorsFromScenario(); });
+
+      return; // ← skip expanded path
+    }
+
+    // === EXPANDED (rect + blocks) ===
+    g.select(".blocks").style("display", null); // ensure blocks visible
+
     const { W, H, innerW, caps } = dimsFor(gen);
     const topY = -H/2 + PAD_INNER;
     const isOn = (gen.pg || 0) > 0;
 
-    // frame + outline
+    // same outer rectangle, just bigger and centered
     g.select(".map-gen")
       .attr("x", -W/2).attr("y", -H/2)
       .attr("width", W).attr("height", H)
-      .attr("fill",  "#fff")
+      .attr("rx", 10).attr("ry", 10)
+      .attr("fill", "#fff")
       .attr("stroke", isOn ? "#2e7d32" : "#111")
       .attr("stroke-width", isOn ? 5 : 2);
 
     // halo + clip
     g.select(".map-gen-halo")
       .attr("x", -W/2 - HALO_PAD).attr("y", -H/2 - HALO_PAD)
-      .attr("width", W + HALO_PAD*2).attr("height", H + HALO_PAD*2);
-    g.select(`#clip-${CSS.escape(id)} rect`)
-    .attr("x", -W/2 + PAD_INNER).attr("y", -H/2 + PAD_INNER)
-    .attr("width", innerW)
-    .attr("height", Math.max(0, H - PAD_INNER * 2));
+      .attr("width",  W + HALO_PAD*2).attr("height", H + HALO_PAD*2);
 
-    // backgrounds
+    g.select(`#clip-${CSS.escape(id)} rect`)
+      .attr("x", -W/2 + PAD_INNER).attr("y", -H/2 + PAD_INNER)
+      .attr("width", innerW)
+      .attr("height", Math.max(0, H - PAD_INNER * 2));
+
+    // backgrounds (full shape), always drawn; fills show how much is active
     const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
       .data(caps, (b,i)=>i);
     bgs.join(
@@ -1615,9 +1662,10 @@ function updateMapGeneratorsFromScenario() {
     .attr("height", SCALED_BLOCK_H)
     .attr("rx", 6).attr("ry", 6)
     .attr("fill", "transparent")
-    .attr("stroke", "#000").attr("stroke-width", .8);
+    .attr("stroke", "#000").attr("stroke-width", .8)
+    .on("click", (ev, b) => onBlockClick(ev, b, node));
 
-    // fills (binary 0/half/full)
+    // fills (0/half/full)
     const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
       .data(caps, (b,i)=>i);
     fills.join(
@@ -1630,11 +1678,53 @@ function updateMapGeneratorsFromScenario() {
     .attr("height", SCALED_BLOCK_H)
     .attr("rx", 6).attr("ry", 6)
     .attr("width", b => {
-      const filled = (gen.pg || 0) >= b.upper;
+      const filled = (gen.pg || 0) >= logicalUpper(b, gen);
       if (!filled) return 0;
       return (b.size === HALF_STEP) ? (innerW/2) : innerW;
     })
-    .attr("fill", blockColor(gen.emissions_per_mw || 0));
+    .attr("fill", blockColor(gen.emissions_per_mw || 0))
+    .on("click", (ev, b) => onBlockClick(ev, b, node));
+
+    // echip (expanded) only when Emissions active
+    const bb = g.select(".map-gen").node().getBBox();
+    if (a.has('emissions')) {
+      g.selectAll("rect.echip")
+        .data([gen])
+        .join(e => e.append("rect")
+          .attr("class","echip")
+          .attr("rx",3).attr("ry",3)
+          .attr("width",10).attr("height",18)
+          .attr("stroke","#5f6c88").attr("stroke-width",1))
+        .attr("fill", echipFill(gen.emissions_per_mw))
+        .attr("x", bb.x + bb.width + 6)
+        .attr("y", bb.y - 4);
+    } else {
+      g.selectAll("rect.echip").remove();
+    }
+
+    // minimize button ONLY WHEN EXPANDED
+    const mini = ui.append("g").attr("class","minibtn").style("cursor","pointer");
+    mini.append("rect")
+      .attr("width", 18).attr("height", 18).attr("rx", 5).attr("ry", 5)
+      .attr("fill", "#0e1420").attr("stroke", "#5f6c88").attr("stroke-width", 1);
+    mini.append("path")
+      .attr("d", "M4,9 H14")
+      .attr("stroke", "#c3cbe0").attr("stroke-width", 2).attr("stroke-linecap","round");
+
+    ui.select("g.minibtn")
+      .attr("transform", `translate(${bb.x + bb.width - 18}, ${bb.y - 18})`)
+      .on("click", (ev) => {
+        ev.stopPropagation();
+        // Optional: if filters are active, flash to indicate disabled
+        if (activeFilters.size > 0) {
+          const r = d3.select(ev.currentTarget).select("rect");
+          r.transition().duration(80).attr("stroke","#ef5350")
+           .transition().duration(160).attr("stroke","#5f6c88");
+          return;
+        }
+        setExpanded(id, false);
+        updateMapGeneratorsFromScenario();
+      });
   });
 
   updateGeneratorStrokes();
@@ -1642,7 +1732,7 @@ function updateMapGeneratorsFromScenario() {
 }
 
 
-  document.getElementById("toggleBtn").addEventListener("click", () => {
+document.getElementById("toggleBtn").addEventListener("click", () => {
   const panel = document.getElementById("adminPanel");
   const isCollapsed = panel.classList.contains("collapsed");
 
@@ -1874,6 +1964,34 @@ function showResultOverlay() {
     // Re-render gens with new scaling rules
     updateMapGeneratorsFromScenario();
   });
+
+  // Lines card stays a mode toggle, not a compound filter
+// === Lines card handler ===
+const linesCard = document.getElementById("scale-lines");
+const linesStatus = document.getElementById("status-lines");
+if (linesCard) {
+  linesCard.addEventListener("click", () => {
+    // Toggle a simple boolean flag
+    const wasOn = (currentMapMode === "lines");
+    currentMapMode = wasOn ? "full" : "lines";
+
+    // Update appearance
+    linesCard.classList.toggle("selected", !wasOn);
+    linesCard.classList.add("scale-lines");
+    if (linesStatus) {
+      linesStatus.textContent = !wasOn ? "Active" : "Click to scale";
+    }
+
+    // Redraw chevrons appropriately
+    refreshChevrons(currentLines || [], currentMapMode);
+
+    // Dim/undim other elements if you want
+    d3.selectAll(".map-bus, .map-load, .map-gen-group")
+      .transition().duration(300)
+      .attr("opacity", !wasOn ? 0.2 : 1);
+  });
+}
+
 });
 
 
