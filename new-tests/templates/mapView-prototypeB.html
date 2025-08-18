@@ -8,26 +8,6 @@
     <style>
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
 
-    .power-block-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-bottom: 4px;
-}
-
-.power-block {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  background: var(--gen-off, #444);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background 0.2s ease;
-  cursor: pointer;
-}
-
-.power-block-row .power-block[style*="background: var(--gen-on)"] {
-  background: var(--gen-on);
-}
 
 .map-load {
   fill: #5878cf;
@@ -694,8 +674,9 @@ const svgElement = svg.node();
 const zoomLayer = svg.select("#zoom-layer");
 const zoomGroup = svg.append("g").attr("id", "zoom-group");
 
-const bubble = d3.select("#bubble");
 let selectedGeneratorId = null;
+
+const roundToHalf = v => Math.round((v || 0) / HALF_STEP) * HALF_STEP;
 
 let totalPower = 0;
 let totalCost = 0;
@@ -819,15 +800,6 @@ function getLoadColor(pct) {
   return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
 }
 
-function drawSelectedGeneratorHalo(){
-  d3.selectAll(".map-gen-halo")
-    .attr("opacity", function(d){
-      // d here is the bound node object (bus/gen/meta node)
-      const parent = d3.select(this.parentNode);
-      const id = parent.select(".map-gen").attr("id");
-      return (id === selectedGeneratorId) ? 1 : 0;
-    });
-}
 
 async function fetchAllScenarios() {
   console.log("fetchAllScenarios")
@@ -968,51 +940,7 @@ function drawChevrons(lines, nodes, mode) {
   });
 }
 
-// Enriches live lines with geometry ids, then calls drawChevrons
-function refreshChevrons(liveLines, mode) {
-  // Map live (API) lines -> static (SVG) geometry
-  const enriched = (staticLines || []).map(lineGeom => {
-    const live = (liveLines || []).find(l =>
-      `Bus${l.from_bus}` === lineGeom.source && `Bus${l.to_bus}` === lineGeom.target
-    );
-    return {
-      ...lineGeom,
-      flow:  live?.flow   ?? 0,
-      rate_a: live?.rate_a ?? 1
-    };
-  });
 
-  drawChevrons(enriched, staticNodes || [], mode || "full");
-}
-
-// Fallback chevron path if your existing chevronPath() isn’t present
-function defaultChevronPath(scale) {
-  const L = scale * 2, W = scale;
-  return `M 0 0 L ${L} ${-W} L ${L*0.8} 0 L ${L} ${W} Z`;
-}
-
-
-function placeEChip(gen, svgX, svgY, emissions) {
-  const id = `echip-${gen.id}`;
-  const old = document.getElementById(id);
-  if (old) old.remove();
-
-  const chip = document.createElement('div');
-  chip.id = id;
-  chip.className = 'echip';
-
-  const sat = Math.round(map(emissions, 0, 100, 18, 92));
-  chip.style.background = `hsl(0, ${sat}%, 52%)`;
-
-  const pt = svgElement.createSVGPoint(); pt.x = svgX; pt.y = svgY;
-  const screenCoords = pt.matrixTransform(svgElement.getScreenCTM());
-  const containerRect = document.getElementById("map-container").getBoundingClientRect();
-
-  chip.style.left = `${screenCoords.x - containerRect.left}px`;
-  chip.style.top  = `${screenCoords.y - containerRect.top}px`;
-
-  document.getElementById("map-container").appendChild(chip);
-}
 
 function echipFill(emisValue, gens = currentGenerators) {
   const extent = d3.extent(gens, g => g.emissions_per_mw || 0);
@@ -1127,65 +1055,41 @@ function updateGeneratorHalos() {
 }
 
 
-// Draw pips by capacity (max) and fill by current (pg). Supports half-dots.
+// Draw pips by capacity (max) and fill by current (pg).
+// Binary-only rendering for dice: NO half dots (capacity or current).
 function drawPipsByMaxD3(containerSel, cx, cy, size, currentMW, maxMW){
   const grid = 3;
   const cell = size / grid;
   const r = Math.max(3.6, cell * 0.30);
 
-  const maxBlocks = (maxMW || 0) / 100;             // 100 MW per block in your rect view
-  const curBlocks = Math.min(maxBlocks, (currentMW || 0) / 100);
+  // Keep internal rounding consistent with bars (50 MW), but dice render only whole dots.
+  const capMW = roundCapToHalf(maxMW);            // capacity can stay Ceil→half
+  const curMW = Math.min(roundToHalf(currentMW), capMW);  // current = Nearest→half
 
-  const fullMax = Math.floor(maxBlocks);
-  const hasHalfMax = (maxBlocks - fullMax) >= 0.5;
-  const totalPips = fullMax + (hasHalfMax ? 1 : 0);
+  const maxBlocks = capMW / 100;                       // 100 MW per block
+  const curBlocks = Math.min(maxBlocks, curMW / 100);
 
-  const fullCur = Math.floor(curBlocks);
-  const hasHalfCur = ((curBlocks - fullCur) >= 0.5);
+  // ❗Binary dice: show only full dots for capacity/current
+  const fullMaxDots = Math.floor(maxBlocks);           // capacity dots to draw (no half dot)
+  const fullCurDots = Math.floor(curBlocks);           // filled dots (no half fill)
 
   const g = containerSel.append("g").attr("class", "dice-pips");
 
   let drawn = 0;
-  for (let i=0; i<9 && drawn<totalPips; i++){
+  for (let i = 0; i < 9 && drawn < fullMaxDots; i++) {
     const row = Math.floor(i / grid), col = i % grid;
     const px = cx - size/2 + cell*(col + 0.5);
     const py = cy - size/2 + cell*(row + 0.5);
 
     const pip = g.append("circle")
       .attr("cx", px).attr("cy", py).attr("r", r)
-      .attr("stroke", "#2a3244").attr("stroke-width", 1);
+      .attr("stroke", "#2a3244").attr("stroke-width", 1)
+      .attr("fill", i < fullCurDots ? "#c3cbe0" : "transparent");
 
-    if (i < fullCur){
-      pip.attr("fill", "#c3cbe0");
-    } else if (i === fullCur && hasHalfCur){
-      pip.attr("fill", "#c3cbe0");
-      // mask right half → simple overlay rect
-      g.append("rect")
-        .attr("x", px).attr("y", py - r)
-        .attr("width", r).attr("height", 2*r)
-        .attr("fill", "#0f1522");
-    } else {
-      pip.attr("fill", "transparent");
-    }
     drawn++;
   }
 
-  if (hasHalfMax && drawn === fullMax){
-    const i = drawn;
-    const row = Math.floor(i / grid), col = i % grid;
-    const px = cx - size/2 + cell*(col + 0.5);
-    const py = cy - size/2 + cell*(row + 0.5);
-
-    g.append("circle")
-      .attr("cx", px).attr("cy", py).attr("r", r)
-      .attr("stroke", "#2a3244").attr("stroke-width", 1)
-      .attr("fill", "transparent");
-
-    g.append("rect")
-      .attr("x", px).attr("y", py - r)
-      .attr("width", r).attr("height", 2*r)
-      .attr("fill", "#0f1522");
-  }
+  // No half-capacity indicator in dice view (intentionally omitted).
 }
 
 
@@ -1196,6 +1100,52 @@ function ensureUiLayer(gSel){
   return ui;
 }
 
+// === Click handler for capacity/current slots (top-level!) ===
+function onBlockClick(ev, b, node) {
+  const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id);
+  if (!gen) return;
+
+  // Logical bounds for this block against gen.pmax
+  const upper = Math.min(b.upper, gen.pmax || 0);
+  const lower = Math.min(b.lower, gen.pmax || 0);
+
+  // Toggle: clicking a filled block drops to its lower edge, else raise to upper edge
+  let targetMW = ((gen.pg || 0) >= upper) ? lower : upper;
+
+  // Quantize to 50 MW steps and clamp
+  const HALF_STEP = BLOCK_UNIT / 2;
+  targetMW = Math.round(targetMW / HALF_STEP) * HALF_STEP;
+  targetMW = Math.max(0, Math.min(targetMW, gen.pmax || 0));
+
+  // Optimistic UI
+  gen.pg = targetMW;
+  updateMapGeneratorsFromScenario();
+
+  // Persist to backend
+  const percent = Math.min(100, Math.round((targetMW / (gen.pmax || 1)) * 100));
+  fetch(`/api/set_generation/${gen.index}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ percent, user_active: true })
+  })
+  .then(r => r.json())
+  .then(data => {
+    currentGenerators = data.generators;
+    currentLines = data.lines;
+    renderOverview(currentGenerators, currentScenarioData, currentLines);
+    updateMapGeneratorsFromScenario();
+    updateGeneratorHalos();
+
+    // Re-open the selected generator’s UI if needed
+    if (selectedGeneratorId) {
+      const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+      if (!selected.empty()) selected.dispatch("click");
+    }
+  })
+  .catch(console.error);
+
+  ev.stopPropagation();
+}
 
 
 
@@ -1212,48 +1162,6 @@ Promise.all([
   // Helper: logical upper bound for this block = min(display upper, real pmax)
 function logicalUpper(b, gen) { return Math.min(b.upper, gen.pmax || 0); }
 function logicalLower(b, gen) { return Math.min(b.lower, gen.pmax || 0); }
-
-
-
-
-function onBlockClick(ev, b, node) {
-  const gen = currentGenerators.find(x => `Gen${x.bus}` === node.id);
-  if (!gen) return;
-
-  const upper = logicalUpper(b, gen);
-  const lower = logicalLower(b, gen);
-
-  // Toggle: click same block lowers power, otherwise raise to it
-  let targetMW = ((gen.pg || 0) >= upper) ? lower : upper;
-
-  // Quantize to half steps and clamp
-  const HALF_STEP = BLOCK_UNIT / 2;
-  targetMW = Math.round(targetMW / HALF_STEP) * HALF_STEP;
-  targetMW = Math.max(0, Math.min(targetMW, gen.pmax || 0));
-
-  // Optimistic UI
-  gen.pg = targetMW;
-  updateMapGeneratorsFromScenario();
-
-  // POST to server
-  const percent = Math.min(100, Math.round((targetMW / (gen.pmax || 1)) * 100));
-  fetch(`/api/set_generation/${gen.index}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ percent, user_active: true })
-  })
-  .then(r => r.json())
-  .then(data => {
-    currentGenerators = data.generators;
-    currentLines = data.lines;
-    renderOverview(currentGenerators, currentScenarioData, currentLines);
-    updateMapGeneratorsFromScenario();
-  })
-  .catch(console.error);
-
-  ev.stopPropagation();
-}
-
 
   zoomGroup.selectAll("path.map-line")
     .data(lines)
@@ -1333,7 +1241,7 @@ function genDims(gen){
   const n = Math.max(1, caps.length);
   const scaledH  = n * SCALED_BLOCK_H + (n - 1) * BLOCK_GAP + PAD_INNER * 2;
   const NEUTRAL_H = PAD_INNER * 2 + SCALED_BLOCK_H * 3 + BLOCK_GAP * 2;
-  const H = powerActive ? scaledH : NEUTRAL_H;
+  const H = (powerActive || widthActive) ? scaledH : NEUTRAL_H;
 
   const innerW = W - PAD_INNER * 2;
   return { W, H, innerW, caps };
@@ -1411,102 +1319,10 @@ function drawRectGenerators(){
     // Clicks will be bound in the updater when we have actual block data
   });
 }
-
-drawRectGenerators();
-updateMapGeneratorsFromScenario();
-
-
-function applyMapMode(mode) {
-  // Only "lines" is a real mode now; power/cost/emissions are filters.
-  if (mode !== "lines") {
-    console.warn("applyMapMode only supports 'lines' now");
-    return;
-  }
-
-  // Toggle Lines mode
-  const turningOn = currentMapMode !== "lines";
-  currentMapMode = turningOn ? "lines" : "full";
-
-  const isLines = currentMapMode === "lines";
-
-  // Lines always visible
-  d3.selectAll(".map-line")
-    .transition().duration(300)
-    .attr("opacity", 1);
-
-  // Dim everything else while Lines mode is on
-  const faded = isLines ? 0.2 : 1;
-  d3.selectAll(".map-bus, .map-load, .map-gen-group, .map-gen-halo")
-    .transition().duration(300)
-    .attr("opacity", faded);
-
-  // Redraw chevrons so they scale/emphasize in Lines mode
-  refreshChevrons(currentLines || [], currentMapMode);
-
-  // (Optional) keep emission chips unobtrusive in Lines mode
-  if (isLines) {
-    document.querySelectorAll(".echip").forEach(el => el.style.opacity = "0.2");
-  } else {
-    document.querySelectorAll(".echip").forEach(el => el.style.opacity = "1");
-    // If emissions filter is active, ensure chips are correctly placed after leaving Lines mode
-    if (appliedSet().has('emissions')) updateMapGeneratorsFromScenario();
-  }
-
-  // Card UI feedback
-  const linesCard = document.getElementById("scale-lines");
-  const linesStatus = document.getElementById("status-lines");
-  if (linesCard) {
-    linesCard.classList.toggle("selected", isLines);
-    linesCard.classList.toggle("scale-lines", isLines);
-  }
-  if (linesStatus) {
-    linesStatus.textContent = isLines ? "Active" : "Click to scale";
-  }
-}
-
-
-function createBlock(level, isHalf, gen) {
-  const block = document.createElement("div");
-  block.className = "power-block";
-  block.style.width = isHalf ? `10px` : `20px`;
-  block.style.height = "20px";
-  block.style.borderRadius = "4px";
-  const updated = currentGenerators.find(g => g.index === gen.index);
-  block.style.background = updated && updated.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
-  block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
-  block.title = `${level} MW`;
-
-  block.style.cursor = "pointer";
-  block.addEventListener("mousedown", (event) => {
-  event.stopPropagation(); // prevent bubble from closing
-
-  const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
-  fetch(`/api/set_generation/${gen.index}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ percent, user_active: true })
-  })
-    .then(res => res.json())
-    .then(data => {
-      currentGenerators = data.generators;
-      currentLines = data.lines;
-      console.log("calling renderOverview");
-      renderOverview(currentGenerators, currentScenarioData, currentLines);
-      updateMapGeneratorsFromScenario();
-      updateGeneratorHalos();
-
-      // 🔁 Redraw the generator bubble to reflect the updated gen.pg
-      const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
-      if (!selected.empty()) {
-        selected.dispatch("click");
-      }
-    });
+  // after drawRectGenerators() is defined and genGroups are built:
+  drawRectGenerators();
+  updateMapGeneratorsFromScenario();
 });
-
-  return block;
-}
-});
-
 
 // ===== Update (dice on startup → expand when filters are active) =====
 function updateMapGeneratorsFromScenario() {
@@ -1665,25 +1481,35 @@ function updateMapGeneratorsFromScenario() {
     .attr("stroke", "#000").attr("stroke-width", .8)
     .on("click", (ev, b) => onBlockClick(ev, b, node));
 
-    // fills (0/half/full)
-    const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
-      .data(caps, (b,i)=>i);
-    fills.join(
-      e => e.append("rect").attr("class","gen-block-fill"),
-      u => u,
-      x => x.remove()
-    )
-    .attr("x", -innerW/2)
-    .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-    .attr("height", SCALED_BLOCK_H)
-    .attr("rx", 6).attr("ry", 6)
-    .attr("width", b => {
-      const filled = (gen.pg || 0) >= logicalUpper(b, gen);
-      if (!filled) return 0;
-      return (b.size === HALF_STEP) ? (innerW/2) : innerW;
-    })
-    .attr("fill", blockColor(gen.emissions_per_mw || 0))
-    .on("click", (ev, b) => onBlockClick(ev, b, node));
+    // fills (0/half/full) — compute bottom‑up like mapBtest
+    const currentBlocks = Math.max(0, (gen.pg || 0) / 100);
+    const fullCur = Math.floor(currentBlocks);
+    const hasHalfCur = (currentBlocks - fullCur) >= 0.5;
+
+  const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
+    .data(caps, (b,i)=>i);
+  fills.join(
+    e => e.append("rect").attr("class","gen-block-fill"),
+    u => u,
+    x => x.remove()
+  )
+  .attr("x", -innerW/2)
+  .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+  .attr("height", SCALED_BLOCK_H)
+  .attr("rx", 6).attr("ry", 6)
+  .attr("width", b => {
+  // Tolerant "filled" check to survive backend rounding (e.g., 349 vs 350)
+const EPS = HALF_STEP / 4; // 12.5 MW slack
+const upper = Math.min(b.upper, gen.pmax || 0);
+const quantPg = Math.round((gen.pg || 0) / HALF_STEP) * HALF_STEP;
+
+const filled = (quantPg + EPS) >= upper;
+if (!filled) return 0;
+// full means full capacity for the slot; half-capacity slot uses its full (half) width
+return (b.size === HALF_STEP) ? (innerW/2) : innerW;
+})
+  .attr("fill", blockColor(gen.emissions_per_mw || 0))
+  .on("click", (ev, b) => onBlockClick(ev, b, node));
 
     // echip (expanded) only when Emissions active
     const bb = g.select(".map-gen").node().getBBox();
