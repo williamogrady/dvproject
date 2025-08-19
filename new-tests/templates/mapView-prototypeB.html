@@ -13,11 +13,11 @@
   fill: #5878cf;
 }
 
-
 :root {
   --gen-on: #4caf50;
   --gen-off: #333;
 }
+
 
     body {
       margin: 0;
@@ -575,20 +575,54 @@
   pointer-events: none;
 }
 
+  </style>
+<style>
+/* --- tokens --- */
+:root{
+  --card-bg: #fff;
+  --card-stroke: #cdd5df;
+  --on-stroke: #2e7d32;
 
-.echip {
-  position: absolute;
-  width: 10px;
-  height: 18px;
-  border: 1px solid #5f6c88;
-  border-radius: 3px;
-  background: #2a2f3d;
-  pointer-events: none;
-  z-index: 999;
+  --gen-on: #4caf50;
+  --gen-on-dark: #1b5e20;
+
+  --dice-off-stroke: #222;
+  --pip-off: #111;
+  --pip-on: #fff;
+
+  --emi-ring-w: 10px;          /* ← adjust ring thickness here */
 }
 
+/* emissions indicators */
+.gen-emi-strip { fill: var(--emi, #4caf50); pointer-events:none; }
+.gen-emi-ring  { fill: none; stroke: var(--emi, #4caf50); stroke-width: var(--emi-ring-w); pointer-events:none; }
 
-  </style>
+/* interaction */
+.clickable { cursor: pointer; }
+
+/* base card (expanded defaults) */
+.gen-card{
+  fill: var(--card-bg);
+  stroke: var(--card-stroke);
+  stroke-width: 1.2;
+  shape-rendering: geometricPrecision;
+}
+.gen-card--on { stroke: var(--on-stroke); stroke-width: 1.6; }
+
+/* dice-mode overrides (declared AFTER .gen-card so they win) */
+.gen-card--dice-on  { fill: var(--gen-on) !important;  stroke: var(--gen-on-dark) !important; }
+.gen-card--dice-off { fill: #fff !important;           stroke: var(--dice-off-stroke) !important; }
+
+/* dice pips */
+.pip-dot { stroke: none; }
+.pip-dot.off { fill: var(--pip-off); }
+.pip-dot.on  { fill: var(--pip-on); }
+
+/* soft shadow */
+.with-soft-shadow { filter: url(#softShadow); }
+</style>
+
+
 </head>
 <body>
   <div id="map-container">
@@ -695,6 +729,17 @@ let availableScenarios = [];
 
 let currentMapMode = "full";
 
+
+const defs = svg.append("defs");
+const softShadow = defs.append("filter")
+  .attr("id", "softShadow")
+  .attr("x", "-20%").attr("y", "-20%")
+  .attr("width", "140%").attr("height", "140%");
+softShadow.append("feDropShadow")
+  .attr("dx", 0).attr("dy", 2)
+  .attr("stdDeviation", 2.5)
+  .attr("flood-opacity", 0.25);
+
 // collapsed on startup; expands when filters are active
 // collapsed on startup; expands when filters are active
 const expandedById = new Map();
@@ -715,14 +760,44 @@ function appliedSet(){
     : new Set(activeFilters);
 }
 
+// Collapsed dice pips: ON => white dots for current, black for remaining
+// OFF => all capacity dots black
+function drawDicePipsCollapsed(containerSel, size, currentMW, maxMW, isOn){
+  const grid = 3;
+  const cell = size / grid;
+  const r = Math.max(4.2, cell * 0.34);
+
+  // Round to your 50 MW half-step logic
+  const capMW = roundCapToHalf(maxMW || 0);
+  const curMW = Math.min(roundToHalf(currentMW || 0), capMW);
+
+  const capDots = Math.floor(Math.min(9, capMW / 100));  // 100 MW per dot
+  const curDots = Math.floor(Math.min(9, curMW / 100));
+
+  const g = containerSel.append("g").attr("class", "dice-pips");
+
+  for (let i = 0; i < capDots; i++) {
+    const row = Math.floor(i / grid), col = i % grid;
+    const cx = 0 - size/2 + cell*(col + 0.5);
+    const cy = 0 - size/2 + cell*(row + 0.5);
+
+    // Decide color by state:
+    // - if ON: first curDots are white ("on"), rest black ("off")
+    // - if OFF: all black ("off")
+    const isFilledNow = isOn && (i < curDots);
+    const cls = isFilledNow ? "pip-dot on" : "pip-dot off";
+
+    g.append("circle")
+      .attr("class", cls)
+      .attr("cx", cx).attr("cy", cy).attr("r", r);
+  }
+}
 
 function getWidthScale() {
   const costExtent = d3.extent(currentGenerators, g => g.cost_per_mw || 0);
   return d3.scaleLinear()
     .domain([Math.max(1, costExtent[0] || 1), costExtent[1] || 1])
     .range([MIN_GEN_W, MAX_GEN_W]);
-
-    
 }
 
 function map(value, inMin, inMax, outMin, outMax) {
@@ -746,6 +821,19 @@ function getBlockColor() {
     return '#d2d7e2'; // neutral when Emissions filter not active
   };
 }
+
+
+function emissionsColor(gen, gens = currentGenerators) {
+  const e = gen.emissions_per_mw || 0;
+  const extent = d3.extent(gens, g => g.emissions_per_mw || 0); // [min, max]
+  // More saturated green = cleaner (lower emissions)
+  const sat = d3.scaleLinear()
+    .domain([extent[1] || 1, extent[0] || 0]) // high→low
+    .range([20, 85])                          // low sat (dirty) → high sat (clean)
+    .clamp(true);
+  return `hsl(140, ${sat(e)}%, 45%)`;
+}
+
 
 
 // Define zoom behavior — same as before
@@ -942,14 +1030,6 @@ function drawChevrons(lines, nodes, mode) {
 
 
 
-function echipFill(emisValue, gens = currentGenerators) {
-  const extent = d3.extent(gens, g => g.emissions_per_mw || 0);
-  const sat = d3.scaleLinear()
-    .domain([extent[0] || 0, extent[1] || 1])
-    .range([18, 92])
-    .clamp(true);
-  return `hsl(0, ${sat(emisValue || 0)}%, 52%)`;
-}
 
 function chevronPath(scale) {
     const length = scale * 2;
@@ -1029,21 +1109,21 @@ function capacityBoundsTopDown(pmax){
 }
 
 function updateGeneratorStrokes() {
-  d3.selectAll(".map-gen").each(function(d) {
+  d3.selectAll(".map-gen").each(function() {
     const el = d3.select(this);
-    const gen = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const id = el.attr("id");
+    const isSelected = (id === selectedGeneratorId);
 
-    let strokeColor = "black";
-    let strokeWidth = 3;
-
-    if (d.id === selectedGeneratorId) {
-      strokeColor = "#42a5f5";
-      strokeWidth = 4;
+    if (isSelected) {
+      // Only emphasize selection; leave base/dice styling intact
+      el.attr("stroke", "#42a5f5").attr("stroke-width", 3);
+    } else {
+      // Do NOT override; let CSS classes control appearance
+      el.attr("stroke", null).attr("stroke-width", null);
     }
-
-    el.attr("stroke", strokeColor).attr("stroke-width", strokeWidth);
   });
 }
+
 
 function updateGeneratorHalos() {
   d3.selectAll(".map-gen-halo")
@@ -1060,36 +1140,36 @@ function updateGeneratorHalos() {
 function drawPipsByMaxD3(containerSel, cx, cy, size, currentMW, maxMW){
   const grid = 3;
   const cell = size / grid;
-  const r = Math.max(3.6, cell * 0.30);
+  const r = Math.max(4.2, cell * 0.34);
 
-  // Keep internal rounding consistent with bars (50 MW), but dice render only whole dots.
-  const capMW = roundCapToHalf(maxMW);            // capacity can stay Ceil→half
-  const curMW = Math.min(roundToHalf(currentMW), capMW);  // current = Nearest→half
+  const capMW = roundCapToHalf(maxMW);
+  const curMW = Math.min(roundToHalf(currentMW), capMW);
 
-  const maxBlocks = capMW / 100;                       // 100 MW per block
+  const maxBlocks = capMW / 100;   // 100 MW per dot
   const curBlocks = Math.min(maxBlocks, curMW / 100);
 
-  // ❗Binary dice: show only full dots for capacity/current
-  const fullMaxDots = Math.floor(maxBlocks);           // capacity dots to draw (no half dot)
-  const fullCurDots = Math.floor(curBlocks);           // filled dots (no half fill)
+  const capDots = Math.floor(Math.min(9, maxBlocks));
+  const curDots = Math.floor(Math.min(9, curBlocks));
 
   const g = containerSel.append("g").attr("class", "dice-pips");
 
-  let drawn = 0;
-  for (let i = 0; i < 9 && drawn < fullMaxDots; i++) {
+  for (let i = 0; i < capDots; i++) {
     const row = Math.floor(i / grid), col = i % grid;
     const px = cx - size/2 + cell*(col + 0.5);
     const py = cy - size/2 + cell*(row + 0.5);
 
-    const pip = g.append("circle")
-      .attr("cx", px).attr("cy", py).attr("r", r)
-      .attr("stroke", "#2a3244").attr("stroke-width", 1)
-      .attr("fill", i < fullCurDots ? "#c3cbe0" : "transparent");
+    // capacity outline (always)
+    g.append("circle")
+      .attr("class", "pip-capacity")
+      .attr("cx", px).attr("cy", py).attr("r", r);
 
-    drawn++;
+    // current fill (overlay)
+    if (i < curDots) {
+      g.append("circle")
+        .attr("class", "pip-current")
+        .attr("cx", px).attr("cy", py).attr("r", r - 0.6);
+    }
   }
-
-  // No half-capacity indicator in dice view (intentionally omitted).
 }
 
 
@@ -1230,13 +1310,12 @@ function genDims(gen){
   const a = appliedSet();
   const widthActive = a.has('cost');
   const powerActive = a.has('power');
+  const onlyCost    = (a.size === 1 && a.has('cost'));
 
-  // Width: scaled by cost only if Cost filter is applied; otherwise minimal width
   const W = widthActive
     ? Math.max(MIN_GEN_W, getWidthScale()(gen.cost_per_mw || 0))
     : MIN_GEN_W;
 
-  // Height: scaled by capacity only if Power filter is applied; otherwise a neutral height (~3 slots)
   const caps = capacityBoundsTopDown(gen.pmax || 0);
   const n = Math.max(1, caps.length);
   const scaledH  = n * SCALED_BLOCK_H + (n - 1) * BLOCK_GAP + PAD_INNER * 2;
@@ -1339,22 +1418,24 @@ function updateMapGeneratorsFromScenario() {
   function dimsFor(gen){
     const widthActive = a.has('cost');
     const powerActive = a.has('power');
+    const onlyCost = (activeFilters.size === 1 && activeFilters.has('cost'));
+    const onlyEmissions = (activeFilters.size === 1 && activeFilters.has('emissions'));
+    
 
+    // Width: scale by cost only when Cost is active
     const W = widthActive
       ? Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0))
       : MIN_GEN_W;
 
+    // Height: show full capacity when Power is active OR when only Cost is active
     const caps = capacityBoundsTopDown(gen.pmax || 0);
     const n = Math.max(1, caps.length);
-
     const scaledH  = n * SCALED_BLOCK_H + (n - 1) * BLOCK_GAP + PAD_INNER * 2;
     const NEUTRAL_H = PAD_INNER * 2 + SCALED_BLOCK_H * 3 + BLOCK_GAP * 2;
-    const H = powerActive ? scaledH : NEUTRAL_H;
-
+    const H = (activeFilters.has('power') || onlyCost || onlyEmissions) ? scaledH : NEUTRAL_H;
     const innerW = W - PAD_INNER*2;
     return { W, H, innerW, caps };
   }
-  function logicalUpper(b, gen){ return Math.min(b.upper, gen.pmax || 0); }
 
   d3.selectAll(".map-gen-group").each(function(node){
     const g  = d3.select(this);
@@ -1372,87 +1453,80 @@ function updateMapGeneratorsFromScenario() {
     ui.selectAll("g.expand-plus, g.minibtn").remove();
     g.selectAll(".dice, .dice-pips").remove();
 
-    if (!expanded) {
-      // === DICE (collapsed) ===
-      g.select(".blocks").style("display", "none");
-      g.select(".map-gen-halo").attr("width", 0).attr("height", 0);
+  if (!expanded) {
+  // === COLLAPSED (DICE) ===
+  g.select(".blocks").style("display", "none");
+  g.select(".map-gen-halo").attr("width", 0).attr("height", 0);
 
-      // same centered rectangle as expanded, but compact
-      g.select(".map-gen")
-        .attr("x", -DICE/2).attr("y", -DICE/2)
-        .attr("width", DICE).attr("height", DICE)
-        .attr("rx", 10).attr("ry", 10)
-        .attr("fill", "#0f1522")
-        .attr("stroke", "#2a3244")
-        .attr("stroke-width", 1.2);
+  // compute isOn BEFORE using it
+  const isOn = (gen.pg || 0) > 0;
 
-      // pips (capacity = pmax, current = pg)
-      drawPipsByMaxD3(g, 0, 0, DICE, gen.pg || 0, gen.pmax || 0);
+  // make the whole group clickable to expand
+  g.classed("clickable", true)
+    .on("click", () => { setExpanded(id, true); updateMapGeneratorsFromScenario(); });
 
-      // echip only if Emissions filter is active
-      if (a.has('emissions')) {
-        const bb = g.select(".map-gen").node().getBBox();
-        g.selectAll("rect.echip")
-          .data([gen])
-          .join(e => e.append("rect")
-            .attr("class","echip")
-            .attr("rx",3).attr("ry",3)
-            .attr("width",10).attr("height",18)
-            .attr("stroke","#5f6c88").attr("stroke-width",1))
-          .attr("fill", echipFill(gen.emissions_per_mw))
-          .attr("x", bb.x + bb.width + 6)
-          .attr("y", bb.y - 4);
-      } else {
-        g.selectAll("rect.echip").remove();
-      }
+  // clean dice card (green when on, white when off)
+  g.select(".map-gen")
+    .attr("class", "map-gen gen-card gen-card--collapsed with-soft-shadow " + (isOn ? "gen-card--dice-on" : "gen-card--dice-off"))
+    .attr("x", -DICE/2).attr("y", -DICE/2)
+    .attr("width", DICE).attr("height", DICE)
+    .attr("rx", 10).attr("ry", 10);
 
-      // BIG FADED PLUS (same size as dice), shown on hover only
-      const plus = ui.append("g")
-        .attr("class","expand-plus")
-        .style("pointer-events","none")
-        .attr("opacity", 0);
+  // draw dice pips (white = on/current, black = off/capacity)
+  g.selectAll(".dice-pips").remove();
+  drawDicePipsCollapsed(g, DICE, gen.pg || 0, gen.pmax || 0, isOn);
 
-      // draw a large plus that spans most of the dice
-      const crossLen = DICE * 0.66;
-      const strokeW  = DICE * 0.12;
-      plus.append("line")
-        .attr("x1", -crossLen/2).attr("y1", 0).attr("x2", crossLen/2).attr("y2", 0)
-        .attr("stroke", "#c3cbe0").attr("stroke-width", strokeW).attr("stroke-linecap","round")
-        .attr("opacity", 0.12);
-      plus.append("line")
-        .attr("x1", 0).attr("y1", -crossLen/2).attr("x2", 0).attr("y2", crossLen/2)
-        .attr("stroke", "#c3cbe0").attr("stroke-width", strokeW).attr("stroke-linecap","round")
-        .attr("opacity", 0.12);
+  // emissions RING in collapsed state uses DICE (W/H not available here)
+  const emiCol = emissionsColor(gen);
+  g.selectAll("rect.gen-emi-ring")
+    .data([0])
+    .join("rect")
+    .attr("class","gen-emi-ring")
+    .attr("x", -DICE/2).attr("y", -DICE/2)
+    .attr("width", DICE).attr("height", DICE)
+    .style("--emi", emiCol)
+    .attr("opacity", activeFilters.has('emissions') ? 1 : 0);
 
-      plus.attr("transform", `translate(0,0)`);
+  // remove any old echip in collapsed mode
+  g.selectAll("rect.echip").remove();
 
-      // hover to reveal big plus a bit more
-      g.on("mouseenter", () => plus.transition().duration(120).attr("opacity", 1))
-       .on("mouseleave", () => plus.transition().duration(140).attr("opacity", 0));
+  // BIG FADED PLUS on hover (decorative only)
+  const plus = ui.append("g")
+    .attr("class","expand-plus gen-plus")
+    .style("pointer-events","none")
+    .attr("opacity", 0);
 
-      // clicking the dice expands
-      g.select(".map-gen")
-        .style("cursor","pointer")
-        .on("click", () => { setExpanded(id, true); updateMapGeneratorsFromScenario(); });
+  const crossLen = DICE * 0.66;
+  const strokeW  = DICE * 0.12;
+  plus.append("line")
+    .attr("x1", -crossLen/2).attr("y1", 0).attr("x2", crossLen/2).attr("y2", 0)
+    .attr("stroke", "#c3cbe0").attr("stroke-width", strokeW).attr("stroke-linecap","round")
+    .attr("opacity", 0.12);
+  plus.append("line")
+    .attr("x1", 0).attr("y1", -crossLen/2).attr("x2", 0).attr("y2", crossLen/2)
+    .attr("stroke", "#c3cbe0").attr("stroke-width", strokeW).attr("stroke-linecap","round")
+    .attr("opacity", 0.12);
 
-      return; // ← skip expanded path
-    }
+  g.on("mouseenter", () => plus.transition().duration(120).attr("opacity", 1))
+   .on("mouseleave", () => plus.transition().duration(140).attr("opacity", 0));
+
+  return; // done with collapsed
+}
 
     // === EXPANDED (rect + blocks) ===
-    g.select(".blocks").style("display", null); // ensure blocks visible
+    g.on("click", null).classed("clickable", false);
+    g.select(".blocks").style("display", null);
 
     const { W, H, innerW, caps } = dimsFor(gen);
     const topY = -H/2 + PAD_INNER;
-    const isOn = (gen.pg || 0) > 0;
+    const isOn = (gen.pg || 0) > 0; // define before using below
 
-    // same outer rectangle, just bigger and centered
     g.select(".map-gen")
+      .attr("class", "map-gen gen-card gen-card--expanded with-soft-shadow")
+      .classed("gen-card--on", isOn)
       .attr("x", -W/2).attr("y", -H/2)
       .attr("width", W).attr("height", H)
-      .attr("rx", 10).attr("ry", 10)
-      .attr("fill", "#fff")
-      .attr("stroke", isOn ? "#2e7d32" : "#111")
-      .attr("stroke-width", isOn ? 5 : 2);
+      .attr("rx", 10).attr("ry", 10);
 
     // halo + clip
     g.select(".map-gen-halo")
@@ -1464,7 +1538,7 @@ function updateMapGeneratorsFromScenario() {
       .attr("width", innerW)
       .attr("height", Math.max(0, H - PAD_INNER * 2));
 
-    // backgrounds (full shape), always drawn; fills show how much is active
+    // backgrounds (capacity slots) — always draw, so capacity is visible even if pg=0
     const bgs = g.select(".blocks").selectAll("rect.gen-block-bg")
       .data(caps, (b,i)=>i);
     bgs.join(
@@ -1481,54 +1555,41 @@ function updateMapGeneratorsFromScenario() {
     .attr("stroke", "#000").attr("stroke-width", .8)
     .on("click", (ev, b) => onBlockClick(ev, b, node));
 
-    // fills (0/half/full) — compute bottom‑up like mapBtest
-    const currentBlocks = Math.max(0, (gen.pg || 0) / 100);
-    const fullCur = Math.floor(currentBlocks);
-    const hasHalfCur = (currentBlocks - fullCur) >= 0.5;
+    const emiCol = emissionsColor(gen);
+    g.selectAll("rect.gen-emi-ring")
+      .data([0])
+      .join("rect")
+      .attr("class","gen-emi-ring")
+      .attr("x", -W/2).attr("y", -H/2)   // use DICE for collapsed
+      .attr("width", W).attr("height", H)
+      .style("--emi", emissionsColor(gen))
+      .attr("opacity", activeFilters.has('emissions') ? 1 : 0);
 
-  const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
-    .data(caps, (b,i)=>i);
-  fills.join(
-    e => e.append("rect").attr("class","gen-block-fill"),
-    u => u,
-    x => x.remove()
-  )
-  .attr("x", -innerW/2)
-  .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-  .attr("height", SCALED_BLOCK_H)
-  .attr("rx", 6).attr("ry", 6)
-  .attr("width", b => {
-  // Tolerant "filled" check to survive backend rounding (e.g., 349 vs 350)
-const EPS = HALF_STEP / 4; // 12.5 MW slack
-const upper = Math.min(b.upper, gen.pmax || 0);
-const quantPg = Math.round((gen.pg || 0) / HALF_STEP) * HALF_STEP;
 
-const filled = (quantPg + EPS) >= upper;
-if (!filled) return 0;
-// full means full capacity for the slot; half-capacity slot uses its full (half) width
-return (b.size === HALF_STEP) ? (innerW/2) : innerW;
-})
-  .attr("fill", blockColor(gen.emissions_per_mw || 0))
-  .on("click", (ev, b) => onBlockClick(ev, b, node));
+    // fills (current)
+    const fills = g.select(".blocks").selectAll("rect.gen-block-fill")
+      .data(caps, (b,i)=>i);
+    fills.join(
+      e => e.append("rect").attr("class","gen-block-fill"),
+      u => u,
+      x => x.remove()
+    )
+    .attr("x", -innerW/2)
+    .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
+    .attr("height", SCALED_BLOCK_H)
+    .attr("rx", 6).attr("ry", 6)
+    .attr("width", b => {
+      const EPS = HALF_STEP / 4; // tolerate backend rounding
+      const upper = Math.min(b.upper, gen.pmax || 0);
+      const quantPg = Math.round((gen.pg || 0) / HALF_STEP) * HALF_STEP;
+      const filled = (quantPg + EPS) >= upper;
+      if (!filled) return 0;
+      return (b.size === HALF_STEP) ? (innerW/2) : innerW;
+    })
+    .attr("fill", blockColor(gen.emissions_per_mw || 0))
+    .on("click", (ev, b) => onBlockClick(ev, b, node));
 
-    // echip (expanded) only when Emissions active
-    const bb = g.select(".map-gen").node().getBBox();
-    if (a.has('emissions')) {
-      g.selectAll("rect.echip")
-        .data([gen])
-        .join(e => e.append("rect")
-          .attr("class","echip")
-          .attr("rx",3).attr("ry",3)
-          .attr("width",10).attr("height",18)
-          .attr("stroke","#5f6c88").attr("stroke-width",1))
-        .attr("fill", echipFill(gen.emissions_per_mw))
-        .attr("x", bb.x + bb.width + 6)
-        .attr("y", bb.y - 4);
-    } else {
-      g.selectAll("rect.echip").remove();
-    }
-
-    // minimize button ONLY WHEN EXPANDED
+    // minimize button (expanded only)
     const mini = ui.append("g").attr("class","minibtn").style("cursor","pointer");
     mini.append("rect")
       .attr("width", 18).attr("height", 18).attr("rx", 5).attr("ry", 5)
@@ -1538,10 +1599,9 @@ return (b.size === HALF_STEP) ? (innerW/2) : innerW;
       .attr("stroke", "#c3cbe0").attr("stroke-width", 2).attr("stroke-linecap","round");
 
     ui.select("g.minibtn")
-      .attr("transform", `translate(${bb.x + bb.width - 18}, ${bb.y - 18})`)
+    .attr("transform", `translate(${(W/2) - 18}, ${(-H/2) - 18})`)
       .on("click", (ev) => {
         ev.stopPropagation();
-        // Optional: if filters are active, flash to indicate disabled
         if (activeFilters.size > 0) {
           const r = d3.select(ev.currentTarget).select("rect");
           r.transition().duration(80).attr("stroke","#ef5350")
@@ -1556,6 +1616,8 @@ return (b.size === HALF_STEP) ? (innerW/2) : innerW;
   updateGeneratorStrokes();
   updateGeneratorHalos();
 }
+
+
 
 
 document.getElementById("toggleBtn").addEventListener("click", () => {
