@@ -153,11 +153,11 @@
 }
 
 
-
 /* ----------------------------------------
-   SPECIFIC CARD LAYOUTS
+   SPECIFIC CARD LAYOUTS (CLEANED)
 ---------------------------------------- */
 
+/* Column placement + vertical spacing model */
 #scale-power {
   grid-column: 1 / 2;
   display: flex;
@@ -189,7 +189,116 @@
 }
 
 /* ----------------------------------------
-   TASK SECTION PLACEHOLDER
+   LINES CARD (Rows 3 & 4)
+---------------------------------------- */
+
+/* Horizontal rows (single line); no visible scrollbars/gray boxes */
+#scale-lines .row-rich,
+#scale-lines .row-top {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 2px;
+  background: transparent;
+  /* Hide scrollbars cross-browser */
+  scrollbar-width: none;              /* Firefox */
+  -ms-overflow-style: none;           /* IE/Edge legacy */
+}
+
+
+#scale-lines .row-rich { margin-bottom: 8px; }  /* tweak 6–12px to taste */
+#scale-lines .row-top  { margin-top: 8px; }
+
+#scale-lines .row-rich::-webkit-scrollbar,
+#scale-lines .row-top::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;               /* Chrome/Safari */
+}
+#scale-lines .row-rich::-webkit-scrollbar-thumb,
+#scale-lines .row-top::-webkit-scrollbar-thumb,
+#scale-lines .row-rich::-webkit-scrollbar-track,
+#scale-lines .row-top::-webkit-scrollbar-track,
+#scale-lines .row-rich::-webkit-scrollbar-corner,
+#scale-lines .row-top::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Optional tiny title when overloaded == 0 */
+#scale-lines .row-top-title {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 700;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+/* Cards — shared base */
+#scale-lines .line-card {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 22px 1fr;   /* left icon + right text */
+  align-items: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 6px;
+  border: 1.5px solid var(--accent, #e5e7eb); /* JS sets --accent/borderColor */
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  position: relative;
+}
+
+/* Row 3 cards 20% smaller */
+#scale-lines .row-rich .line-card {
+  width: 88px;          /* was ~110px */
+  height: 26px;         /* was ~32px */
+  padding: 3px 5px;     /* slightly tighter */
+  grid-template-columns: 18px 1fr; /* shrink left icon column */
+}
+
+/* Slightly smaller type only for Row 3 */
+#scale-lines .row-rich .line-card .load  { font-size: 0.74rem; }
+#scale-lines .row-rich .line-card .delta { font-size: 0.60rem; }
+
+
+#scale-lines .row-top .line-card {   /* Row 4 */
+  width: 80px;
+  height: 24px;
+  border-radius: 8px;
+  padding: 3px 5px;
+  grid-template-columns: 18px 1fr;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* Inner layout + type */
+#scale-lines .line-card .left  { display:flex; align-items:center; justify-content:center; }
+#scale-lines .line-card .right { display:grid; grid-template-rows: 1fr auto; padding-left: 4px; }
+#scale-lines .line-card .load  { font-weight: 800; color: #111; font-size: 0.82rem; line-height: 1; }
+#scale-lines .row-top .line-card .load { font-size: 0.78rem; }
+#scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .68rem; }
+.delta.up { color:#c62828; }
+.delta.down { color:#2e7d32; }
+.delta.neutral { color:#64748b; }
+
+/* Hover: subtle only, no layout shift */
+#scale-lines .line-card:hover { background: #f7f9fb; }
+
+/* Remove the old left accent bar entirely */
+#scale-lines .line-card::before { content: none !important; }
+
+/* Selection state (keep, but no colored borders) */
+.overview-card.selected { border: none; box-shadow: 0 0 0 2px rgba(66,165,245,.18) inset; }
+.overview-card.scale-power.selected,
+.overview-card.scale-cost.selected,
+.overview-card.scale-emissions.selected,
+.overview-card.scale-lines.selected { border: none; }
+
+
+
+
+/* ----------------------------------------
+   TASK SECTION
 ---------------------------------------- */
 
 .task-card {
@@ -331,63 +440,70 @@
 .overview-card.scale-emissions.selected {
   border-color: #c62828;
 }
-
 /* ----------------------------------------
-   BLOCKS
+   BLOCKS — Power card (responsive)
 ---------------------------------------- */
-/* Container for power value */
-#overview-power {
+
+/* Space between blocks and fraction text; keep content inside card */
+#scale-power .overview-value {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  font-family: "Figtree", sans-serif;
-  font-size: 12px;
+  gap: 10px;         /* margin between blocks and the text */
+  width: 100%;
+  overflow: hidden;  /* prevent any overflow peeking out */
 }
 
-/* Block container */
+/* Power blocks become a responsive grid that auto-wraps */
 #overview-power .blocks {
-  display: flex;
-  gap: 2px;
-  flex-wrap: nowrap;
-  align-items: center;
-  padding-top: 2px;
+  --cell-min: 22px;  /* JS will tune for huge goals */
+  --gap: 6px;
+  --block-h: 26px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+  gap: var(--gap);
+  width: 100%;
+  max-width: 100%;   /* remove old 200px clamp */
+  height: auto;      /* remove fixed heights */
+  align-content: start;
+  box-sizing: border-box;
 }
 
-.blocks {
+/* Each block fills its grid cell */
+#overview-power .block {
+  width: 100%;
+  height: var(--block-h);
+  border-radius: 6px;
+}
+
+/* Keep your color semantics */
+#overview-power .block.full   { background-color: #4caf50; }
+#overview-power .block.partial{ background-color: #a5d6a7; }
+#overview-power .block.goal   { background-color: #e0e0e0; }
+#overview-power .block.over   {
+  background-color: #ef5350;
+  color: white;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ----------------------------------------
+   BLOCKS — Legacy styles (scoped AWAY from power)
+   (prevents them from overriding the grid above)
+---------------------------------------- */
+.overview-card:not(#scale-power) .blocks {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   width: 100%;
-  max-width: 200px; /* Adjust as needed for exact width */
+  max-width: 200px;
 }
 
-.block {
-  width: 18px;      /* 10 blocks * (width + gap) ≈ container width */
+.overview-card:not(#scale-power) .block {
+  width: 18px;
   height: 20px;
   background: #ccc;
   border-radius: 2px;
-}
-
-.block.full {
-  background-color: #4caf50;
-}
-
-.block.partial {
-  background-color: #a5d6a7;
-}
-
-.block.goal {
-  background-color: #e0e0e0;
-}
-
-.block.over {
-  background-color: #ef5350;
-  color: white;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* ----------------------------------------
@@ -641,10 +757,27 @@
   </div>
       <div class="overview-status" id="status-power">Click to scale</div>
     </div>
-    <div class="overview-card" id="scale-lines">
-  <div class="overview-label">Overloaded Lines</div>
-  <div class="overview-value" id="overview-lines">–</div>
-  <div class="overview-status" id="status-lines"> Click to scale</div>
+    
+  <div class="overview-card" id="scale-lines">
+  <div class="lines-card">
+    <!-- Row 1: Title -->
+    <div class="overview-label">Overloaded Lines</div>
+
+    <!-- Row 2: Count (+ “All good!” pill when zero) -->
+    <div class="row-count">
+      <div class="overview-value" id="overview-lines">–</div>
+      <div id="lines-ok-pill" class="pill-ok" style="display:none;">All good!</div>
+    </div>
+
+    <!-- Row 3: Rich overloaded line cards (max 3) -->
+    <div class="row-rich" id="row-rich"></div>
+
+    <!-- Row 4: Compact “Top lines” (overflow overloaded + top-loaded non-overloaded) -->
+    <div class="row-top" id="row-top"></div>
+
+    <!-- Row 5: Helper text (click card to scale) -->
+    <div class="overview-status" id="status-lines">Click to scale</div>
+  </div>
 </div>
 <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
     <div class="overview-card" id="scale-cost">
@@ -715,6 +848,11 @@ const roundToHalf = v => Math.round((v || 0) / HALF_STEP) * HALF_STEP;
 let totalPower = 0;
 let totalCost = 0;
 let totalEmissions = 0;
+
+// === Overloaded lines state ===
+let previousLineLoads = {}; // line.id -> previous load pct (0..1)
+
+let lineMetrics = new Map();
 
 let currentScaleMode = null;
 let currentGenerators = [];
@@ -933,6 +1071,8 @@ if (powerFraction) {
   if (lines) {
     console.log("🔁 Refreshing chevrons with updated line data");
     refreshChevrons(lines, currentMapMode);
+    updateLinesCard(lines || []);
+
   }
   
 }
@@ -969,14 +1109,14 @@ if (powerFraction) {
         });
       }
 
-document.getElementById("scenario-select").addEventListener("change", (e) => {
-    previousLineFlows = {}; // reset previous flows
-    loadScenario(e.target.value);
+    document.getElementById("scenario-select").addEventListener("change", (e) => {
+      previousLineLoads = {};  // was previousLineFlows
+      loadScenario(e.target.value);
     });
 
     document.getElementById("reset-button").addEventListener("click", () => {
-      previousLineFlows = {}; // reset previous flows
-      loadScenario(currentScenarioId); // reload current scenario
+      previousLineLoads = {};  // was previousLineFlows
+      loadScenario(currentScenarioId);
     });
 
     // ===== Chevrons =====
@@ -1017,15 +1157,224 @@ function drawChevrons(lines, nodes, mode) {
     const size = Math.max(8, base * scale);
 
     chevronGroup.append("path")
-      .datum(line)
-      .attr("class", "chevron")
-      .attr("d", chevronPath ? chevronPath(size) : defaultChevronPath(size))
-      .attr("fill", color)
-      .attr("opacity", 0.95)
-      .attr("stroke", "#111")
-      .attr("stroke-width", 0.4)
-      .attr("transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`);
+  .datum(line)
+  .attr("class", "chevron")
+  .attr("id", `chev-${line.id}`)
+  .attr("d", chevronPath ? chevronPath(size) : defaultChevronPath(size))
+  .attr("fill", color)
+  .attr("opacity", 0.95)
+  .attr("stroke", "#111")
+  .attr("stroke-width", 0.4)
+  .attr("data-x", midX)
+  .attr("data-y", midY)
+  .attr("transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`)
+.attr("data-base-transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`);
+
+
   });
+}
+
+function updateLinesCard(/* liveLines not needed anymore */) {
+  const countEl = document.getElementById("overview-lines");
+  const okPill  = document.getElementById("lines-ok-pill");
+  const rowRich = document.getElementById("row-rich");
+  const rowTop  = document.getElementById("row-top");
+  const status  = document.getElementById("status-lines");
+  if (!countEl || !okPill || !rowRich || !rowTop || !status) return;
+
+  // Stabilize heights / spacing
+  rowRich.style.height = "36px";
+  rowTop.style.height  = "28px";
+  status.style.marginTop = "10px";
+
+  // Build a sortable array from metrics (fallback to 0 if missing)
+  const lines = staticLines.map(s => {
+    const m = lineMetrics.get(s.id);
+    const pct = m ? m.pct : 0;
+    const flow = m ? m.flow : 0;
+    const rate = m ? m.rate_a : (s.rate_a ?? 1);
+    return { ...s, _pct: pct, flow, rate_a: rate };
+  });
+
+  // Partition/sort
+  const byPctDesc = (a,b) => b._pct - a._pct;
+  const overloaded = lines.filter(l => l._pct > 1).sort(byPctDesc);
+  const nonOver    = lines.filter(l => l._pct <= 1).sort(byPctDesc);
+
+  // Row 2: count + All good! pill
+  countEl.textContent = overloaded.length;
+  const showOk = overloaded.length === 0;
+  okPill.textContent = "All good!";
+  okPill.style.display = showOk ? "inline-block" : "none";
+  if (showOk) {
+    Object.assign(okPill.style, {
+      background: "#4caf50",   // same green as power bars
+      color: "#fff",
+      fontWeight: "700",
+      borderRadius: "9999px",
+      padding: "2px 8px"
+      
+    });
+  }
+  
+
+function miniChevron(color, sizePx){
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("width", sizePx);
+  svg.setAttribute("height", sizePx);
+  svg.setAttribute("viewBox", "-12 -12 24 24");
+  svg.style.transform = "translateY(-5px)";   // ← move up ~5px
+
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("transform", "rotate(90)");  // keep your 90° rotation
+
+  const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("d", chevronPath(6));     // same geometry as map
+  path.setAttribute("fill", color);
+  path.setAttribute("stroke", "#111");
+  path.setAttribute("stroke-width", "0.4");
+
+  g.appendChild(path);
+  svg.appendChild(g);
+  return svg;
+}
+
+
+  // Row 3: top 3 overloaded (interactive, thick border)
+  rowRich.innerHTML = "";
+  overloaded.slice(0, 3).forEach(line => {
+    const prevPct = previousLineLoads[line.id] ?? line._pct;
+    const delta   = (line._pct - prevPct) * 100;
+    const dir     = Math.abs(delta) < 0.5 ? "neutral" : (delta > 0 ? "up" : "down");
+    const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
+    const accent  = getLoadColor(line._pct);
+    const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
+
+    const card = document.createElement("div");
+    card.className = "line-card";
+    card.style.setProperty("--accent", accent);
+    card.style.borderColor = accent;
+    card.style.borderWidth = "3px";  // twice as thick
+    card.style.borderStyle = "solid";
+    card.setAttribute("data-line-id", line.id);
+
+    card.innerHTML = `
+      <div class="left"></div>
+      <div class="right">
+        <div class="load">${loadTxt}</div>
+        <div class="delta ${dir}">${deltaLabel}</div>
+      </div>
+    `;
+    card.querySelector(".left").appendChild(miniChevron(accent, 16));
+    card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
+    rowRich.appendChild(card);
+  });
+
+  // Row 4: overflow overloaded + top non-over (now from SAME metrics)
+  rowTop.innerHTML = "";
+
+  // Row 4: overflow overloaded + top non-over (with deltas like Row 3)
+const overflow = overloaded.slice(3);
+const topNon   = nonOver.slice(0, 3);
+const row4List = [...overflow, ...topNon];
+
+row4List.forEach(line => {
+  // --- SAME DELTA LOGIC AS ROW 3 ---
+  const prevPct = previousLineLoads[line.id] ?? line._pct;
+  const delta   = (line._pct - prevPct) * 100;
+  const dir     = Math.abs(delta) < 0.5 ? "neutral" : (delta > 0 ? "up" : "down");
+  const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
+
+  const accent  = getLoadColor(line._pct);
+  const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
+
+  const card = document.createElement("div");
+  card.className = "line-card top-card";
+  card.style.setProperty("--accent", accent);
+  card.style.borderColor = accent;
+  card.style.borderWidth = "1.5px";
+  card.style.borderStyle = "solid";
+  card.setAttribute("data-line-id", line.id);
+
+  card.innerHTML = `
+    <div class="left"></div>
+    <div class="right">
+      <div class="load">${loadTxt}</div>
+      <div class="delta ${dir}">${deltaLabel}</div>
+    </div>
+  `;
+
+  // same mini chevron icon
+  card.querySelector(".left").appendChild(miniChevron(accent, 14));
+
+  // Row 4 also pings; but don't toggle Lines mode
+  card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
+
+  rowTop.appendChild(card);
+});
+
+
+  // Remember for next delta
+  lines.forEach(l => { previousLineLoads[l.id] = l._pct; });
+
+  // Reset scrollers
+  rowRich.scrollLeft = 0;
+  rowTop.scrollLeft  = 0;
+}
+
+
+
+
+function pingChevron(lineId){
+  const chev = d3.select(`#chev-${CSS.escape(lineId)}`);
+  if (chev.empty()) return;
+
+  // Use a base transform (translate+rotate only) so we never compound scales
+  const baseT = chev.attr("data-base-transform")
+             || (chev.attr("transform") || "").replace(/\s*scale\([^)]+\)/g, "");
+  const accent = chev.attr("fill") || "#42a5f5";
+
+  // Simple buffer: ignore while animating (prevents spam-click grow)
+  if (chev.attr("data-animating") === "1") return;
+  chev.attr("data-animating", "1");
+
+  // Ensure ping layer
+  let pingLayer = d3.select("#chevron-pings");
+  if (pingLayer.empty()) pingLayer = d3.select("#zoom-group").append("g").attr("id","chevron-pings");
+
+  // Ring radii that remain visible at any zoom
+  const k = d3.zoomTransform(svg.node()).k || 1;
+  const midX = +chev.attr("data-x");
+  const midY = +chev.attr("data-y");
+  const rOuter = 70 / k;
+  const rInner = 40 / k;
+
+  // Emit 2 color-matched rings
+  [0, 120].forEach((delay, i) => {
+    const circle = pingLayer.append("circle")
+      .attr("cx", midX).attr("cy", midY)
+      .attr("r", 0)
+      .attr("fill", "none")
+      .attr("stroke", accent)
+      .attr("stroke-width", 2 / k)
+      .attr("opacity", 0.95);
+
+    circle.transition().delay(delay).duration(650)
+      .attr("r", i === 0 ? rOuter : rInner)
+      .attr("opacity", 0)
+      .ease(d3.easeCubicOut)
+      .on("end", () => circle.remove());
+  });
+
+  // Clamp growth to 500% and ALWAYS return to base (no compounding)
+  const MAX_SCALE = 5;
+  chev.interrupt()
+      .attr("transform", `${baseT} scale(1)`)
+      .transition().duration(180).ease(d3.easeCubicOut)
+        .attr("transform", `${baseT} scale(${MAX_SCALE})`)
+      .transition().duration(220).ease(d3.easeCubicIn)
+        .attr("transform", `${baseT} scale(1)`)
+        .on("end", () => { chev.attr("data-animating", null); });
 }
 
 
@@ -1045,18 +1394,37 @@ function chevronPath(scale) {
 }
 
 function refreshChevrons(liveLines, currentMapMode) {
-  console.log("refreshChevrons called with mode:", currentMapMode);
+  // Index both directions so lookups don’t miss when sign flips
+  const liveIdx = new Map();
+  for (const l of (liveLines || [])) {
+    liveIdx.set(`Bus${l.from_bus}|Bus${l.to_bus}`, l);
+    liveIdx.set(`Bus${l.to_bus}|Bus${l.from_bus}`, l);
+  }
 
-  const enrichedLines = staticLines.map(line => {
-    const live = liveLines.find(l =>
-      `Bus${l.from_bus}` === line.source && `Bus${l.to_bus}` === line.target
-    );
-    return { ...line, flow: live?.flow ?? 0, rate_a: live?.rate_a ?? 1 };
+  const enriched = staticLines.map(s => {
+    const live = liveIdx.get(`${s.source}|${s.target}`);
+    const flow = live?.flow ?? 0;
+    const rate = live?.rate_a ?? 1;
+    const pct  = rate > 0 ? Math.abs(flow) / rate : 0;
+    return { ...s, flow, rate_a: rate, _pct: pct };
   });
 
+  // Update the shared metrics map (source of truth for BOTH rows)
+  lineMetrics.clear();
+  for (const L of enriched) {
+    lineMetrics.set(L.id, { pct: L._pct, flow: L.flow, rate_a: L.rate_a });
+  }
+
+  // (Re)draw chevrons using enriched data as you already do
   d3.select("#chevron-layer").remove();
-  drawChevrons(enrichedLines, staticNodes, currentMapMode); // Pass mode
+  drawChevrons(enriched, staticNodes, currentMapMode);
+
+  // Optionally stamp DOM for debug/consistency
+  enriched.forEach(L => {
+    d3.select(`#chev-${CSS.escape(L.id)}`).attr("data-pct", L._pct);
+  });
 }
+
 
 // === Rect Generators: settings (tune freely) ================================
 const BLOCK_UNIT       = 100;      // MW per block
@@ -1663,6 +2031,17 @@ function updatePowerBlocks(totalPower, targetPower) {
   const scaledTotal = totalPower / blockSize;
   const overAmount = totalPower - targetPower;
   const showOver = overAmount > 0;
+
+  // Make the grid denser for huge goals so it stays inside the card
+    let cellMin = 22, blockH = 26, gap = 6;
+    if (blockCount > 120) { cellMin = 12; blockH = 14; gap = 4; }
+    else if (blockCount > 80) { cellMin = 14; blockH = 16; gap = 5; }
+    else if (blockCount > 40) { cellMin = 18; blockH = 20; gap = 6; }
+
+    container.style.setProperty('--cell-min', `${cellMin}px`);
+    container.style.setProperty('--block-h', `${blockH}px`);
+    container.style.setProperty('--gap', `${gap}px`);
+
 
   //console.log("🔢 blockCount:", blockCount);
   //console.log("📈 overAmount:", overAmount);
