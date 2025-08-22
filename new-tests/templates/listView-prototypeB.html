@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DV Project - ListView B</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <link rel="stylesheet" href="/css/listview-coreB.css">
+
+  <style>
+    /* Top-level spacing */
+#listView-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* New two-column work area */
+#row-2-work.work-grid {
+  display: grid;
+  grid-template-columns: minmax(480px, 1fr) 1fr; /* lists | map */
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Column wrappers */
+#left-lists,
+#right-map { 
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Ensure the map has room to breathe */
+#map-wrapper { 
+  min-height: 520px;
+}
+
+  </style>
+</head>
+<body class="light-theme">
+  <div id="main-layout">
+    <div id="listView-container">
+
+      <!-- Row 1: Overview -->
+      <div class="row" id="row-1">
+        <div class="overview-card">
+          <div class="overview-power">
+            <div class="label">Power</div>
+            <div class="power-blocks-wrapper">
+              <div class="power-blocks" id="overview-power-blocks"></div>
+              <div class="power-block-label" id="overview-power-label">–</div>
+            </div>
+          </div>
+
+          <div class="overview-emissions">
+            <div class="label">Emissions</div>
+            <div class="emissions-value" id="overview-emissions">–</div>
+          </div>
+
+          <div class="overview-cost">
+            <div class="label">Cost</div>
+            <div class="cost-value" id="overview-cost">–</div>
+          </div>
+
+          <div class="overview-scenario">
+            <div class="label">Scenario</div>
+            <div class="scenario-name" id="overview-scenario-name">–</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: (old Lines panel kept but hidden for now) -->
+      <div class="row" id="row-2" style="display:none;">
+        <div class="lines-status-card"> … </div>
+        <div class="lines-scroll-card" id="line-scroll"></div>
+      </div>
+
+      <!-- Row 2: Work Area (Lists + Map) -->
+      <div class="row work-grid" id="row-2-work">
+
+        <!-- LEFT: Generator Lists -->
+        <div id="left-lists">
+          <div id="generators-container">
+            <div class="generator-column" id="inactive-container">
+              <div class="generator-header">
+                <div class="column-label-row">
+                  <div class="column-label">Inactive Generators</div>
+                  <div class="sort-buttons" data-type="inactive">
+                    <button class="sort-btn" data-sort="bus">Bus</button>
+                    <button class="sort-btn" data-sort="pmax">Power</button>
+                    <button class="sort-btn" data-sort="cost">Cost</button>
+                    <button class="sort-btn" data-sort="emissions">Emissions</button>
+                  </div>
+                </div>
+              </div>
+              <div class="generator-body"><!-- cards injected --></div>
+            </div>
+
+            <div class="generator-column" id="active-container">
+              <div class="generator-header">
+                <div class="column-label-row">
+                  <div class="column-label">Active Generators</div>
+                  <div class="sort-buttons" data-type="active">
+                    <button class="sort-btn" data-sort="bus">Bus</button>
+                    <button class="sort-btn" data-sort="pmax">Power</button>
+                    <button class="sort-btn" data-sort="cost">Cost</button>
+                    <button class="sort-btn" data-sort="emissions">Emissions</button>
+                  </div>
+                </div>
+              </div>
+              <div class="generator-body"><!-- cards injected --></div>
+            </div>
+          </div>
+
+          <!-- Row 4: Controls (kept; dark-mode removed) -->
+          <div class="row" id="row-4">
+            <div class="controls-left">
+              <label for="scenario-select">Load Scenario:</label>
+              <select id="scenario-select"></select>
+              <button id="reset-button">🔁 Reset</button>
+              <button id="undo-button">↩️ Undo</button>
+              <button id="redo-button">↪️ Redo</button>
+              <!-- removed: theme-toggle button -->
+            </div>
+            <div class="controls-right">
+              <button class="submit-button">Submit</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Map -->
+        <div id="right-map">
+          <div id="map-panel" style="flex: 1; display: flex; flex-direction: column; position: relative;">
+
+            <!-- Filter Row -->
+            <div id="map-filters">
+              <div class="map-filters-title">Map Filters</div>
+              <div class="map-filters-options">
+                <label><input type="checkbox" class="layer-toggle" data-target="map-gen" checked> Generators</label>
+                <label><input type="checkbox" class="layer-toggle" data-target="map-line" checked> Lines</label>
+                <label><input type="checkbox" class="layer-toggle" data-target="map-load" checked> Loads</label>
+                <label><input type="checkbox" class="layer-toggle" data-target="map-bus" checked> Buses</label>
+                <label><input type="checkbox" class="layer-toggle" data-target="line-load-indicator" checked> Line Loads</label>
+              </div>
+            </div>
+
+            <button onclick="window.location.href='/map'">Switch to Map View</button>
+
+            <div id="map-tooltip" style="
+              position: absolute;
+              display: none;
+              padding: 6px 10px;
+              background: #222;
+              color: white;
+              border-radius: 6px;
+              font-size: 0.8rem;
+              pointer-events: none;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              z-index: 1000;"></div>
+
+            <!-- Zoomable SVG Map Wrapper -->
+            <div id="map-wrapper" style="flex: 1; position: relative;"></div>
+
+            <div id="map-legend-bar">
+              <div class="legend-title">Legend</div>
+              <div class="legend-items">
+                <div class="legend-entry"><span class="legend-symbol legend-gen-on"></span> Generator (On)</div>
+                <div class="legend-entry"><span class="legend-symbol legend-gen-off"></span> Generator (Off)</div>
+                <div class="legend-entry"><span class="legend-triangle"></span> Load</div>
+                <div class="legend-entry"><span class="legend-chevron">➤</span> Line Load</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div> <!-- /row-2-work -->
+
+    </div> <!-- /listView-container -->
+  </div>   <!-- /main-layout -->
+</body>
+
+    
+
+  <script> 
+    let activeSort = {
+      inactive: { key: 'bus', order: 'asc' },
+      active: { key: 'bus', order: 'asc' }
+    };
+
+    let currentScenarioId = "";
+    let currentScenarioData = null;
+    let availableScenarios = [];
+    let currentGenerators = [];
+    let previousLineFlows = {};  // keyed by `from_bus-to_bus`
+    let activeGenerators = [];
+    let inactiveGenerators = [];
+
+    let historyStack = [];
+let redoStack = [];
+
+
+
+    // SVG Map Rendering
+const svgWidth = 600;
+const svgHeight = 600;
+let selectedGeneratorId = null;
+
+function showTooltip(text, x, y) {
+  const tooltip = document.getElementById("map-tooltip");
+  tooltip.textContent = text;
+  tooltip.style.left = (x + 12) + "px";
+  tooltip.style.top = (y - 20) + "px";
+  tooltip.style.display = "block";
+}
+
+function hideTooltip() {
+  document.getElementById("map-tooltip").style.display = "none";
+}
+
+    async function fetchAllScenarios() {
+      const res = await fetch("/api/scenarios");
+      const data = await res.json();
+
+      availableScenarios = data;
+
+      // Find default scenario
+      const defaultScenario = data.find(s => s.scenario_id === "clean_north_power");
+
+        if (defaultScenario) {
+    currentScenarioId = defaultScenario.scenario_id;
+    currentScenarioData = defaultScenario;
+
+        populateScenarioDropdown(data, currentScenarioId);
+        loadScenario(currentScenarioId);
+      } else {
+        console.error("No scenario with ID 'default' found.");
+      }
+    }
+
+    function populateScenarioDropdown(scenarios, selectedId) {
+        const select = document.getElementById("scenario-select");
+        select.innerHTML = "";
+
+        scenarios.forEach(s => {
+          const option = document.createElement("option");
+          option.value = s.scenario_id;
+          option.textContent = s.title || s.scenario_id;
+          if (s.scenario_id === selectedId) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      }
+
+
+      async function loadScenario(scenarioId) {
+        const res = await fetch(`/api/scenario/${scenarioId}`);
+        const data = await res.json();
+        currentScenarioId = scenarioId;
+        currentScenarioData = data;
+        currentGenerators = data.generators;
+
+        renderGenerators(currentGenerators);
+        renderLines(data.lines, data.solved !== false);
+        renderOverview(currentGenerators, data.lines, data.total_cost, data.solved);
+        updateMapGeneratorsFromScenario();
+        console.log("🧪 Solved status?", data.solved);
+      }
+
+    function populateScenarioDropdown(scenarios, defaultId) {
+      const select = document.getElementById("scenario-select");
+      select.innerHTML = "";
+
+      scenarios.forEach(s => {
+        const option = document.createElement("option");
+        option.value = s.scenario_id;
+        option.textContent = s.title;
+        if (s.scenario_id === defaultId) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+    }
+
+        document.getElementById("scenario-select").addEventListener("change", (e) => {
+      previousLineFlows = {}; // reset previous flows
+      loadScenario(e.target.value);
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+      previousLineFlows = {}; // reset previous flows
+      loadScenario(currentScenarioId); // reload current scenario
+    });
+
+
+    function renderOverview(gens, lines) {
+      const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
+      const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
+      const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+      const overloaded = lines.filter(l => l.overloaded).length;
+
+      const scenarioArea = document.querySelector(".overview-scenario");
+      scenarioArea.innerHTML = `
+        <div class="label">Scenario</div>
+        <div class="scenario-name">${currentScenarioData?.title || currentScenarioId || "No Scenario Loaded"}</div>
+      `;
+
+ const BLOCK_SIZE = 100;
+const powerGoal = currentScenarioData?.target_mw || 150;
+const powerFilled = totalPower;
+
+const container = document.getElementById("overview-power-blocks");
+const label = document.getElementById("overview-power-label");
+container.innerHTML = "";
+
+const blockGoalCount = Math.ceil(powerGoal / BLOCK_SIZE);
+const scaledFilled = powerFilled / BLOCK_SIZE;
+const overAmount = scaledFilled - blockGoalCount;
+const showOver = overAmount > 0;
+
+for (let i = 0; i < blockGoalCount; i++) {
+  const block = document.createElement("div");
+  block.className = "power-block goal";
+
+  const fillStart = i;
+  const fillEnd = i + 1;
+
+  if (scaledFilled >= fillEnd) {
+    block.className = "power-block full";
+  } else if (scaledFilled > fillStart) {
+    block.className = "power-block partial";
+  }
+
+  container.appendChild(block);
+}
+
+if (showOver && blockGoalCount > 0) {
+  const lastBlock = container.lastElementChild;
+  if (lastBlock) {
+    lastBlock.className = "power-block over";
+    const roundedOver = Math.ceil(overAmount);
+    lastBlock.textContent = roundedOver > 20 ? "!!!" : `+${roundedOver}`;
+  }
+}
+
+label.textContent = `${powerFilled.toFixed(0)} / ${powerGoal} MW`;
+
+
+      document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
+      document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+      //document.getElementById("line-status-count").textContent = overloaded;
+    }
+
+
+function getLineLoadPct(line) {
+  return line.rate_a > 0 ? (line.flow / line.rate_a) : 0;
+}
+
+function renderLines(lines, solved = true) {
+  const container = document.getElementById("line-scroll");
+  container.innerHTML = "";
+
+  // ✅ Sort lines by load percentage descending
+  const sorted = [...lines].sort((a, b) => {
+    const pctA = getLineLoadPct(a);
+    const pctB = getLineLoadPct(b);
+    return pctB - pctA;
+  });
+
+  const statusLabel = document.getElementById("line-status");
+
+  if (!solved) {
+    statusLabel.textContent = "⏳ No power flow yet";
+    statusLabel.className = "status-label warning";
+  } else {
+    console.log("🧪 Solved status?", solved);
+    const overloadedCount = lines.filter(l => getLineLoadPct(l) > 1).length;
+
+    if (overloadedCount === 0) {
+      statusLabel.textContent = "✔ All lines OK";
+      statusLabel.className = "status-label";
+    } else if (overloadedCount <= 3) {
+      statusLabel.textContent = `⚠ ${overloadedCount} line(s) overloaded`;
+      statusLabel.className = "status-label warning";
+    } else {
+      statusLabel.textContent = `🟥 ${overloadedCount} line(s) OVERLOADED`;
+      statusLabel.className = "status-label danger";
+    }
+  }
+
+  sorted.forEach(line => {
+    const card = document.createElement("div");
+    card.className = "line-card";
+
+    if (!solved) {
+      card.innerHTML = `
+        Line ${line.from_bus} → ${line.to_bus}<br>
+        <span style="font-size: 0.85rem; color: var(--text-faint);">(No power flow)</span>
+      `;
+    } else {
+      const pct = Math.round((line.flow / line.rate_a) * 100);
+      const color = d3.interpolateReds(pct / 100);
+      const textColor = pct > 60 ? "white" : "#111";
+      card.style.background = color;
+      card.style.color = textColor;
+      card.style.setProperty('--load', pct / 100);
+
+      const key = `${line.from_bus}-${line.to_bus}`;
+      const prev = previousLineFlows[key] ?? line.flow;
+      const oldPct = (prev / line.rate_a) * 100;
+      const newPct = (line.flow / line.rate_a) * 100;
+      const delta = Math.round(newPct - oldPct);
+      previousLineFlows[key] = line.flow;
+
+      let deltaText = "";
+      if (delta > 0) {
+        deltaText = `<span style="color: limegreen;">▲ +${delta}%</span>`;
+      } else if (delta < 0) {
+        deltaText = `<span style="color: crimson;">▼ ${Math.abs(delta)}%</span>`;
+      } else {
+        deltaText = `<span style="color: gray;">–</span>`;
+      }
+
+      card.innerHTML = `
+        Line ${line.from_bus} → ${line.to_bus}<br>
+        ${pct}%<br>
+        ${deltaText}
+      `;
+    }
+
+
+
+    container.appendChild(card);
+  });
+
+   if (solved) {
+      renderMapLineLoads(lines);
+    }
+}
+
+function renderMapLineLoads(lines) {
+  d3.selectAll(".line-load-indicator").remove();
+
+  setTimeout(() => {
+    const group = d3.select("#zoom-group");
+
+    lines.forEach(line => {
+      const lineId = `Line_Bus${Math.min(line.from_bus, line.to_bus)}_Bus${Math.max(line.from_bus, line.to_bus)}`;
+      const path = document.getElementById(lineId);
+      if (!path) return;
+
+      const totalLength = path.getTotalLength();
+      const pointA = path.getPointAtLength(totalLength * 0.45);
+      const pointB = path.getPointAtLength(totalLength * 0.55);
+
+      const dx = pointB.x - pointA.x;
+      const dy = pointB.y - pointA.y;
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      const flow = line.flow;
+      const dir = flow >= 0 ? 1 : -1;
+      const color = getLoadColor(getLineLoadPct(line));
+
+      group.append("path")
+        .attr("class", "line-load-indicator")
+        .attr("d", "M -30 -20 L 0 0 L -30 20")
+        .attr("fill", color)
+        .attr("stroke", "black")
+        .attr("stroke-width", 0.5)
+        .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
+    })
+    .on("click", (event) => {
+  showTooltip(line.id, event.pageX, event.pageY);
+  event.stopPropagation();
+});
+  }, 0);
+}
+
+
+function getLoadColor(pct) {
+  return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
+}
+
+
+
+function renderGenerators(gens) {
+  currentGenerators = gens;
+
+  const lockedGens = gens.filter(g => g.locked);
+  const disabledGens = gens.filter(g => g.disabled);
+  const activeGens = gens.filter(g => g.user_active && !g.locked && !g.disabled);
+  const inactiveGens = gens.filter(g => !g.user_active || g.disabled);
+
+  // ✅ Save for future sorting
+  activeGenerators = [...lockedGens, ...activeGens];
+  inactiveGenerators = inactiveGens;
+
+  renderColumn("inactive", inactiveGenerators);
+  renderColumn("active", activeGenerators);
+}
+
+function renderColumn(type, gens) {
+  const container = document.querySelector(`#${type}-container .generator-body`);
+  container.innerHTML = "";
+
+  const { key, order } = activeSort[type];
+  const maxPmax = Math.max(...currentGenerators.map(g => g.pmax));
+  const sorted = gens.slice().sort(getSortFunction(key, order));
+
+  console.log(`📦 Rendering ${type} list sorted by ${key} (${order})`);
+  console.log("First 3 names:", sorted.slice(0, 3).map(g => g.station_name || g.name));
+
+  sorted.forEach(gen => {
+    container.appendChild(createGeneratorCard(gen, maxPmax));
+  });
+}
+
+function markUserActiveStatus(gens) {
+  gens.forEach(g => {
+    if (g.user_active === undefined) {
+      g.user_active = g.pg > 0;  // infer on first load
+    }
+  });
+}
+
+function getSortFunction(key, order) {
+  const dir = order === 'asc' ? 1 : -1;
+  if (key === 'cost') return (a, b) => dir * (a.cost_per_mw - b.cost_per_mw);
+  if (key === 'emissions') return (a, b) => dir * (a.emissions_per_mw - b.emissions_per_mw);
+  if (key === 'pmax') return (a, b) => dir * (a.pmax - b.pmax);
+  return (a, b) => dir * (a.bus - b.bus);
+}
+
+
+function createGeneratorCard(gen, maxPmax) {
+  const genId = `Gen${gen.bus}`;
+  const locked = currentScenarioData?.locked_generators?.includes(genId);
+  const disabled = currentScenarioData?.disabled_generators?.includes(genId);
+  const status = gen.user_active ? "active" : "inactive";
+
+  const card = document.createElement("div");
+  card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
+
+
+  console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
+  console.log("→ pg:", gen.pg, "→ user_active:", gen.user_active);
+  console.groupEnd();
+
+  function getCostColor(cost) {
+  if (cost < 2) return 'green';
+  if (cost < 5) return 'yellow';
+  if (cost < 7) return 'orange';
+  return 'red';
+}
+
+function getEmissionColor(emissions) {
+  if (emissions < 0.5) return 'green';
+  if (emissions < 1.0) return '#88cc88';
+  if (emissions < 1.5) return '#bbbb88';
+  return 'gray';
+}
+
+
+  // ========== LEFT SECTION ==========
+  const left = document.createElement("div");
+  const fuelColors = {
+    coal: '#614732', gas: '#4a7838', hydro: '#4faad1', combined: '#ad7a37',
+  };
+  left.style.backgroundColor = fuelColors[gen.fuel_type.toLowerCase()] || 'var(--bg-soft)';
+  left.className = "gen-section left";
+  left.innerHTML = `
+    <div class="gen-name">${gen.station_name}</div>
+    <div class="gen-number">Bus ${gen.bus}</div>
+    <div class="gen-type">${gen.fuel_type}</div>`;
+
+  // ========== CENTER SECTION ==========
+  const center = document.createElement("div");
+  center.className = "gen-section center";
+  center.innerHTML = `
+    <div class="gen-power"><div class="power-label">Power</div></div>
+    <div class="gen-impact-row">
+      <div class="gen-cost impact-wrapper">
+        <div class="impact-box" style="background:${getCostColor(gen.cost_per_mw)};">💲</div>
+        <div class="impact-label">${gen.cost_per_mw.toFixed(1)} / MW</div>
+      </div>
+      <div class="gen-emissions impact-wrapper">
+        <div class="impact-box" style="background:${getEmissionColor(gen.emissions_per_mw)};">☁️</div>
+        <div class="impact-label">${gen.emissions_per_mw.toFixed(1)} / MW</div>
+      </div>
+    </div>`;
+
+  // === Power block row ===
+  const powerContainer = center.querySelector(".gen-power");
+  const blockRow = document.createElement("div");
+  blockRow.className = "power-block-row";
+  powerContainer.appendChild(blockRow);
+
+  // Add "off" block if pg > 0
+  if (gen.pg > 0 && gen.user_active && !disabled && !locked) {
+    const offBlock = document.createElement("div");
+    offBlock.className = "power-block off-toggle";
+    offBlock.textContent = "off";
+    offBlock.style = `
+      background: #444; color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 2px 6px; font-size: 0.7rem;
+      border-radius: 4px; cursor: pointer;
+    `;
+    offBlock.title = "Turn off generator but keep it active";
+
+    offBlock.addEventListener("click", () => {
+      fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent: 0, user_active: true })
+      })
+        .then(res => res.json())
+        .then(data => {
+          currentGenerators = data.generators;
+          renderGenerators(currentGenerators);
+          renderLines(data.lines, data.solved !== false);
+          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+          updateMapGeneratorsFromScenario();
+        });
+    });
+
+    blockRow.appendChild(offBlock);
+  }
+
+  // Build blocks
+  let levels = [];
+  let current = 0;
+  while (current + 100 <= gen.pmax) {
+    current += 100;
+    levels.push(current);
+  }
+  if (current < gen.pmax) levels.push(gen.pmax);
+
+  function createBlock(level, isHalf = false) {
+    const block = document.createElement("div");
+    block.className = "power-block";
+    block.style.width = isHalf ? `10px` : `20px`;
+    block.style.height = "20px";
+    block.style.borderRadius = "4px";
+    block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
+    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
+    block.title = `${level} MW`;
+
+    if (gen.user_active && !disabled && !locked) {
+      block.style.cursor = "pointer";
+      block.addEventListener("mousedown", () => {
+        const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+        fetch(`/api/set_generation/${gen.index}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ percent, user_active: true })
+        })
+          .then(res => res.json())
+          .then(data => {
+            currentGenerators = data.generators;
+            renderGenerators(currentGenerators);
+            renderLines(data.lines, data.solved !== false);
+            renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+            updateMapGeneratorsFromScenario(); // ✅ Reflect state change on map
+          });
+      });
+    }
+
+    return block;
+  }
+
+  levels.forEach((level, i) => {
+    const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+    const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+    blockRow.appendChild(createBlock(level, isHalf));
+  });
+
+  const maxLabel = document.createElement("span");
+  maxLabel.style.marginLeft = "8px";
+  maxLabel.style.fontSize = "0.75rem";
+  maxLabel.style.color = "var(--text-light)";
+  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
+  blockRow.appendChild(maxLabel);
+
+  // ========== RIGHT SECTION ==========
+  const right = document.createElement("div");
+  right.className = "gen-section right";
+  const toggle = document.createElement("div");
+
+  if (locked) {
+    toggle.className = "minus-button";
+    toggle.textContent = "🔒";
+    toggle.title = "Locked by scenario";
+    toggle.style.cursor = "default";
+  } else if (disabled) {
+    toggle.className = "minus-button";
+    toggle.textContent = "−";
+    toggle.title = "Disabled in this scenario";
+    toggle.style.cursor = "not-allowed";
+  } else {
+    toggle.className = gen.user_active ? "minus-button" : "plus-button";
+    toggle.textContent = gen.user_active ? "−" : "+";
+    toggle.onclick = async () => {
+      const activating = !gen.user_active;
+      const percent = 0;
+      const user_active = activating;
+
+      const res = await fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent, user_active })
+      });
+
+      const data = await res.json();
+      currentGenerators = data.generators;
+      renderGenerators(currentGenerators);
+      renderLines(data.lines, data.solved !== false);
+      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      updateMapGeneratorsFromScenario();
+    };
+  }
+
+  // Assemble full card
+  right.appendChild(toggle);
+  card.appendChild(left);
+  card.appendChild(center);
+  card.appendChild(right);
+
+  if (selectedGeneratorId === genId) {
+    card.classList.add("selected");
+  }
+
+    card.addEventListener("click", () => {
+  selectedGeneratorId = genId;
+  updateMapGeneratorsFromScenario();  // update stroke styling
+});
+
+    card.addEventListener("mouseenter", () => {
+      const genId = `Gen${gen.bus}`;
+      const mapCircle = document.getElementById(genId);
+      if (mapCircle) {
+        const cx = parseFloat(mapCircle.getAttribute("cx"));
+        const cy = parseFloat(mapCircle.getAttribute("cy"));
+
+        d3.select(`#${CSS.escape(genId)}`).classed("hovered", true);
+
+        tooltipText
+          .text(gen.station_name)
+          .attr("x", cx + 8)
+          .attr("y", cy - 8)
+          .style("display", "block");
+      }
+    });
+
+    card.addEventListener("mouseleave", () => {
+      d3.select(`#Gen${gen.bus}`).classed("hovered", false);
+      tooltipText.style("display", "none");
+    });
+
+
+  return card;
+}
+
+
+
+
+
+function bindSortListeners() {
+  console.log("Binding sort listeners...");
+  document.querySelectorAll('.sort-buttons .sort-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const type = button.closest('.sort-buttons').dataset.type;
+      const clickedKey = button.dataset.sort;
+      const current = activeSort[type];
+
+      if (current.key === clickedKey) {
+        current.order = current.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        current.key = clickedKey;
+        current.order = 'asc';
+      }
+
+      document.querySelectorAll(`.sort-buttons[data-type="${type}"] .sort-btn`).forEach(btn => {
+        btn.classList.remove('active', 'asc', 'desc');
+      });
+      button.classList.add('active', current.order);
+
+      // ✅ Pass correct array
+      const data = type === "active" ? activeGenerators : inactiveGenerators;
+      renderColumn(type, data);
+    });
+  });
+}
+
+
+function updateSortButtonStyles() {
+  ['active', 'inactive'].forEach(type => {
+    const { key, order } = activeSort[type];
+    document.querySelectorAll(`.sort-buttons[data-type="${type}"] .sort-btn`).forEach(btn => {
+      btn.classList.remove('active', 'asc', 'desc');
+      if (btn.dataset.sort === key) {
+        btn.classList.add('active', order);
+      }
+    });
+  });
+}
+
+
+// SVG 
+
+// Add SVG container with zoom
+const mapContainer = d3.select("#map-wrapper")
+  .append("svg")
+  .attr("width", "100%")
+  .attr("height", "100%")
+  .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const zoomGroup = mapContainer.append("g").attr("id", "zoom-group");
+
+const tooltipText = zoomGroup.append("text")
+  .attr("id", "map-tooltip")
+  .attr("text-anchor", "start")
+  .attr("font-size", "10px")
+  .attr("fill", "#fff")
+  .style("pointer-events", "none")
+  .style("display", "none");
+
+const zoomBehavior = d3.zoom()
+  .scaleExtent([0.2, 5])
+  .on("zoom", (event) => {
+    zoomGroup.attr("transform", event.transform);
+  });
+
+mapContainer.call(zoomBehavior);
+
+const initialZoom = d3.zoomIdentity.translate(svgWidth * 0.2, svgHeight * 0.2).scale(0.4);
+mapContainer.call(zoomBehavior.transform, initialZoom);
+
+// === Fetch and Draw Map ===
+Promise.all([
+  fetch("/new-tests/full_nodes.json").then(res => res.json()),
+  fetch("/new-tests/full_lines.json").then(res => res.json())
+]).then(([nodes, lines]) => {
+  // Lines
+  zoomGroup.selectAll("path.map-line")
+    .data(lines)
+    .enter()
+    .append("path")
+    .attr("class", "map-line")
+    .attr("id", d => d.id)
+    .attr("d", d => d.d)
+    .attr("stroke", "#888")
+    .attr("stroke-width", 1.5)
+    .attr("fill", "none");
+
+  // Generators
+  zoomGroup.selectAll("circle.map-gen")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("circle")
+    .attr("class", "map-gen")
+    .attr("id", d => d.id)
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y)
+    .attr("r", 30)
+    .attr("fill", d => {
+        const match = currentGenerators.find(g => `Gen${g.bus}` === d.id); // TODO : NOT WORKING
+        return match && match.pg > 0 ? "#4caf50" : "ffffff";        // TODO : css
+      })
+    .attr("stroke", "black")
+    .attr("stroke-width", 1.2)
+    .on("click", function(event, d) {
+  selectedGeneratorId = d.id;
+  updateGeneratorStrokes();
+  updateGeneratorHalos();
+  showTooltip(d.id, event.pageX, event.pageY);
+  event.stopPropagation();
+});
+
+zoomGroup.selectAll("rect.map-bus")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("rect")
+  .attr("class", "map-bus")
+  .attr("id", d => d.id)
+  .attr("x", d => d.x - d.width / 2)
+  .attr("y", d => d.y - d.height / 2)
+  .attr("width", d => d.width)
+  .attr("height", d => d.height)
+  .attr("fill", "#666")
+  .attr("stroke", "#000")
+  .attr("stroke-width", 0.8)
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+zoomGroup.selectAll("path.map-load")
+  .data(nodes.filter(d => d.type === "load"))
+  .enter()
+  .append("path")
+  .attr("class", "map-load")
+  .attr("id", d => d.id)
+  .attr("d", d => {
+    const size = 20;
+    const x = d.x;
+    const y = d.y;
+    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
+  })
+  .attr("transform", d => {
+    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
+      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
+    }
+    return null;
+  });
+
+
+  // === Hover & Selection Sync
+  d3.selectAll(".map-gen")
+    .on("mouseenter", function (event, d) {
+      d3.select(this).classed("hovered", true);
+    })
+    .on("mouseleave", function () {
+      d3.select(this).classed("hovered", false);
+    });
+
+  // Optional: add generator label
+  /*
+  zoomGroup.selectAll("text.map-gen-label")
+    .data(nodes.filter(d => d.type === "generator"))
+    .enter()
+    .append("text")
+    .attr("x", d => d.x + 6)
+    .attr("y", d => d.y + 3)
+    .attr("font-size", "6px")
+    .text(d => d.id); */
+});
+
+// === Update generator colors on scenario load ===
+function updateMapGeneratorsFromScenario() {
+  const genNodes = d3.selectAll(".map-gen");
+
+  genNodes.each(function(d) {
+    const match = currentGenerators.find(g => `Gen${g.bus}` === d.id);
+    const isOn = match && match.pg > 0;
+    const isSelected = d.id === selectedGeneratorId;
+
+    d3.select(this)
+      .attr("fill", isOn ? "#4caf50" : "white")
+      .attr("stroke", isSelected ? "blue" : "black")
+      .attr("stroke-width", isSelected ? 2.5 : 1.2);
+  });
+
+  d3.selectAll(".map-gen-highlight").remove();
+
+  if (selectedGeneratorId) {
+    const selected = d3.select(`#${CSS.escape(selectedGeneratorId)}`);
+    if (!selected.empty()) {
+      const { cx, cy } = selected.node();
+      const r = +selected.attr("r");
+
+      d3.select("#zoom-group")
+        .append("circle")
+        .attr("class", "map-gen-highlight")
+        .attr("cx", cx.baseVal.value)
+        .attr("cy", cy.baseVal.value)
+        .attr("r", r + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#00f")
+        .attr("stroke-width", 3)
+        .attr("pointer-events", "none");
+    }
+  }
+}
+
+
+// Hook into your scenario load
+const oldLoadScenario = loadScenario;
+loadScenario = async function (scenarioId) {
+  await oldLoadScenario(scenarioId);
+  updateMapGeneratorsFromScenario();
+};
+
+
+
+document.querySelectorAll(".layer-toggle").forEach(checkbox => {
+  checkbox.addEventListener("change", (e) => {
+    const className = e.target.dataset.target;
+    const isVisible = e.target.checked;
+
+    d3.selectAll(`.${className}`).style("display", isVisible ? null : "none");
+  });
+});
+
+function pushToHistory(generators) {
+  historyStack.push(JSON.parse(JSON.stringify(generators)));
+  if (historyStack.length > 100) historyStack.shift(); // prevent memory bloat
+  redoStack = []; // clear redo stack on new action
+}
+
+function applyGeneratorState(state) {
+  currentGenerators = JSON.parse(JSON.stringify(state));
+  renderGenerators(currentGenerators);
+  renderOverview(currentGenerators, currentScenarioData.lines, currentScenarioData.total_cost, currentScenarioData.solved);
+  updateMapGeneratorsFromScenario();
+}
+
+document.getElementById("undo-button").addEventListener("click", () => {
+  if (historyStack.length > 0) {
+    const prevState = historyStack.pop();
+    redoStack.push(JSON.parse(JSON.stringify(currentGenerators)));
+    applyGeneratorState(prevState);
+  }
+});
+
+document.getElementById("redo-button").addEventListener("click", () => {
+  if (redoStack.length > 0) {
+    const nextState = redoStack.pop();
+    historyStack.push(JSON.parse(JSON.stringify(currentGenerators)));
+    applyGeneratorState(nextState);
+  }
+});
+
+document.getElementById("theme-toggle").addEventListener("click", () => {
+  const body = document.body;
+  const isDark = body.classList.contains("dark-theme");
+
+  body.classList.toggle("dark-theme", !isDark);
+  body.classList.toggle("light-theme", isDark);
+
+  const btn = document.getElementById("theme-toggle");
+  btn.textContent = isDark ? "🌙 Dark Mode" : "🌞 Light Mode";
+});
+
+    window.addEventListener("DOMContentLoaded", () => {
+    const theme = document.body.classList.contains("dark-theme") ? "dark-theme"
+                : document.body.classList.contains("light-theme") ? "light-theme"
+                : "no theme applied";
+    console.log("🌗 Current theme on startup:", theme);
+    bindSortListeners();     // ✅ Only here
+    updateSortButtonStyles();   // ✅ This applies the correct style immediately
+    fetchAllScenarios();     // ✅ Normal startup logic
+  });
+
+  </script>
+</body>
+</html>

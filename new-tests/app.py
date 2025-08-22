@@ -16,6 +16,10 @@ def start():
 def list_view():
     return render_template("listView-prototype.html")
 
+@app.route("/listB")
+def list_viewB():
+    return render_template("listView-prototypeB.html")
+
 @app.route("/map")
 def map_view():
     return render_template("mapView-prototype.html")
