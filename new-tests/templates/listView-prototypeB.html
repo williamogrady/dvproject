@@ -8,68 +8,80 @@
   <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <link rel="stylesheet" href="/css/listview-coreB.css">
 
-  <style>
-    /* Top-level spacing */
-#listView-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+<style id="listview-core-bootstrap">
+  @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
+</style>
 
-/* New two-column work area */
-#row-2-work.work-grid {
-  display: grid;
-  grid-template-columns: minmax(480px, 1fr) 1fr; /* lists | map */
-  gap: 16px;
-  align-items: stretch;
-}
-
-/* Column wrappers */
-#left-lists,
-#right-map { 
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Ensure the map has room to breathe */
-#map-wrapper { 
-  min-height: 520px;
-}
-
-  </style>
 </head>
-<body class="light-theme">
+<body>
   <div id="main-layout">
     <div id="listView-container">
 
-      <!-- Row 1: Overview -->
-      <div class="row" id="row-1">
-        <div class="overview-card">
-          <div class="overview-power">
-            <div class="label">Power</div>
-            <div class="power-blocks-wrapper">
-              <div class="power-blocks" id="overview-power-blocks"></div>
-              <div class="power-block-label" id="overview-power-label">–</div>
-            </div>
-          </div>
+<!-- Row 1: Overview -->
+<div class="row" id="row-1">
+  <div id="overview">
+  <div id="overview-status-section">
+    <div class="overview-card" id="scale-power">
+  <div class="overview-label">Power</div>
+  <div class="overview-value" id="overview-power">
+    <div class="blocks"></div>
+    <div class="fraction">–</div>
+  </div>
+      <div class="overview-status" id="status-power">Click to scale</div>
+    </div>
+    
+  <div class="overview-card" id="scale-lines">
+  <div class="lines-card">
+    <!-- Row 1: Title -->
+    <div class="overview-label">Overloaded Lines</div>
 
-          <div class="overview-emissions">
-            <div class="label">Emissions</div>
-            <div class="emissions-value" id="overview-emissions">–</div>
-          </div>
+    <!-- Row 2: Count (+ “All good!” pill when zero) -->
+    <div class="row-count">
+      <div class="overview-value" id="overview-lines">–</div>
+      <div id="lines-ok-pill" class="pill-ok" style="display:none;">All good!</div>
+    </div>
 
-          <div class="overview-cost">
-            <div class="label">Cost</div>
-            <div class="cost-value" id="overview-cost">–</div>
-          </div>
+    <!-- Row 3: Rich overloaded line cards (max 3) -->
+    <div class="row-rich" id="row-rich"></div>
 
-          <div class="overview-scenario">
-            <div class="label">Scenario</div>
-            <div class="scenario-name" id="overview-scenario-name">–</div>
-          </div>
-        </div>
-      </div>
+    <!-- Row 4: Compact “Top lines” (overflow overloaded + top-loaded non-overloaded) -->
+    <div class="row-top" id="row-top"></div>
+
+    <!-- Row 5: Helper text (click card to scale) -->
+    <div class="overview-status" id="status-lines">Click to scale</div>
+  </div>
+</div>
+<div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
+    <div class="overview-card" id="scale-cost">
+      <div class="overview-label">Cost</div>
+      <div class="overview-value" id="overview-cost">–</div>
+      <div class="overview-status" id="status-cost">Click to scale</div>
+    </div>
+    <div class="overview-card" id="scale-emissions">
+      <div class="overview-label">Emissions</div>
+      <div class="overview-value" id="overview-emissions">–</div>
+      <div class="overview-status" id="status-emissions">Click to scale</div>
+    </div>
+  </div>
+  </div>
+  <div id="overview-task-section">
+  <div class="task-card">
+    <div class="overview-label">Scenario Task</div>
+    <div id="task-placeholder" class="task-placeholder">
+      No Scenario Loaded
+    </div>
+  </div>
+</div>
+    </div>
+
+    <div class="task-submit-row">
+      <button id="submit-button" disabled>Submit Solution</button>
+    </div>
+  </div>
+    </div>
+
+
+
 
       <!-- Row 2: (old Lines panel kept but hidden for now) -->
       <div class="row" id="row-2" style="display:none;">
@@ -120,8 +132,6 @@
               <label for="scenario-select">Load Scenario:</label>
               <select id="scenario-select"></select>
               <button id="reset-button">🔁 Reset</button>
-              <button id="undo-button">↩️ Undo</button>
-              <button id="redo-button">↪️ Redo</button>
               <!-- removed: theme-toggle button -->
             </div>
             <div class="controls-right">
@@ -132,49 +142,77 @@
 
         <!-- RIGHT: Map -->
         <div id="right-map">
-          <div id="map-panel" style="flex: 1; display: flex; flex-direction: column; position: relative;">
+  <div
+  id="map-panel"
+  style="flex: 1; display: flex; flex-direction: column; position: relative;"
+>
+  <!-- Filter Row -->
+  <div id="map-filters">
+    <div class="map-filters-title">Map Filters</div>
+    <div class="map-filters-options">
+      <label>
+        <input type="checkbox" class="layer-toggle" data-target="map-gen" checked>
+        Generators
+      </label>
+      <label>
+        <input type="checkbox" class="layer-toggle" data-target="map-line" checked>
+        Lines
+      </label>
+      <label>
+        <input type="checkbox" class="layer-toggle" data-target="map-load" checked>
+        Loads
+      </label>
+      <label>
+        <input type="checkbox" class="layer-toggle" data-target="map-bus" checked>
+        Buses
+      </label>
+      <label>
+        <input type="checkbox" class="layer-toggle" data-target="line-load-indicator" checked>
+        Line Loads
+      </label>
+    </div>
+  </div>
 
-            <!-- Filter Row -->
-            <div id="map-filters">
-              <div class="map-filters-title">Map Filters</div>
-              <div class="map-filters-options">
-                <label><input type="checkbox" class="layer-toggle" data-target="map-gen" checked> Generators</label>
-                <label><input type="checkbox" class="layer-toggle" data-target="map-line" checked> Lines</label>
-                <label><input type="checkbox" class="layer-toggle" data-target="map-load" checked> Loads</label>
-                <label><input type="checkbox" class="layer-toggle" data-target="map-bus" checked> Buses</label>
-                <label><input type="checkbox" class="layer-toggle" data-target="line-load-indicator" checked> Line Loads</label>
-              </div>
-            </div>
+  <button onclick="window.location.href='/map'">Switch to Map View</button>
 
-            <button onclick="window.location.href='/map'">Switch to Map View</button>
+  <div
+    id="map-tooltip"
+    style="
+      position: absolute;
+      display: none;
+      padding: 6px 10px;
+      background: #222;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      z-index: 1000;
+    "
+  ></div>
 
-            <div id="map-tooltip" style="
-              position: absolute;
-              display: none;
-              padding: 6px 10px;
-              background: #222;
-              color: white;
-              border-radius: 6px;
-              font-size: 0.8rem;
-              pointer-events: none;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-              z-index: 1000;"></div>
+  <!-- Zoomable SVG Map Wrapper -->
+  <div id="map-wrapper" style="flex: 1; position: relative;"></div>
 
-            <!-- Zoomable SVG Map Wrapper -->
-            <div id="map-wrapper" style="flex: 1; position: relative;"></div>
+  <div id="map-legend-bar">
+    <div class="legend-title">Legend</div>
+    <div class="legend-items">
+      <div class="legend-entry">
+        <span class="legend-symbol legend-gen-on"></span> Generator (On)
+      </div>
+      <div class="legend-entry">
+        <span class="legend-symbol legend-gen-off"></span> Generator (Off)
+      </div>
+      <div class="legend-entry">
+        <span class="legend-triangle"></span> Load
+      </div>
+      <div class="legend-entry">
+        <span class="legend-chevron">➤</span> Line Load
+      </div>
+    </div>
+  </div>
+</div>
 
-            <div id="map-legend-bar">
-              <div class="legend-title">Legend</div>
-              <div class="legend-items">
-                <div class="legend-entry"><span class="legend-symbol legend-gen-on"></span> Generator (On)</div>
-                <div class="legend-entry"><span class="legend-symbol legend-gen-off"></span> Generator (Off)</div>
-                <div class="legend-entry"><span class="legend-triangle"></span> Load</div>
-                <div class="legend-entry"><span class="legend-chevron">➤</span> Line Load</div>
-              </div>
-            </div>
-
-          </div>
-        </div>
       </div> <!-- /row-2-work -->
 
     </div> <!-- /listView-container -->
@@ -189,6 +227,8 @@
       active: { key: 'bus', order: 'asc' }
     };
 
+    let totalPower = 0, totalCost = 0, totalEmissions = 0;
+
     let currentScenarioId = "";
     let currentScenarioData = null;
     let availableScenarios = [];
@@ -196,6 +236,12 @@
     let previousLineFlows = {};  // keyed by `from_bus-to_bus`
     let activeGenerators = [];
     let inactiveGenerators = [];
+
+// Small format helpers
+const formatMW  = v => `${Math.round(Number(v||0))} MW`;
+const formatUSD = v => `$${Math.round(Number(v||0))}`;
+const formatCO2 = v => `${Math.round(Number(v||0))} CO₂`;
+
 
     let historyStack = [];
 let redoStack = [];
@@ -239,35 +285,27 @@ function hideTooltip() {
       }
     }
 
-    function populateScenarioDropdown(scenarios, selectedId) {
-        const select = document.getElementById("scenario-select");
-        select.innerHTML = "";
 
-        scenarios.forEach(s => {
-          const option = document.createElement("option");
-          option.value = s.scenario_id;
-          option.textContent = s.title || s.scenario_id;
-          if (s.scenario_id === selectedId) {
-            option.selected = true;
-          }
-          select.appendChild(option);
-        });
-      }
+async function loadScenario(scenarioId){
+  const res = await fetch(`/api/scenario/${scenarioId}`);
+  const data = await res.json();
 
+  currentScenarioId   = scenarioId;
+  currentScenarioData = data.scenario || {};
+  currentGenerators   = data.generators || [];
+  const lines         = data.lines || data.powerflow?.lines || [];
 
-      async function loadScenario(scenarioId) {
-        const res = await fetch(`/api/scenario/${scenarioId}`);
-        const data = await res.json();
-        currentScenarioId = scenarioId;
-        currentScenarioData = data;
-        currentGenerators = data.generators;
+  window.currentLines = lines; // if other modules rely on it
 
-        renderGenerators(currentGenerators);
-        renderLines(data.lines, data.solved !== false);
-        renderOverview(currentGenerators, data.lines, data.total_cost, data.solved);
-        updateMapGeneratorsFromScenario();
-        console.log("🧪 Solved status?", data.solved);
-      }
+  renderGenerators(currentGenerators);
+  renderLines(lines, data.solved !== false);
+  renderOverview(currentGenerators, currentScenarioData, lines);
+  updateLinesCard(lines);
+  updateMapGeneratorsFromScenario();
+  setupTaskSection(currentScenarioData);
+  // No second “scenario UI” call — renderOverview already computed + applied it
+}
+
 
     function populateScenarioDropdown(scenarios, defaultId) {
       const select = document.getElementById("scenario-select");
@@ -294,64 +332,334 @@ function hideTooltip() {
       loadScenario(currentScenarioId); // reload current scenario
     });
 
+// --- NEW: normalize helpers ---
+function normalizeLines(linesIn){
+  if (Array.isArray(linesIn)) return linesIn;
+  if (!linesIn) return [];
+  if (typeof linesIn === "object" && !("length" in linesIn)) return Object.values(linesIn);
+  return Array.from(linesIn);
+}
+function nz(n){ return Number(n || 0); }
 
-    function renderOverview(gens, lines) {
-      const totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
-      const totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
-      const totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
-      const overloaded = lines.filter(l => l.overloaded).length;
+// --- NEW: pure state computation (no DOM here) ---
+function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
+  const lines = normalizeLines(linesIn);
 
-      const scenarioArea = document.querySelector(".overview-scenario");
-      scenarioArea.innerHTML = `
-        <div class="label">Scenario</div>
-        <div class="scenario-name">${currentScenarioData?.title || currentScenarioId || "No Scenario Loaded"}</div>
-      `;
+  const totals = {
+    power:     gens.reduce((s,g) => s + nz(g.pg), 0),
+    cost:      gens.reduce((s,g) => s + nz(g.pg) * nz(g.cost_per_mw), 0),
+    emissions: gens.reduce((s,g) => s + nz(g.pg) * nz(g.emissions_per_mw), 0),
+  };
 
- const BLOCK_SIZE = 100;
-const powerGoal = currentScenarioData?.target_mw || 150;
-const powerFilled = totalPower;
+  const targetMW = nz(scenario.target_mw);
+  const maxCost  = (scenario.max_cost != null) ? nz(scenario.max_cost) : null;
+  const maxCO2   = (scenario.max_emissions != null) ? nz(scenario.max_emissions) : null;
 
-const container = document.getElementById("overview-power-blocks");
-const label = document.getElementById("overview-power-label");
-container.innerHTML = "";
+  const overloadedCount = lines.filter(l => {
+    const rate = nz(l.rate_a ?? l.rateA);
+    const flow = Math.abs(nz(l.flow));
+    return rate > 0 && flow > rate;
+  }).length;
 
-const blockGoalCount = Math.ceil(powerGoal / BLOCK_SIZE);
-const scaledFilled = powerFilled / BLOCK_SIZE;
-const overAmount = scaledFilled - blockGoalCount;
-const showOver = overAmount > 0;
+  const meetsPower      = targetMW > 0 ? totals.power >= targetMW : true;
+  const withinCost      = (maxCost == null) ? true : totals.cost      <= maxCost;
+  const withinEmissions = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
+  const noOverloads     = overloadedCount === 0;
 
-for (let i = 0; i < blockGoalCount; i++) {
-  const block = document.createElement("div");
-  block.className = "power-block goal";
-
-  const fillStart = i;
-  const fillEnd = i + 1;
-
-  if (scaledFilled >= fillEnd) {
-    block.className = "power-block full";
-  } else if (scaledFilled > fillStart) {
-    block.className = "power-block partial";
-  }
-
-  container.appendChild(block);
+  return {
+    totals, targetMW, maxCost, maxCO2, overloadedCount,
+    meetsPower, withinCost, withinEmissions, noOverloads,
+    allMet: meetsPower && withinCost && withinEmissions && noOverloads
+  };
 }
 
-if (showOver && blockGoalCount > 0) {
-  const lastBlock = container.lastElementChild;
-  if (lastBlock) {
-    lastBlock.className = "power-block over";
-    const roundedOver = Math.ceil(overAmount);
-    lastBlock.textContent = roundedOver > 20 ? "!!!" : `+${roundedOver}`;
+// --- NEW: apply the computed state to checkboxes/buttons (DOM only) ---
+function applyScenarioUI(state){
+  const cPower  = document.getElementById("check-power");
+  const cLines  = document.getElementById("check-lines");
+  const cBudget = document.getElementById("check-budget");
+  if (cPower)  cPower.checked  = !!state.meetsPower;
+  if (cLines)  cLines.checked  = !!state.noOverloads;
+  if (cBudget){
+    cBudget.closest("li").style.display = (state.maxCost != null) ? "" : "none";
+    cBudget.checked = (state.maxCost != null) && !!state.withinCost;
   }
+  const submitBtn = document.getElementById("submit-button");
+  if (submitBtn){
+    submitBtn.disabled = !state.allMet;
+    submitBtn.classList.toggle("active", state.allMet);
+  }
+  const ctrlSubmit = document.querySelector("#row-4 .submit-button");
+  if (ctrlSubmit) ctrlSubmit.disabled = !state.allMet;
 }
 
-label.textContent = `${powerFilled.toFixed(0)} / ${powerGoal} MW`;
 
 
-      document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(2)}`;
-      document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
-      //document.getElementById("line-status-count").textContent = overloaded;
+
+
+function renderTaskSection(scenario = {}, evalStateArg) {
+  // Fallbacks so we never read properties off undefined
+  const gens  = (window.currentGenerators || []);
+  const lines = (window.currentLines     || []);
+  // Use provided eval state if present; otherwise compute it safely
+  const state = evalStateArg ?? (typeof evaluateScenarioState === "function"
+    ? evaluateScenarioState(gens, lines, scenario)
+    : {
+        totals: { power: 0, cost: 0, emissions: 0 },
+        targetMW: Number(scenario?.target_mw || 0),
+        maxCost:  (scenario?.max_cost ?? null),
+        maxCO2:   (scenario?.max_emissions ?? null),
+        overloadedCount: 0,
+        meetsPower: false, withinCost: true, withinEmissions: true, noOverloads: true,
+        allMet: false
+      });
+
+  // --- Render UI using `state` (NEVER assume evalStateArg is defined) ---
+  const title = scenario?.title || scenario?.name || "Scenario";
+  const desc  = scenario?.description || scenario?.task || "";
+
+  const reqList = document.getElementById("task-requirements");
+  if (reqList) {
+    const hasBudget = state.maxCost != null;
+    // update checkboxes (if present)
+    const cPower  = document.getElementById("check-power");
+    const cLines  = document.getElementById("check-lines");
+    const cBudget = document.getElementById("check-budget");
+    if (cPower)  cPower.checked  = !!state.meetsPower;
+    if (cLines)  cLines.checked  = !!state.noOverloads;
+    if (cBudget) { cBudget.closest("li").style.display = hasBudget ? "" : "none"; cBudget.checked = hasBudget && !!state.withinCost; }
+  }
+
+  // Constraints
+  const powerSpan = document.getElementById("constraint-power");
+  if (powerSpan) powerSpan.textContent = String(state.targetMW || 0);
+
+  const costWrap = document.getElementById("constraint-cost-container");
+  const costSpan = document.getElementById("constraint-cost");
+  if (costWrap) costWrap.style.display = (state.maxCost != null) ? "" : "none";
+  if (costSpan && state.maxCost != null) costSpan.textContent = String(state.maxCost);
+
+  // Submit enablement
+  const submitBtn = document.getElementById("submit-button");
+  if (submitBtn) {
+    submitBtn.disabled = !state.allMet;
+    submitBtn.classList.toggle("active", state.allMet);
+  }
+
+  // Keep controls bar submit (if present) in sync
+  const ctrlSubmit = document.querySelector("#row-4 .submit-button");
+  if (ctrlSubmit) ctrlSubmit.disabled = !state.allMet;
+}
+
+
+// MapView-style overview renderer (robust to any 'lines' shape)
+function renderOverview(gens, scenarioData = {}, linesIn = []) {
+  // --- normalize lines to a plain array ---
+  const lines = Array.isArray(linesIn)
+    ? linesIn
+    : (linesIn == null
+        ? []
+        : (typeof linesIn === "object" && !("length" in linesIn))
+          ? Object.values(linesIn)         // e.g., { "1-2": {...}, "2-3": {...} }
+          : Array.from(linesIn));          // e.g., NodeList / array-like
+
+  // --- totals (safe numbers) ---
+  totalPower     = (gens || []).reduce((s, g) => s + Number(g.pg || 0), 0);
+  totalCost      = (gens || []).reduce((s, g) => s + Number(g.pg || 0) * Number(g.cost_per_mw || 0), 0);
+  totalEmissions = (gens || []).reduce((s, g) => s + Number(g.pg || 0) * Number(g.emissions_per_mw || 0), 0);
+
+  const target = Number(scenarioData?.target_mw || 0);
+
+  // --- overloaded lines count (abs(flow) > rate_a) ---
+  const overloadedCount = lines.filter(l => {
+    const rate = Number(l?.rate_a ?? l?.rateA ?? 0);
+    const flow = Math.abs(Number(l?.flow ?? 0));
+    return rate > 0 && flow > rate;
+  }).length;
+
+  // --- DOM hookups (supports both legacy IDs and MapView selectors) ---
+  const powerBlocks = document.querySelector("#overview-power .blocks")
+                    || document.getElementById("overview-power-blocks");
+  const powerLabel  = document.querySelector("#overview-power .fraction")
+                    || document.getElementById("overview-power-label");
+  if (powerLabel) powerLabel.textContent = target
+      ? `${Math.round(totalPower)} / ${target}`
+      : `${Math.round(totalPower)} / –`;
+
+  const costEl = document.getElementById("overview-cost");
+  if (costEl) costEl.textContent = `$${Math.round(totalCost)}`;
+
+  const emiEl = document.getElementById("overview-emissions");
+  if (emiEl) emiEl.textContent = `${Math.round(totalEmissions)} CO₂`;
+
+  const linesEl = document.getElementById("overview-lines");
+  if (linesEl) linesEl.textContent = overloadedCount;
+
+  const okPill = document.getElementById("lines-ok-pill");
+  if (okPill) {
+    const solved = overloadedCount === 0 && target > 0 && totalPower >= target;
+    okPill.style.display = solved ? "inline-block" : "none";
+  }
+
+  // --- power blocks grid render ---
+  updatePowerBlocks(totalPower, target);
+
+  // optional hooks if present
+  try { if (typeof refreshChevrons === "function") refreshChevrons(lines, window.currentMapMode || "full"); } catch(_) {}
+  try { if (typeof updateLinesCard  === "function") updateLinesCard(lines); } catch(_) {}
+  // Re-evaluate scenario + refresh the task section UI
+try {
+  const state = evaluateScenarioState(gens, lines, currentScenarioData || {});
+renderTaskSection(currentScenarioData || {}, state);   // fills numbers/visibility
+applyScenarioUI(state);      
+} catch (_) {}
+
+}
+
+// Keeps previous loads for deltas across renders
+const _prevLineFlow = Object.create(null);
+
+function getLineKey(l) {
+  const a = Number(l.from_bus ?? l.from ?? l.a ?? 0);
+  const b = Number(l.to_bus   ?? l.to   ?? l.b ?? 0);
+  const lo = Math.min(a,b), hi = Math.max(a,b);
+  return `${lo}-${hi}`;
+}
+
+function linePct(l) {
+  const rate = Number(l.rate_a ?? l.rateA ?? 0);
+  const flow = Math.abs(Number(l.flow ?? 0));
+  if (!rate) return 0;
+  return (flow / rate) * 100;
+}
+
+function loadClass(pct) {
+  if (pct >= 100) return "load-high";
+  if (pct >= 80)  return "load-warn";
+  return "load-okay";
+}
+
+function deltaInfo(curr, prev) {
+  const d = Math.round(curr - prev);
+  if (d > 0)  return { cls: "up", txt: `+${d}%` };
+  if (d < 0)  return { cls: "down", txt: `${d}%` };
+  return { cls: "neutral", txt: "–" };
+}
+
+function makeMini(line, pct, prevPct) {
+  const key = getLineKey(line);
+  const di  = deltaInfo(pct, prevPct);
+  const klass = loadClass(pct);
+  const name = `L ${line.from_bus ?? line.from}→${line.to_bus ?? line.to}`;
+  return `
+    <div class="line-mini ${klass}" data-line="${key}">
+      <div class="chev"></div>
+      <div class="txt">
+        <span class="name">${name}</span>
+        <span class="load">${Math.round(pct)}%</span>
+        <span class="delta ${di.cls}">${di.txt}</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Populate Lines card like MapView B:
+ * - row-rich: top 3 overloaded (>=100%)
+ * - row-top : next highest (up to 6), excluding those in row-rich
+ */
+function updateLinesCard(linesIn) {
+  // Normalize to array
+  const lines = Array.isArray(linesIn)
+    ? linesIn
+    : (linesIn == null ? [] :
+       (typeof linesIn === "object" && !("length" in linesIn)) ? Object.values(linesIn) : Array.from(linesIn));
+
+  const richRow = document.getElementById("lines-row-rich");
+  const topRow  = document.getElementById("lines-row-top");
+  const countEl = document.getElementById("overview-lines");
+
+  if (!richRow || !topRow) return;
+
+  // Compute % and sort by severity
+  const withPct = lines.map(l => {
+    const pct = linePct(l);
+    const key = getLineKey(l);
+    const prev = _prevLineFlow[key] ?? pct;
+    _prevLineFlow[key] = pct;
+    return { line: l, pct, prev };
+  }).sort((a,b) => b.pct - a.pct);
+
+  const overloaded = withPct.filter(x => x.pct >= 100);
+  const others     = withPct.filter(x => x.pct < 100);
+
+  // Count & pill handled in renderOverview; keep count synced here if present
+  if (countEl) countEl.textContent = overloaded.length;
+
+  // Top 3 overloaded
+  const rich = overloaded.slice(0, 3)
+    .map(x => makeMini(x.line, x.pct, x.prev)).join("");
+
+  // Next best (up to 6), excluding the ones already shown
+  const shownKeys = new Set(overloaded.slice(0,3).map(x => getLineKey(x.line)));
+  const top = others.filter(x => !shownKeys.has(getLineKey(x.line)))
+    .slice(0, 6)
+    .map(x => makeMini(x.line, x.pct, x.prev)).join("");
+
+  richRow.innerHTML = rich || "";
+  topRow.innerHTML  = top  || "";
+}
+
+
+
+// Power block grid (ported from MapView B with dual-selector support)
+function updatePowerBlocks(totalPower, targetPower) {
+  const container = document.querySelector("#overview-power .blocks")
+                 || document.getElementById("overview-power-blocks");
+  const label     = document.querySelector("#overview-power .fraction")
+                 || document.getElementById("overview-power-label");
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const BLOCK_SIZE   = 100;                       // MW per block
+  const blockCount   = targetPower > 0 ? Math.ceil(targetPower / BLOCK_SIZE) : 0;
+  const scaledTotal  = totalPower / BLOCK_SIZE;
+  const overAmount   = Math.max(0, totalPower - (targetPower || 0));
+  const showOver     = overAmount > 0;
+
+  // Densify grid for large goals (so it fits inside the card)
+  let cellMin = 22, blockH = 26, gap = 6;
+  if (blockCount > 120) { cellMin = 12; blockH = 14; gap = 4; }
+  else if (blockCount > 80) { cellMin = 14; blockH = 16; gap = 5; }
+  else if (blockCount > 40) { cellMin = 18; blockH = 20; gap = 6; }
+
+  container.style.setProperty('--cell-min', `${cellMin}px`);
+  container.style.setProperty('--block-h', `${blockH}px`);
+  container.style.setProperty('--gap', `${gap}px`);
+
+  for (let i = 0; i < blockCount; i++) {
+    const block = document.createElement("div");
+    block.className = "block";
+    if (scaledTotal >= (i + 1))       block.classList.add("full");
+    else if (scaledTotal > i)         block.classList.add("partial");
+    else                              block.classList.add("goal");
+    container.appendChild(block);
+  }
+
+  if (showOver && blockCount > 0) {
+    const last = container.lastElementChild;
+    if (last) {
+      last.className = "block over";
+      last.textContent = overAmount > 2000 ? "!!!" : `+${Math.ceil(overAmount / 100)}`;
     }
+  }
+
+  if (label) {
+    label.textContent = targetPower ? `${Math.round(totalPower)} / ${targetPower}` : `${Math.round(totalPower)} / –`;
+  }
+}
 
 
 function getLineLoadPct(line) {
@@ -360,24 +668,24 @@ function getLineLoadPct(line) {
 
 function renderLines(lines, solved = true) {
   const container = document.getElementById("line-scroll");
+  const statusLabel = document.getElementById("line-status");
+
+  // If the panel isn't present, just draw map indicators (when solved) and bail.
+  if (!container || !statusLabel) {
+    if (solved) { try { renderMapLineLoads(lines || []); } catch (e) {} }
+    return;
+  }
+
   container.innerHTML = "";
 
   // ✅ Sort lines by load percentage descending
-  const sorted = [...lines].sort((a, b) => {
-    const pctA = getLineLoadPct(a);
-    const pctB = getLineLoadPct(b);
-    return pctB - pctA;
-  });
-
-  const statusLabel = document.getElementById("line-status");
+  const sorted = [...lines].sort((a, b) => getLineLoadPct(b) - getLineLoadPct(a));
 
   if (!solved) {
     statusLabel.textContent = "⏳ No power flow yet";
     statusLabel.className = "status-label warning";
   } else {
-    console.log("🧪 Solved status?", solved);
     const overloadedCount = lines.filter(l => getLineLoadPct(l) > 1).length;
-
     if (overloadedCount === 0) {
       statusLabel.textContent = "✔ All lines OK";
       statusLabel.className = "status-label";
@@ -415,13 +723,9 @@ function renderLines(lines, solved = true) {
       previousLineFlows[key] = line.flow;
 
       let deltaText = "";
-      if (delta > 0) {
-        deltaText = `<span style="color: limegreen;">▲ +${delta}%</span>`;
-      } else if (delta < 0) {
-        deltaText = `<span style="color: crimson;">▼ ${Math.abs(delta)}%</span>`;
-      } else {
-        deltaText = `<span style="color: gray;">–</span>`;
-      }
+      if (delta > 0) deltaText = `<span style="color: limegreen;">▲ +${delta}%</span>`;
+      else if (delta < 0) deltaText = `<span style="color: crimson;">▼ ${Math.abs(delta)}%</span>`;
+      else deltaText = `<span style="color: gray;">–</span>`;
 
       card.innerHTML = `
         Line ${line.from_bus} → ${line.to_bus}<br>
@@ -430,15 +734,12 @@ function renderLines(lines, solved = true) {
       `;
     }
 
-
-
     container.appendChild(card);
   });
 
-   if (solved) {
-      renderMapLineLoads(lines);
-    }
+  if (solved) renderMapLineLoads(lines);
 }
+
 
 function renderMapLineLoads(lines) {
   d3.selectAll(".line-load-indicator").remove();
@@ -459,8 +760,7 @@ function renderMapLineLoads(lines) {
       const dy = pointB.y - pointA.y;
       const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-      const flow = line.flow;
-      const dir = flow >= 0 ? 1 : -1;
+      const dir = line.flow >= 0 ? 1 : -1;
       const color = getLoadColor(getLineLoadPct(line));
 
       group.append("path")
@@ -469,14 +769,15 @@ function renderMapLineLoads(lines) {
         .attr("fill", color)
         .attr("stroke", "black")
         .attr("stroke-width", 0.5)
-        .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle + (dir < 0 ? 180 : 0)})`);
-    })
-    .on("click", (event) => {
-  showTooltip(line.id, event.pageX, event.pageY);
-  event.stopPropagation();
-});
+        .attr("transform", `translate(${(pointA.x + pointB.x) / 2}, ${(pointA.y + pointB.y) / 2}) rotate(${angle + (dir < 0 ? 180 : 0)})`)
+        .on("click", (event) => {
+          showTooltip(`Line ${line.from_bus}→${line.to_bus}`, event.pageX, event.pageY);
+          event.stopPropagation();
+        });
+    });
   }, 0);
 }
+
 
 
 function getLoadColor(pct) {
@@ -544,9 +845,9 @@ function createGeneratorCard(gen, maxPmax) {
   card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
 
-  console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
-  console.log("→ pg:", gen.pg, "→ user_active:", gen.user_active);
-  console.groupEnd();
+  //console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
+  //console.log("→ pg:", gen.pg, "→ user_active:", gen.user_active);
+  //console.groupEnd();
 
   function getCostColor(cost) {
   if (cost < 2) return 'green';
@@ -621,7 +922,7 @@ function getEmissionColor(emissions) {
           currentGenerators = data.generators;
           renderGenerators(currentGenerators);
           renderLines(data.lines, data.solved !== false);
-          renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+          renderOverview(currentGenerators, currentScenarioData, window.currentLines);
           updateMapGeneratorsFromScenario();
         });
     });
@@ -662,7 +963,7 @@ function getEmissionColor(emissions) {
             currentGenerators = data.generators;
             renderGenerators(currentGenerators);
             renderLines(data.lines, data.solved !== false);
-            renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+            renderOverview(currentGenerators, currentScenarioData, data.lines);
             updateMapGeneratorsFromScenario(); // ✅ Reflect state change on map
           });
       });
@@ -717,7 +1018,7 @@ function getEmissionColor(emissions) {
       currentGenerators = data.generators;
       renderGenerators(currentGenerators);
       renderLines(data.lines, data.solved !== false);
-      renderOverview(data.generators, data.lines, data.total_cost, data.solved);
+      renderOverview(currentGenerators, currentScenarioData, data.lines);
       updateMapGeneratorsFromScenario();
     };
   }
@@ -764,6 +1065,89 @@ function getEmissionColor(emissions) {
 }
 
 
+(function wireOverviewSelection(){
+  const cardIds = ["scale-power","scale-lines","scale-cost","scale-emissions"];
+  const all = cardIds.map(id => document.getElementById(id)).filter(Boolean);
+  if (!all.length) return;
+  all.forEach(el => {
+    el.addEventListener("click", () => {
+      all.forEach(c => c.classList.remove("selected"));
+      el.classList.add("selected");
+    });
+  });
+})();
+
+// === POWER blocks (identical behavior + look) ===
+const POWER_BLOCK_SIZE_MW = 100;
+let _powerDensityIdx = 1; // 0..N, cycles on click
+const _densityPresets = [
+  { cell: 22, gap: 6 },  // roomy
+  { cell: 18, gap: 6 },  // default
+  { cell: 14, gap: 5 },  // compact
+  { cell: 12, gap: 4 }   // extra-compact
+];
+
+function updatePowerBlocks(totalPower, targetPower){
+  const container = document.querySelector("#overview-power .blocks")
+                 || document.getElementById("overview-power-blocks");
+  const label     = document.querySelector("#overview-power .fraction")
+                 || document.getElementById("overview-power-label");
+  if (!container) return;
+
+  const total = Math.max(0, Number(totalPower || 0));
+  const target = Math.max(0, Number(targetPower || 0));
+
+  // Decide how many blocks to draw
+  const blockCount = target > 0 ? Math.ceil(target / POWER_BLOCK_SIZE_MW)
+                                : Math.ceil(total / POWER_BLOCK_SIZE_MW);
+
+  // Density: auto-adjust based on block count, then apply current preset offset
+  let auto = 1; // default index
+  if (blockCount > 120) auto = 3;
+  else if (blockCount > 80) auto = 2;
+  else if (blockCount > 40) auto = 1;
+  const preset = _densityPresets[Math.min(auto, _powerDensityIdx)];
+  container.style.setProperty("--cell-min", `${preset.cell}px`);
+  container.style.setProperty("--gap", `${preset.gap}px`);
+
+  // Build the grid
+  container.innerHTML = "";
+  const fullCount = Math.floor(total / POWER_BLOCK_SIZE_MW);
+  const partialRemainder = total % POWER_BLOCK_SIZE_MW;
+  const hasPartial = partialRemainder > 0 && fullCount < blockCount;
+
+  for (let i = 0; i < blockCount; i++){
+    const div = document.createElement("div");
+    div.className = "block";
+    if (i < fullCount) div.classList.add("full");
+    else if (i === fullCount && hasPartial) div.classList.add("partial");
+    // else remains as goal (unfilled)
+    container.appendChild(div);
+  }
+
+  // Over indicator: if total exceeds target, mark last block red with +X
+  if (target > 0 && total > target && container.lastElementChild){
+    const overBlocks = Math.ceil((total - target) / POWER_BLOCK_SIZE_MW);
+    const last = container.lastElementChild;
+    last.className = "block over";
+    last.textContent = `+${overBlocks}`;
+  }
+
+  if (label){
+    label.textContent = target ? `${Math.round(total)} / ${target}` : `${Math.round(total)} / –`;
+  }
+}
+
+// Optional: “Click to scale” density cycle (MapView affordance)
+(function wirePowerCardScaling(){
+  const card = document.getElementById("scale-power");
+  if (!card) return;
+  card.addEventListener("click", () => {
+    _powerDensityIdx = (_powerDensityIdx + 1) % _densityPresets.length;
+    // Re-render with the new density
+    updatePowerBlocks(window.totalPower || 0, (window.currentScenarioData && currentScenarioData.target_mw) || 0);
+  });
+})();
 
 
 
@@ -821,7 +1205,7 @@ const mapContainer = d3.select("#map-wrapper")
 const zoomGroup = mapContainer.append("g").attr("id", "zoom-group");
 
 const tooltipText = zoomGroup.append("text")
-  .attr("id", "map-tooltip")
+  .attr("id", "map-label")
   .attr("text-anchor", "start")
   .attr("font-size", "10px")
   .attr("fill", "#fff")
@@ -868,17 +1252,17 @@ Promise.all([
     .attr("r", 30)
     .attr("fill", d => {
         const match = currentGenerators.find(g => `Gen${g.bus}` === d.id); // TODO : NOT WORKING
-        return match && match.pg > 0 ? "#4caf50" : "ffffff";        // TODO : css
+        return match && match.pg > 0 ? "#4caf50" : "#ffffff";
       })
     .attr("stroke", "black")
     .attr("stroke-width", 1.2)
     .on("click", function(event, d) {
   selectedGeneratorId = d.id;
-  updateGeneratorStrokes();
-  updateGeneratorHalos();
+  updateMapGeneratorsFromScenario();
   showTooltip(d.id, event.pageX, event.pageY);
   event.stopPropagation();
 });
+
 
 zoomGroup.selectAll("rect.map-bus")
   .data(nodes.filter(d => d.type === "bus"))
@@ -941,6 +1325,61 @@ zoomGroup.selectAll("path.map-load")
     .text(d => d.id); */
 });
 
+function setupTaskSection(scenario){
+  const targetSpan = document.getElementById("constraint-power");
+  if (targetSpan) targetSpan.textContent = String(scenario?.target_mw ?? "–");
+
+  const maxCost = (scenario?.max_cost != null) ? Number(scenario.max_cost) : null;
+  const budgetItem = document.getElementById("budget-check");
+  const costContainer = document.getElementById("constraint-cost-container");
+  const costSpan = document.getElementById("constraint-cost");
+  if (budgetItem)     budgetItem.style.display = (maxCost != null) ? "" : "none";
+  if (costContainer)  costContainer.style.display = (maxCost != null) ? "" : "none";
+  if (costSpan && maxCost != null) costSpan.textContent = String(maxCost);
+
+  const lockedAny = (Array.isArray(scenario?.locked_generators) && scenario.locked_generators.length)
+                 || (Array.isArray(scenario?.disabled_generators) && scenario.disabled_generators.length);
+  const lockRow = document.getElementById("constraint-locked");
+  if (lockRow) lockRow.style.display = lockedAny ? "" : "none";
+
+  const submitBtn = document.getElementById("submit-button");
+  if (submitBtn){
+    submitBtn.onclick = () => {
+      if (submitBtn.disabled) return;
+      if (typeof submitSolution === "function") return submitSolution();
+      showResultOverlay();
+    };
+  }
+}
+
+
+function showResultOverlay() {
+  const overlay = document.createElement("div");
+  overlay.id = "result-overlay";
+  Object.assign(overlay.style, {
+    position:"fixed", top:"0", left:"0", width:"100vw", height:"100vh",
+    background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center",
+    justifyContent:"center", zIndex:"999"
+  });
+
+  const box = document.createElement("div");
+  box.className = "results-box";
+  box.innerHTML = `
+    <h2 class="results-title">✅ Scenario Complete</h2>
+    <div class="results-summary">
+      <p><strong>⚡ Power:</strong> ${Math.round(totalPower)} MW</p>
+      <p><strong>💲 Cost:</strong> $${Math.round(totalCost)}</p>
+      <p><strong>🫧 Emissions:</strong> ${Math.round(totalEmissions)} tCO₂</p>
+    </div>
+    <button class="results-close" id="close-overlay">Close</button>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  document.getElementById("close-overlay").addEventListener("click", () => overlay.remove());
+}
+
+
 // === Update generator colors on scenario load ===
 function updateMapGeneratorsFromScenario() {
   const genNodes = d3.selectAll(".map-gen");
@@ -978,16 +1417,6 @@ function updateMapGeneratorsFromScenario() {
   }
 }
 
-
-// Hook into your scenario load
-const oldLoadScenario = loadScenario;
-loadScenario = async function (scenarioId) {
-  await oldLoadScenario(scenarioId);
-  updateMapGeneratorsFromScenario();
-};
-
-
-
 document.querySelectorAll(".layer-toggle").forEach(checkbox => {
   checkbox.addEventListener("change", (e) => {
     const className = e.target.dataset.target;
@@ -1006,42 +1435,11 @@ function pushToHistory(generators) {
 function applyGeneratorState(state) {
   currentGenerators = JSON.parse(JSON.stringify(state));
   renderGenerators(currentGenerators);
-  renderOverview(currentGenerators, currentScenarioData.lines, currentScenarioData.total_cost, currentScenarioData.solved);
+  renderOverview(currentGenerators, currentScenarioData, window.currentLines);
   updateMapGeneratorsFromScenario();
 }
 
-document.getElementById("undo-button").addEventListener("click", () => {
-  if (historyStack.length > 0) {
-    const prevState = historyStack.pop();
-    redoStack.push(JSON.parse(JSON.stringify(currentGenerators)));
-    applyGeneratorState(prevState);
-  }
-});
-
-document.getElementById("redo-button").addEventListener("click", () => {
-  if (redoStack.length > 0) {
-    const nextState = redoStack.pop();
-    historyStack.push(JSON.parse(JSON.stringify(currentGenerators)));
-    applyGeneratorState(nextState);
-  }
-});
-
-document.getElementById("theme-toggle").addEventListener("click", () => {
-  const body = document.body;
-  const isDark = body.classList.contains("dark-theme");
-
-  body.classList.toggle("dark-theme", !isDark);
-  body.classList.toggle("light-theme", isDark);
-
-  const btn = document.getElementById("theme-toggle");
-  btn.textContent = isDark ? "🌙 Dark Mode" : "🌞 Light Mode";
-});
-
     window.addEventListener("DOMContentLoaded", () => {
-    const theme = document.body.classList.contains("dark-theme") ? "dark-theme"
-                : document.body.classList.contains("light-theme") ? "light-theme"
-                : "no theme applied";
-    console.log("🌗 Current theme on startup:", theme);
     bindSortListeners();     // ✅ Only here
     updateSortButtonStyles();   // ✅ This applies the correct style immediately
     fetchAllScenarios();     // ✅ Normal startup logic
