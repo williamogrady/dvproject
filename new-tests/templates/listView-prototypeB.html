@@ -400,12 +400,7 @@
   .generator-card.locked   { opacity: .95; filter: saturate(.9); }
   .generator-card.disabled { opacity: .65; filter: grayscale(.5); }
   .gen-section.right .locked-btn  { cursor: default !important; }
-  .gen-section.right .disabled-btn{
-    width: 28px; height: 28px; border-radius: 8px;
-    background: #222 center/16px 16px no-repeat url('/new-tests/disabled.png');
-    border: 1px solid rgba(0,0,0,.25);
-    cursor: not-allowed !important;
-  }
+
 </style>
 
 
@@ -1614,9 +1609,10 @@ softShadow.append("feDropShadow")
   .attr("dx",0).attr("dy",2).attr("stdDeviation",2.5).attr("flood-opacity",0.25);
 
 // Settings lifted from MapView B
-const BLOCK_UNIT=100, HALF_STEP=BLOCK_UNIT/2, PAD_INNER=10, BLOCK_GAP=4;
-const MIN_GEN_W=50, WIDTH_VARIATION=80, MAX_GEN_W=MIN_GEN_W+WIDTH_VARIATION;
-const MAX_GEN_H=220, HALO_PAD=8;
+// === Generator layout constants (global) ===
+const BLOCK_UNIT = 100, HALF_STEP = BLOCK_UNIT/2, PAD_INNER = 10, BLOCK_GAP = 4;
+const MIN_GEN_W = 50, WIDTH_VARIATION = 80, MAX_GEN_W = MIN_GEN_W + WIDTH_VARIATION;
+const MAX_GEN_H = 220, HALO_PAD = 8;
 
 const roundCapToHalf = pmax => Math.ceil((pmax||0)/HALF_STEP)*HALF_STEP;
 const capBlocks = p => {
@@ -1625,22 +1621,23 @@ const capBlocks = p => {
   const half = (cap % BLOCK_UNIT) === HALF_STEP;
   return full + (half ? 1 : 0);
 };
-const computeBlockH = gens => {
-  const ext = d3.extent(gens, g => g.pmax||0);
-  const maxB = capBlocks(ext[1]||0);
+function computeBlockH(gens){
+  const ext = d3.extent(gens || [], g => g.pmax || 0);
+  const maxB = capBlocks(ext[1] || 0);
   const avail = MAX_GEN_H - PAD_INNER*2 - (maxB-1)*BLOCK_GAP;
-  return Math.min(28, avail/Math.max(1,maxB));
-};
-const getWidthScale = () => {
-  const ext = d3.extent(currentGenerators, g => g.cost_per_mw||0);
+  return Math.min(28, avail/Math.max(1, maxB));
+}
+function getWidthScale(){
+  const ext = d3.extent((window.currentGenerators || []), g => g.cost_per_mw || 0);
   return d3.scaleLinear().domain([Math.max(1, ext[0]||1), ext[1]||1]).range([MIN_GEN_W, MAX_GEN_W]);
-};
-const emissionsColor = (gen) => {
+}
+function emissionsColor(gen){
   const e = gen.emissions_per_mw||0;
-  const ext = d3.extent(currentGenerators, g => g.emissions_per_mw||0);
+  const ext = d3.extent((window.currentGenerators || []), g => g.emissions_per_mw||0);
   const sat = d3.scaleLinear().domain([ext[1]||1, ext[0]||0]).range([20,85]).clamp(true);
   return `hsl(140, ${sat(e)}%, 45%)`;
-};
+}
+
 
 const generatorNodes = nodes.filter(d => d.type === "generator");
 const genGroups = zoomGroup.selectAll("g.map-gen-group")
@@ -1658,16 +1655,29 @@ genGroups.append("rect")
 genGroups.append("rect")
   .attr("class","map-gen gen-card")
   .attr("id", d=>d.id)
+  .attr("data-x", d=>d.x)          // ← add
+  .attr("data-y", d=>d.y)          // ← add
   .attr("x",-25).attr("y",-25).attr("width",50).attr("height",50)
   .attr("rx",10).attr("ry",10);
 
 genGroups.append("clipPath").attr("id", d=>`clip-${d.id}`).append("rect");
 genGroups.append("g").attr("class","blocks").attr("clip-path", d=>`url(#clip-${d.id})`);
 
-// Icon overlays (hidden by default)
-genGroups.append("image")
-  .attr("class","map-gen-lock").attr("href","/new-tests/lock.png")
-  .attr("x",-12).attr("y",-12).attr("width",24).attr("height",24).style("display","none");
+const LOCK_SRC = "/new-tests/lock.png";
+const LOCK_FALLBACK = "data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
+<path fill='%23c3cbe0' d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z'/>\
+</svg>";
+
+d3.selectAll(".map-gen-lock").attr("href", LOCK_SRC)
+  .each(function(){  // preload to test availability
+    const img = new Image();
+    img.onerror = () => d3.selectAll(".map-gen-lock").attr("href", LOCK_FALLBACK);
+    img.src = LOCK_SRC;
+  });
+
+d3.selectAll(".map-gen-disabled").attr("href", "/new-tests/disabled.png");
+
 genGroups.append("image")
   .attr("class","map-gen-disabled").attr("href","/new-tests/disabled.png")
   .attr("x",-12).attr("y",-12).attr("width",24).attr("height",24).style("display","none");
@@ -1796,14 +1806,13 @@ function updateMapGeneratorsFromScenario(){
   const SCALED_BLOCK_H = computeBlockH(currentGenerators);
   const widthScale = getWidthScale();
 
-  // Robustly read scenario arrays regardless of nesting or naming
   const sc = currentScenarioData || {};
-  const lockedArr   = sc.locked_generators   || sc.locked   || [];
-  const disabledArr = sc.disabled_generators || sc.disabled || [];
-  const lockedSet   = new Set(lockedArr);
-  const disabledSet = new Set(disabledArr);
+  const normalizeId = v => (String(v).startsWith("Gen") ? String(v) : `Gen${v}`);
 
-  d3.selectAll(".map-gen-group").each(function(node){
+  const lockedSet   = new Set((sc.locked_generators   || sc.locked   || []).map(normalizeId));
+  const disabledSet = new Set((sc.disabled_generators || sc.disabled || []).map(normalizeId));
+
+  d3.selectAll(".map-gen-group").each(function(){
     const g = d3.select(this);
     const id = g.select(".map-gen").attr("id");
     const gen = (currentGenerators || []).find(x => `Gen${x.bus}` === id) || {pg:0,pmax:0,cost_per_mw:1,emissions_per_mw:0};
@@ -1881,9 +1890,9 @@ function updateMapGeneratorsFromScenario(){
     // overlays
     const isLocked = lockedSet.has(id);
     const isDisabled = disabledSet.has(id);
-    g.select(".map-gen-lock").style("display", isLocked ? null : "none");
-    g.select(".map-gen-disabled").style("display", isDisabled ? null : "none");
-
+        g.select(".map-gen-lock").style("display", lockedSet.has(id) ? null : "none");
+    g.select(".map-gen-disabled").style("display", disabledSet.has(id) ? null : "none");
+ 
     // stroke emphasis for selection
     g.select(".map-gen")
       .attr("stroke", id===selectedGeneratorId ? "#42a5f5" : null)
@@ -2048,6 +2057,20 @@ console.groupEnd();
     return `M 0 0 L ${length} ${-width} L ${length*0.8} 0 L ${length} ${width} Z`;
   }
 </script>
-
+<script>
+function debugLocks() {
+  const sc = window.currentScenarioData || {};
+  console.group("🔒 Lock/Disabled debug");
+  console.log("scenario keys:", Object.keys(sc));
+  console.log("locked:",   sc.locked_generators   ?? sc.locked   ?? []);
+  console.log("disabled:", sc.disabled_generators ?? sc.disabled ?? []);
+  console.log("overlay images present?",
+    !!document.querySelector(".map-gen-lock"),
+    !!document.querySelector(".map-gen-disabled"));
+  console.groupEnd();
+}
+// Call after a scenario is loaded:
+window.addEventListener("load", () => setTimeout(debugLocks, 0));
+</script>
 </body>
 </html>
