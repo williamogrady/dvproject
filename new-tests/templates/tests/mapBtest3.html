@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generator Texture Mapping – Test</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #1e1e1e;          /* page bg (dark UI) */
+      --map-bg: #dfcfcf;      /* preserve map background colour */
+      --card: rgba(20,20,20,.85);
+    }
+    html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: #eee; }
+    .wrap { height: 100%; display: grid; grid-template-columns: 1fr 360px; }
+    svg { width: 100%; height: 100vh; background: var(--map-bg); display: block; }
+
+    /* simple legend/panel */
+    .panel { padding: 14px 16px; backdrop-filter: blur(4px); background: var(--card); border-left: 1px solid #444; display: flex; flex-direction: column; gap: 12px; }
+    .legend-row { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: center; font-size: 14px; }
+    .chip { width: 24px; height: 16px; border: 1px solid #111; }
+    .note { font-size: 12px; color: #bbb; line-height: 1.35; }
+    .title { font-weight: 700; letter-spacing: .2px; }
+    .subtle { color: #bbb; font-size: 12px; }
+
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <svg id="map">
+      <defs id="defs"></defs>
+      <g id="gens"></g>
+    </svg>
+
+    <aside class="panel">
+      <div class="title">Texture Mapping Test</div>
+      <div class="legend-row">
+        <div class="chip" id="cost-chip"></div>
+        <div>Fill = <b>Cost per MW</b> (Blues scale)</div>
+      </div>
+      <div class="legend-row">
+        <div class="chip" id="emi-chip" style="background: repeating-linear-gradient(45deg, #000 0 3px, transparent 3px 10px);"></div>
+        <div>Shading lines = <b>Emissions / MW</b> (thicker = dirtier)</div>
+      </div>
+      <div class="note">
+        This is a minimal sandbox: only a few generators are rendered. The map background colour is preserved; all other layers are omitted on purpose.
+      </div>
+      <div class="subtle">Tip: Zoom/pan with mouse or trackpad.</div>
+    </aside>
+  </div>
+
+  <script>
+  // --- Sample subset (swap with live data if desired) -----------------------
+  // Positions roughly mimic map coordinates; adjust as needed.
+  const generators = [
+    { id: "Gen4",  x: 360,  y: 220, pmax: 800, pg: 400, cost_per_mw: 22, emissions_per_mw: 0.35 },
+    { id: "Gen15", x: 700,  y: 360, pmax: 450, pg: 250, cost_per_mw: 34, emissions_per_mw: 0.80 },
+    { id: "Gen23", x: 520,  y: 520, pmax: 600, pg: 300, cost_per_mw: 12, emissions_per_mw: 0.10 },
+    { id: "Gen31", x: 860,  y: 180, pmax: 300, pg: 150, cost_per_mw: 44, emissions_per_mw: 1.10 }
+  ];
+
+  // --- Scales ---------------------------------------------------------------
+  const costExtent = d3.extent(generators, d => d.cost_per_mw || 0);
+  const costColor = d3.scaleSequential(d3.interpolateBlues).domain([costExtent[0], costExtent[1]]);
+
+  const emiExtent = d3.extent(generators, d => d.emissions_per_mw || 0);
+  // Stroke width grows with emissions. Clamp to keep visuals sane.
+  const emiStroke = d3.scaleLinear()
+    .domain([Math.max(0, emiExtent[0] || 0), Math.max(0.01, emiExtent[1] || 1)])
+    .range([0.6, 4.5]) // px
+    .clamp(true);
+
+  // Optional: vary spacing slightly with emissions (denser when dirtier)
+  const emiSpacing = d3.scaleLinear()
+    .domain(emiStroke.domain())
+    .range([12, 6]) // px pattern step
+    .clamp(true);
+
+  const svg = d3.select('#map');
+  const defs = d3.select('#defs');
+  const gGens = d3.select('#gens');
+
+  // --- Utilities ------------------------------------------------------------
+  // Make a unique hatch pattern for each generator so we can vary stroke width.
+  function ensureHatch(defs, id, strokeW, step){
+    const pid = `hatch-${id}`;
+    let pat = defs.select(`#${CSS.escape(pid)}`);
+    if (pat.empty()) {
+      pat = defs.append('pattern')
+        .attr('id', pid)
+        .attr('patternUnits', 'userSpaceOnUse')
+        .attr('width', step)
+        .attr('height', step)
+        .attr('patternTransform', 'rotate(45)');
+      pat.append('line')
+        .attr('x1', 0).attr('y1', 0)
+        .attr('x2', 0).attr('y2', step)
+        .attr('stroke', '#000')
+        .attr('stroke-width', strokeW)
+        .attr('stroke-linecap', 'butt');
+    } else {
+      pat.attr('width', step).attr('height', step);
+      pat.select('line').attr('y2', step).attr('stroke-width', strokeW);
+    }
+    return `url(#${pid})`;
+  }
+
+  // --- Draw -----------------------------------------------------------------
+  const W = 88, H = 64, RX = 10; // card size (compact test)
+
+  const nodes = gGens.selectAll('g.gen')
+    .data(generators, d => d.id)
+    .join(enter => {
+      const g = enter.append('g')
+        .attr('class', 'gen')
+        .attr('transform', d => `translate(${d.x},${d.y})`);
+
+      // base fill = cost
+      g.append('rect')
+        .attr('class', 'gen-fill')
+        .attr('x', -W/2).attr('y', -H/2)
+        .attr('width', W).attr('height', H)
+        .attr('rx', RX).attr('ry', RX)
+        .attr('stroke', '#111').attr('stroke-width', 1.2)
+        .attr('fill', d => costColor(d.cost_per_mw || 0));
+
+      // overlay hatch = emissions texture
+      g.append('rect')
+        .attr('class', 'gen-hatch')
+        .attr('x', -W/2).attr('y', -H/2)
+        .attr('width', W).attr('height', H)
+        .attr('rx', RX).attr('ry', RX)
+        .attr('fill', 'none'); // set later to pattern
+
+      // label
+      g.append('text')
+        .attr('y', H/2 + 14)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', 12)
+        .attr('fill', '#111')
+        .text(d => d.id);
+
+      return g;
+    });
+
+  // Create/update patterns and apply
+  nodes.each(function(d){
+    const strokeW = emiStroke(d.emissions_per_mw || 0);
+    const step = emiSpacing(d.emissions_per_mw || 0);
+    const patUrl = ensureHatch(defs, d.id, strokeW, step);
+    d3.select(this).select('rect.gen-hatch')
+      .attr('fill', patUrl)
+      .attr('opacity', 0.55); // tweak texture dominance
+  });
+
+  // --- Zoom/pan for comfort -------------------------------------------------
+  const zoom = d3.zoom().scaleExtent([0.5, 3]).on('zoom', (ev) => gGens.attr('transform', ev.transform));
+  svg.call(zoom);
+
+  // --- Hooking to your real data (notes) -----------------------------------
+  // 1) Replace `generators` with a mapped subset from your live arrays.
+  //    Example (pseudo):
+  //      const ids = new Set(["Gen4","Gen15","Gen23","Gen31"]);
+  //      const positions = await fetch('/new-tests/full_nodes.json').then(r=>r.json());
+  //      const gensLive = (await fetch('/api/generators').then(r=>r.json()))
+  //        .filter(g => ids.has(`Gen${g.bus}`))
+  //        .map(g => ({
+  //          id: `Gen${g.bus}`,
+  //          x: positions.find(n => n.id === `Gen${g.bus}`).x,
+  //          y: positions.find(n => n.id === `Gen${g.bus}`).y,
+  //          pmax: g.pmax, pg: g.pg,
+  //          cost_per_mw: g.cost_per_mw,
+  //          emissions_per_mw: g.emissions_per_mw
+  //        }));
+  //
+  // 2) Re-run the join with gensLive to render in the same style.
+  //
+  // That’s it — the fill and texture mappings are automatic.
+  </script>
+</body>
+</html>

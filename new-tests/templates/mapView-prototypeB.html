@@ -737,6 +737,24 @@
 /* soft shadow */
 .with-soft-shadow { filter: url(#softShadow); }
 </style>
+<style>
+  /* On/off halo (green when ON) */
+.gen-halo-on  { stroke: #2e7d32; stroke-width: 3; fill: none; opacity: 0.95; }
+.gen-halo-off { stroke: none; fill: none; opacity: 0; }
+
+/* Locked/disabled overlays */
+.gen-locked   { pointer-events: none; }            /* still clickable via icon layer if you want */
+.gen-disabled { opacity: 0.35; pointer-events: none; filter: grayscale(0.2); }
+
+.gen-lock-icon {
+  font: 700 14px/1.0 system-ui, sans-serif;
+  fill: #111;
+  paint-order: stroke;
+  stroke: rgba(255,255,255,0.8);
+  stroke-width: 2px;
+}
+
+</style>
 
 
 </head>
@@ -2261,6 +2279,66 @@ if (linesCard) {
 
 });
 
+
+  </script>
+
+  <script>
+    // ==== COST COLOR (green -> yellow -> orange -> red) ====
+function makeCostColorScale(gens = currentGenerators){
+  const [minC, maxC] = d3.extent(gens, g => g.cost_per_mw || 0);
+  // 4-stop piecewise for a smooth “cheap→expensive” ramp
+  const d0 = minC ?? 0;
+  const d3 = maxC ?? 1;
+  const d1 = d0 + (d3 - d0) * 0.33;
+  const d2 = d0 + (d3 - d0) * 0.66;
+  return d3.scaleLinear()
+    .domain([d0, d1, d2, d3])
+    .range(["#2e7d32","#f9a825","#fb8c00","#c62828"])
+    .clamp(true);
+}
+
+// ==== POWER → SIZE (width) ====
+function makePowerWidthScale(gens = currentGenerators){
+  const [minP, maxP] = d3.extent(gens, g => g.pmax || 0);
+  // guard rails so tiny pmax isn’t invisible
+  return d3.scaleSqrt()               // sqrt ~= area perceptual fairness
+    .domain([Math.max(1,minP||1), Math.max(2,maxP||2)])
+    .range([MIN_GEN_W, MAX_GEN_W])
+    .clamp(true);
+}
+
+// ==== EMISSIONS → HATCH (pattern per gen) ====
+function makeEmiStrokeScale(gens = currentGenerators){
+  const [minE, maxE] = d3.extent(gens, g => g.emissions_per_mw || 0);
+  return d3.scaleLinear().domain([minE||0, maxE||1]).range([0.6, 4.5]).clamp(true);
+}
+function makeEmiSpacingScale(gens = currentGenerators){
+  const [minE, maxE] = d3.extent(gens, g => g.emissions_per_mw || 0);
+  return d3.scaleLinear().domain([minE||0, maxE||1]).range([12, 6]).clamp(true);
+}
+
+// Create/refresh a 45° hatch in <defs> for one generator
+function ensureHatch(defsSel, genId, strokeW, step){
+  const pid = `hatch-${genId}`;
+  let pat = defsSel.select(`#${CSS.escape(pid)}`);
+  if (pat.empty()){
+    pat = defsSel.append("pattern")
+      .attr("id", pid)
+      .attr("patternUnits", "userSpaceOnUse")
+      .attr("width", step).attr("height", step)
+      .attr("patternTransform", "rotate(45)");
+    pat.append("line")
+      .attr("x1", 0).attr("y1", 0)
+      .attr("x2", 0).attr("y2", step)
+      .attr("stroke", "#000")
+      .attr("stroke-width", strokeW)
+      .attr("stroke-linecap", "butt");
+  } else {
+    pat.attr("width", step).attr("height", step);
+    pat.select("line").attr("y2", step).attr("stroke-width", strokeW);
+  }
+  return `url(#${pid})`;
+}
 
   </script>
 </body>
