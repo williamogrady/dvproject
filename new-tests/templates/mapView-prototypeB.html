@@ -2014,6 +2014,11 @@ function drawPowerBlocks(g, W, H, pmax, pg, lockedOrDisabled, onSetPg) {
   });
 }
 
+function includesGen(arr, gen){
+  if (!Array.isArray(arr)) return false;
+  const id = gen.id, index = gen.index, bus = gen.bus;
+  return arr.some(v => v === index || v === id || v === bus || v === `Gen${bus}`);
+}
 
 
 
@@ -2050,8 +2055,10 @@ function updateMapGeneratorsFromScenario() {
     if (g.select(".gen-badges").empty())  g.append("g").attr("class", "gen-badges");
 
     // state flags (lock/disabled affect interaction only)
-    const isLocked   = !!(gen.locked || (window.currentScenarioData?.locked_generators?.includes?.(gen.index)));
-    const isDisabled = !!(gen.disabled || gen.status === "disabled");
+const lockedArr   = window.currentScenarioData?.locked_generators   || window.currentScenarioData?.locked   || [];
+ const disabledArr = window.currentScenarioData?.disabled_generators || window.currentScenarioData?.disabled || [];
+ const isLocked   = !!(gen.locked || includesGen(lockedArr, gen));
+ const isDisabled = !!(gen.disabled || gen.status === "disabled" || includesGen(disabledArr, gen));
     g.classed("gen-disabled", isDisabled);
 
     // ---- SIZE (uniform focus) ----
@@ -2258,7 +2265,7 @@ function setupTaskSection(scenario) {
   const hasBudget = scenario.max_cost !== undefined && scenario.max_cost !== null;
     const lockedList = scenario.locked_generators || scenario.locked || [];
   const disabList  = scenario.disabled_generators || scenario.disabled || [];
-  const hasDisab = Array.isArray(scenario.disabled_gens) && scenario.disabled_gens.length > 0;
+const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
   const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
 
   container.innerHTML = `
@@ -2286,7 +2293,7 @@ function setupTaskSection(scenario) {
             <div class="task-title">Scenario Constraints</div>
             <div class="task-subtitle" id="task-constraints">
               ${hasLocked ? `<div id="constraint-locked">Some generators are locked</div>` : ``}
-              ${hasDisab  ? `<div id="constraint-disabled">Some generators are disabled</div>` : ``}
+              ${hasDisabled ? `<div id="constraint-disabled">Some generators are disabled</div>` : ``}
             </div>
           </div>
         </div>
