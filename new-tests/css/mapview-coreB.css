@@ -1,0 +1,740 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
+
+
+.map-load {
+  fill: #5878cf;
+}
+
+:root {
+  --gen-on: #4caf50;
+  --gen-off: #333;
+}
+
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    #map-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    svg#map {
+      width: 100%;
+      height: 100%;
+      background: #dfcfcf;
+    }
+
+#overview {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+  padding: 10px 20px;
+  background: rgba(40, 40, 40, 0.85); /* translucent wrapper */
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+#overview-top {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  align-items: stretch;
+  width: 100%;
+}
+
+#overview-bottom {
+  margin-top: 10px;
+}
+
+#overview {
+  display: flex;
+  flex-direction: row; /* just in case */
+  background: white;
+  border-radius: 20px;
+  padding: 1rem;
+  gap: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  box-sizing: border-box;
+  width: 1500px;
+  margin: auto;
+  opacity: 0.95;
+  align-items: stretch; /* ensures both columns match height */
+}
+
+
+#overview-status-section {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 1rem;
+  flex: 0 0 68%;
+}
+
+#overview-task-section {
+  width: 220px;
+  flex: 1 1 32%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+#overview-task-section, 
+#overview-task-section * {
+  font-family: 'Figtree', sans-serif;
+}
+
+/* ----------------------------------------
+   GENERAL CARD STRUCTURE + TYPOGRAPHY
+---------------------------------------- */
+
+.overview-card {
+  font-family: "Figtree", sans-serif;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 100%;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.overview-card:hover {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+.overview-label {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.overview-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #000;
+}
+
+.overview-status {
+  font-size: 0.7rem;
+  text-align: center;
+  color: #666;
+  margin-top: auto;
+}
+
+
+/* ----------------------------------------
+   SPECIFIC CARD LAYOUTS (CLEANED)
+---------------------------------------- */
+
+/* Column placement + vertical spacing model */
+#scale-power {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-lines {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#scale-cost,
+#scale-emissions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: calc(50% - 0.25rem);
+}
+
+#right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  grid-column: 3 / 4;
+}
+
+/* ----------------------------------------
+   LINES CARD (Rows 3 & 4)
+---------------------------------------- */
+
+/* Horizontal rows (single line); no visible scrollbars/gray boxes */
+#scale-lines .row-rich,
+#scale-lines .row-top {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 2px;
+  background: transparent;
+  /* Hide scrollbars cross-browser */
+  scrollbar-width: none;              /* Firefox */
+  -ms-overflow-style: none;           /* IE/Edge legacy */
+}
+
+
+#scale-lines .row-rich { margin-bottom: 8px; }  /* tweak 6–12px to taste */
+#scale-lines .row-top  { margin-top: 8px; }
+
+#scale-lines .row-rich::-webkit-scrollbar,
+#scale-lines .row-top::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;               /* Chrome/Safari */
+}
+#scale-lines .row-rich::-webkit-scrollbar-thumb,
+#scale-lines .row-top::-webkit-scrollbar-thumb,
+#scale-lines .row-rich::-webkit-scrollbar-track,
+#scale-lines .row-top::-webkit-scrollbar-track,
+#scale-lines .row-rich::-webkit-scrollbar-corner,
+#scale-lines .row-top::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Optional tiny title when overloaded == 0 */
+#scale-lines .row-top-title {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 700;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+/* Cards — shared base */
+#scale-lines .line-card {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 22px 1fr;   /* left icon + right text */
+  align-items: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 6px;
+  border: 1.5px solid var(--accent, #e5e7eb); /* JS sets --accent/borderColor */
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  position: relative;
+}
+
+/* Row 3 cards 20% smaller */
+#scale-lines .row-rich .line-card {
+  width: 88px;          /* was ~110px */
+  height: 26px;         /* was ~32px */
+  padding: 3px 5px;     /* slightly tighter */
+  grid-template-columns: 18px 1fr; /* shrink left icon column */
+}
+
+/* Slightly smaller type only for Row 3 */
+#scale-lines .row-rich .line-card .load  { font-size: 0.74rem; }
+#scale-lines .row-rich .line-card .delta { font-size: 0.60rem; }
+
+
+#scale-lines .row-top .line-card {   /* Row 4 */
+  width: 80px;
+  height: 24px;
+  border-radius: 8px;
+  padding: 3px 5px;
+  grid-template-columns: 18px 1fr;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* Inner layout + type */
+#scale-lines .line-card .left  { display:flex; align-items:center; justify-content:center; }
+#scale-lines .line-card .right { display:grid; grid-template-rows: 1fr auto; padding-left: 4px; }
+#scale-lines .line-card .load  { font-weight: 800; color: #111; font-size: 0.82rem; line-height: 1; }
+#scale-lines .row-top .line-card .load { font-size: 0.78rem; }
+#scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .68rem; }
+.delta.up { color:#c62828; }
+.delta.down { color:#2e7d32; }
+.delta.neutral { color:#64748b; }
+
+/* Hover: subtle only, no layout shift */
+#scale-lines .line-card:hover { background: #f7f9fb; }
+
+/* Remove the old left accent bar entirely */
+#scale-lines .line-card::before { content: none !important; }
+
+/* Selection state (keep, but no colored borders) */
+.overview-card.selected { border: none; box-shadow: 0 0 0 2px rgba(66,165,245,.18) inset; }
+.overview-card.scale-power.selected,
+.overview-card.scale-cost.selected,
+.overview-card.scale-emissions.selected,
+.overview-card.scale-lines.selected { border: none; }
+
+
+
+
+/* ----------------------------------------
+   TASK SECTION
+---------------------------------------- */
+
+.task-card {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  box-sizing: border-box;
+  color: #333;
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.task-content {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.task-left,
+.task-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Specific styling for task section title card */
+.overview-card.task-card {
+  padding: 0.6rem 0.75rem;
+  gap: 0.5rem;
+}
+
+.task-card .task-title {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
+}
+.task-subtitle {
+  font-size: 0.7rem;
+  color: #777;
+  margin-bottom: 0.3rem;
+}
+
+#task-requirements .task-title,
+#task-constraints .task-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+#task-requirements {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+#task-requirements li {
+  font-weight: bold;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+#task-constraints div {
+  font-weight: bold;
+  font-size: 0.75rem;
+  color: #333;
+  margin: 0.2rem 0;
+}
+
+.task-submit-row {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+#submit-button {
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  background-color: #ccc;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  font-size: 0.75rem;
+  cursor: not-allowed;
+  transition: background-color 0.2s ease;
+}
+
+#submit-button.active {
+  background-color: #4CAF50; /* Green */
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: all 0.2s ease-in-out;
+}
+
+#submit-button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+.task-placeholder {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #666;
+  padding: 0.5rem 0;
+}
+/* ----------------------------------------
+   VISUAL FEEDBACK (SELECTED STATES)
+---------------------------------------- */
+
+.overview-card.selected {
+  border: 2px solid #42a5f5;
+}
+
+.overview-card.scale-lines.selected {
+  border-color: #42a5f5;
+}
+
+
+.overview-card.scale-power.selected {
+  border-color: #4caf50;
+}
+
+.overview-card.scale-cost.selected {
+  border-color: #f9a825;
+}
+
+.overview-card.scale-emissions.selected {
+  border-color: #c62828;
+}
+/* ----------------------------------------
+   BLOCKS — Power card (responsive)
+---------------------------------------- */
+
+/* Space between blocks and fraction text; keep content inside card */
+#scale-power .overview-value {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;         /* margin between blocks and the text */
+  width: 100%;
+  overflow: hidden;  /* prevent any overflow peeking out */
+}
+
+/* Power blocks become a responsive grid that auto-wraps */
+#overview-power .blocks {
+  --cell-min: 22px;  /* JS will tune for huge goals */
+  --gap: 6px;
+  --block-h: 26px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+  gap: var(--gap);
+  width: 100%;
+  max-width: 100%;   /* remove old 200px clamp */
+  height: auto;      /* remove fixed heights */
+  align-content: start;
+  box-sizing: border-box;
+}
+
+/* Each block fills its grid cell */
+#overview-power .block {
+  width: 100%;
+  height: var(--block-h);
+  border-radius: 6px;
+}
+
+/* Keep your color semantics */
+#overview-power .block.full   { background-color: #4caf50; }
+#overview-power .block.partial{ background-color: #a5d6a7; }
+#overview-power .block.goal   { background-color: #e0e0e0; }
+#overview-power .block.over   {
+  background-color: #ef5350;
+  color: white;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ----------------------------------------
+   BLOCKS — Legacy styles (scoped AWAY from power)
+   (prevents them from overriding the grid above)
+---------------------------------------- */
+.overview-card:not(#scale-power) .blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+  max-width: 200px;
+}
+
+.overview-card:not(#scale-power) .block {
+  width: 18px;
+  height: 20px;
+  background: #ccc;
+  border-radius: 2px;
+}
+
+/* ----------------------------------------
+   RESULTS
+---------------------------------------- */
+
+.results-box {
+  background: white;
+  color: #222;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  font-family: "Figtree", sans-serif;
+  text-align: center;
+  width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.results-title {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.results-summary p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.results-close {
+  margin-top: 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: "Figtree", sans-serif;
+}
+
+.results-close:hover {
+  background: #45a049;
+}
+
+
+
+    #admin-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 15;
+      background: var(--bg-card);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+
+
+#map-legend {
+  position: fixed;
+  left: 20px;
+  bottom: 80px; /* space above admin panel */
+  background: rgba(40, 40, 40, 0.85);
+  padding: 10px 14px;
+  border: 1px solid #bbb;
+  border-radius: 12px;
+  font-family: sans-serif;
+  font-size: 12px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 19;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin: 2px 0;
+}
+
+.legend-symbol,
+.legend-line,
+.legend-triangle,
+.legend-chevron {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.generator-on {
+  background-color: #4caf50;
+  border: 1px solid #333;
+}
+
+.generator-off {
+  background-color: white;
+  border: 1px solid #333;
+}
+
+.legend-line {
+  width: 18px;
+  height: 4px;
+  background-color: grey;
+  border-radius: 2px;
+}
+
+.legend-triangle {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 14px solid #201cdf;
+  margin-top: 2px;
+}
+
+.legend-chevron {
+  font-size: 16px;
+  color: red;
+  font-weight: bold;
+}
+
+.admin-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(40, 40, 40, 0.85); /* translucent wrapper */
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: width 0.4s ease, padding 0.4s ease;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.admin-panel.collapsed {
+  width: 190px;
+  padding: 10px 12px;
+}
+
+.admin-panel.expanded {
+  width: 900px;
+  padding: 10px 16px;
+}
+
+.admin-toggle-btn {
+  background: rgba(20, 20, 20, 0.95); /* darker than container */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: bold;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 14px;
+  white-space: nowrap;
+}
+
+.admin-body {
+  display: flex;
+  gap: 12px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.admin-panel.collapsed .admin-body {
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+/* --- tokens --- */
+:root{
+  --card-bg: #fff;
+  --card-stroke: #cdd5df;
+  --on-stroke: #2e7d32;
+
+  --gen-on: #4caf50;
+  --gen-on-dark: #1b5e20;
+
+  --dice-off-stroke: #222;
+  --pip-off: #111;
+  --pip-on: #fff;
+
+  --emi-ring-w: 10px;          /* ← adjust ring thickness here */
+}
+
+/* emissions indicators */
+.gen-emi-strip { fill: var(--emi, #4caf50); pointer-events:none; }
+.gen-emi-ring  { fill: none; stroke: var(--emi, #4caf50); stroke-width: var(--emi-ring-w); pointer-events:none; }
+
+/* interaction */
+.clickable { cursor: pointer; }
+
+/* base card (expanded defaults) */
+.gen-card{
+  fill: var(--card-bg);
+  stroke: var(--card-stroke);
+  stroke-width: 1.2;
+  shape-rendering: geometricPrecision;
+}
+.gen-card--on { stroke: var(--on-stroke); stroke-width: 1.6; }
+
+/* dice-mode overrides (declared AFTER .gen-card so they win) */
+.gen-card--dice-on  { fill: var(--gen-on) !important;  stroke: var(--gen-on-dark) !important; }
+.gen-card--dice-off { fill: #fff !important;           stroke: var(--dice-off-stroke) !important; }
+
+/* dice pips */
+.pip-dot { stroke: none; }
+.pip-dot.off { fill: var(--pip-off); }
+.pip-dot.on  { fill: var(--pip-on); }
+
+/* soft shadow */
+.with-soft-shadow { filter: url(#softShadow); }
+
+  /* On/off halo (green when ON) */
+.gen-halo-on  { stroke: #2e7d32; stroke-width: 3; fill: none; opacity: 0.95; }
+.gen-halo-off { stroke: none; fill: none; opacity: 0; }
+
+/* Locked/disabled overlays */
+.gen-locked   { pointer-events: none; }            /* still clickable via icon layer if you want */
+.gen-disabled { opacity: 0.35; pointer-events: none; filter: grayscale(0.2); }
+
+.gen-lock-icon {
+  font: 700 14px/1.0 system-ui, sans-serif;
+  fill: #111;
+  paint-order: stroke;
+  stroke: rgba(255,255,255,0.8);
+  stroke-width: 2px;
+}
+

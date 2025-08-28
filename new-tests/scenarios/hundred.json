@@ -9,8 +9,6 @@
         "Gen8"
     ],
     "disabled_generators": [
-        "Gen1",
-        "Gen6"
     ],
     "initial_outputs": {
         "Gen8": 100,

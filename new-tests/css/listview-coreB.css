@@ -607,3 +607,47 @@ button:hover{ filter: brightness(0.98); }
   font-size: .85rem;
   font-weight: 600;
 }
+
+/* === FINAL OVERRIDES: Lines mini-cards (force MapView sizing) === */
+
+/* Ensure rows use flex, not the earlier grid */
+#row-1 #scale-lines .row-rich,
+#row-1 #scale-lines .row-top {
+  display: flex !important;
+  grid-auto-flow: initial !important;
+  grid-auto-columns: initial !important;
+}
+
+/* Reset any earlier min-width so width can actually shrink */
+#scale-lines .line-card { min-width: 0 !important; }
+#scale-lines .row-rich .line-card { min-width: 0 !important; }
+
+/* MapView parity: exact compact rectangles */
+#scale-lines .line-card {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  width: 80px;                 /* base width */
+  height: 24px;                /* base height */
+  padding: 3px 5px;
+  border: 1.5px solid var(--accent, #e5e7eb);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+
+#scale-lines .row-rich .line-card {
+  width: 88px;                 /* slightly larger for rich row */
+  height: 26px;
+  border-width: 2px;           /* thicker border in rich row */
+}
+
+/* Inner text sizing */
+#scale-lines .line-card .left  { display:flex; align-items:center; justify-content:center; }
+#scale-lines .line-card .right { display:grid; grid-template-rows: 1fr auto; padding-left: 4px; }
+#scale-lines .line-card .load  { font-weight: 800; color: #111; font-size: 0.78rem; line-height: 1; }
+#scale-lines .row-rich .line-card .load { font-size: 0.82rem; }
+#scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .66rem; }
+#scale-lines .line-card:hover  { background: #f7f9fb; }
+

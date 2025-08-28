@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Generators Demo — Cost Halo Colors / Power Focus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { margin:0; background:#0f172a; color:#e5e7eb; font:14px system-ui, sans-serif; }
+  .panel { padding:12px; background:#111827; border-bottom:1px solid #1f2937; display:flex; gap:12px; }
+  .card { cursor:pointer; border:1px solid #334155; padding:8px 12px; border-radius:8px; background:#0b1220; }
+  .card.selected { outline:2px solid #60a5fa; }
+  svg { width:100%; height:calc(100vh - 50px); display:block; background:#0b1220; }
+  .gen-halo { fill:none; stroke-width:6; }
+  .gen-block { rx:4; ry:4; }
+</style>
+</head>
+<body>
+$1
+  <div id="scale-power" class="card">⚡ Power→Size</div>
+  <div id="scale-cost" class="card">⚡ Cost→Halo</div>
+<div id="scale-emissions" class="card">🌫 Emissions→Hatch</div>
+  $2
+</div>
+<svg id="map"><defs id="defs"></defs><g id="root" transform="translate(40,40)"></g></svg>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script type="module">
+let currentGenerators = [
+  { id:"Gen101", x:80, y:80,  pmax:300, pg:100, cost_per_mw:1, emissions_per_mw:0.2 },
+  { id:"Gen102", x:220,y:120, pmax:600, pg:200, cost_per_mw:2, emissions_per_mw:0.8 },
+  { id:"Gen103", x:380,y:180, pmax:900, pg:0,   cost_per_mw:3, emissions_per_mw:0.1 },
+  { id:"Gen104", x:160,y:260, pmax:120, pg:50,  cost_per_mw:4, emissions_per_mw:1.1 },
+];
+
+const activeFilters=new Set();
+const BASE_S=64, HALO_PAD=6;
+
+const svg=d3.select('#map');
+const defs=d3.select('#defs');
+const root=d3.select('#root');
+
+function makeCostColorScale(gens=currentGenerators){
+  const vals=(gens||[]).map(g=>g?.cost_per_mw).filter(v=>Number.isFinite(v));
+  let minC=Math.min(...vals), maxC=Math.max(...vals);
+  if(!Number.isFinite(minC)||!Number.isFinite(maxC)){minC=0;maxC=1;}
+  if(minC===maxC){const pad=Math.max(1,Math.abs(minC)*0.1);minC-=pad;maxC+=pad;}
+  const d0=minC,d3max=maxC;
+  const d1=d0+(d3max-d0)*.33;
+  const d2=d0+(d3max-d0)*.66;
+  return d3.scaleLinear().domain([d0,d1,d2,d3max])
+    .range(["#2e7d32","#f9a825","#fb8c00","#c62828"]).clamp(true);
+}
+function makeEmiStroke(gens=currentGenerators){
+  const [minE,maxE]=d3.extent(gens,g=>g.emissions_per_mw||0);
+  return d3.scaleLinear().domain([minE||0,maxE||1]).range([0.6,4.5]).clamp(true);
+}
+function makeEmiSpacing(gens=currentGenerators){
+  const [minE,maxE]=d3.extent(gens,g=>g.emissions_per_mw||0);
+  return d3.scaleLinear().domain([minE||0,maxE||1]).range([12,6]).clamp(true);
+}
+function ensureHatch(defsSel,id,strokeW,step){
+  const pid=`hatch-${id}`;
+  let pat=defsSel.select(`#${CSS.escape(pid)}`);
+  if(pat.empty()){
+    pat=defsSel.append('pattern').attr('id',pid).attr('patternUnits','userSpaceOnUse')
+      .attr('width',step).attr('height',step).attr('patternTransform','rotate(45)');
+    pat.append('line').attr('x1',0).attr('y1',0).attr('x2',0).attr('y2',step)
+      .attr('stroke','#000').attr('stroke-linecap','butt');
+  }
+  pat.attr('width',step).attr('height',step);
+  pat.select('line').attr('y2',step).attr('stroke-width',strokeW);
+  return `url(#${pid})`;
+}
+
+// wiring
+function wireToggle(key,elId){
+  const el=document.getElementById(elId); if(!el) return; if(el.dataset.wired) return; el.dataset.wired=1;
+  el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();
+    if(activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
+    el.classList.toggle('selected',activeFilters.has(key));
+    update();
+  });
+}
+wireToggle('focus','focus-power');
+wireToggle('cost','scale-cost');
+wireToggle('emissions','scale-emissions');
+
+// init groups
+const gGens=root.selectAll('g.map-gen-group').data(currentGenerators,d=>d.id).join(enter=>{
+  const g=enter.append('g').attr('class','map-gen-group').attr('transform',d=>`translate(${d.x},${d.y})`);
+  g.append('rect').attr('class','map-gen').attr('rx',10).attr('ry',10);
+  g.append('rect').attr('class','map-gen-halo');
+  g.append('rect').attr('class','gen-hatch');
+  g.append('g').attr('class','dice-blocks');
+  return g;
+});
+
+function update(){
+  const gens=currentGenerators;
+  const costColor=makeCostColorScale(gens);
+  const emiStroke=makeEmiStroke(gens);
+  const emiSpacing=makeEmiSpacing(gens);
+  const focusPower = activeFilters.has('focus');
+const showCost   = activeFilters.has('cost');
+const scaleEmi   = activeFilters.has('emissions');
+
+  gGens.each(function(d){
+    const g=d3.select(this);
+    const S= focusPower? BASE_S*1.5 : BASE_S;
+    const W=S,H=S;
+
+    // base rect
+    g.select('.map-gen')
+      .attr('x',-W/2).attr('y',-H/2)
+      .attr('width',W).attr('height',H)
+      .attr('fill','#fff').attr('stroke','#111');
+
+    // COST HALO — only when Cost toggle is ON and sized with the square
+const halo = g.select('.map-gen-halo')
+  .attr('x', -W/2 - HALO_PAD).attr('y', -H/2 - HALO_PAD)
+  .attr('width',  W + HALO_PAD*2).attr('height', H + HALO_PAD*2)
+  .attr('fill','none');
+if (showCost) {
+  const thick = Math.max(6, S * 0.12); // scale thickness with size
+  halo.attr('stroke', costColor(d.cost_per_mw || 0))
+      .attr('stroke-width', thick);
+} else {
+  halo.attr('stroke', 'none');
+}
+
+    // emissions hatch
+    const hatch=g.select('.gen-hatch')
+      .attr('x',-W/2).attr('y',-H/2).attr('width',W).attr('height',H);
+    // reset hatch first
+hatch.attr('fill','none').attr('opacity',0).attr('stroke','none');
+if (scaleEmi) {
+      const url=ensureHatch(defs,d.id,emiStroke(d.emissions_per_mw||0),emiSpacing(d.emissions_per_mw||0));
+      hatch.attr('fill',url).attr('opacity',0.4);
+    }
+
+    // blocks
+    const BLOCK_MW=100;
+    const maxBlocks=Math.max(1,Math.min(9,Math.round(d.pmax/BLOCK_MW)));
+    const curBlocks=Math.round((d.pg||0)/BLOCK_MW);
+    const grid=3,pad=Math.max(4,Math.min(W,H)*0.1);
+    const boxW=W-pad*2,boxH=H-pad*2;
+    const cellW=boxW/grid,cellH=boxH/grid;
+    const data=[...Array(maxBlocks)].map((_,i)=>({
+      x:-boxW/2+(i%grid)*cellW,y:-boxH/2+Math.floor((maxBlocks-1-i)/grid)*cellH,
+      w:cellW,h:cellH,i
+    }));
+    g.select('.dice-blocks').selectAll('rect.gen-block').data(data,d=>d.i).join('rect')
+      .attr('class','gen-block')
+      .attr('x',d=>d.x).attr('y',d=>d.y)
+      .attr('width',d=>d.w-2).attr('height',d=>d.h-2)
+      .attr('fill',d=> d.i<curBlocks? '#22c55e':'#000');
+  });
+}
+
+update();
+</script>
+</body>
+</html>

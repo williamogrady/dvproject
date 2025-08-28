@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Generator Scaling Demo — Power / Cost / Emissions Toggles</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0f172a;      /* slate-900 */
+    --panel: #111827;   /* gray-900 */
+    --ink: #e5e7eb;     /* gray-200 */
+    --muted: #9ca3af;   /* gray-400 */
+    --halo: #22c55e;    /* green-500 */
+  }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font: 14px/1.4 system-ui, Segoe UI, Roboto, sans-serif; }
+  .wrap { display:grid; grid-template-columns: 320px 1fr; min-height:100%; }
+  .panel { background:var(--panel); padding:16px; border-right:1px solid #1f2937; display:flex; flex-direction:column; gap:12px; }
+  .panel h1 { font-size:16px; margin:0 0 8px 0; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  .card { user-select:none; cursor:pointer; border:1px solid #334155; padding:10px 12px; border-radius:10px; background:#0b1220; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  .card.selected { outline:2px solid #60a5fa; } /* blue-400 */
+  .hint { color: var(--muted); font-size: 12px; }
+  svg { width:100%; height:100vh; display:block; background:#0b1220; }
+
+  /* gen styles */
+  .gen-halo-on { stroke: var(--halo); stroke-width: 3; fill:none; }
+  .gen-halo-off { stroke: none; fill:none; }
+  .gen-lock-icon { font: 700 14px/1 system-ui; fill:#111; paint-order:stroke; stroke:#fff; stroke-width:2px; }
+  .gen-disabled { opacity:.35; filter: grayscale(.2); pointer-events: none; }
+
+  .legend { display:grid; gap:6px; }
+  .chip { width:22px; height:14px; border:1px solid #111; display:inline-block; vertical-align:middle; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="panel">
+    <h1>Demo controls</h1>
+    <div class="row">
+      <div id="scale-power" class="card"><span>⚡ Power → Size</span><span class="hint" id="status-power">Click to scale</span></div>
+      <div id="scale-cost" class="card"><span>💸 Cost → Fill</span><span class="hint" id="status-cost">Click to scale</span></div>
+      <div id="scale-emissions" class="card"><span>🌫 Emissions → Hatch</span><span class="hint" id="status-emissions">Click to scale</span></div>
+    </div>
+    <div class="legend">
+      <div>Cost scale (green→yellow→orange→red)</div>
+      <div class="row" id="cost-legend"></div>
+      <div class="hint">Click pips on a square to set power in 100 MW steps. Halo = online (pg &gt; 0).</div>
+    </div>
+  </aside>
+  <svg id="map">
+    <defs id="defs"></defs>
+    <g id="root" transform="translate(40,40)"></g>
+  </svg>
+</div>
+
+<!-- D3 first -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script type="module">
+// === minimal demo data ===
+let currentGenerators = [
+  { bus: 101, id:"Gen101", x: 80,  y: 80,  pmax: 300, pg: 100, cost_per_mw: 1.2, emissions_per_mw: 0.20 },
+  { bus: 102, id:"Gen102", x: 220, y: 120, pmax: 600, pg: 200, cost_per_mw: 5.4, emissions_per_mw: 0.85 },
+  { bus: 103, id:"Gen103", x: 380, y: 180, pmax: 900, pg: 0,   cost_per_mw: 2.0, emissions_per_mw: 0.10 },
+  { bus: 104, id:"Gen104", x: 160, y: 260, pmax: 120, pg: 50,  cost_per_mw: 7.5, emissions_per_mw: 1.10 },
+  { bus: 105, id:"Gen105", x: 340, y: 300, pmax: 450, pg: 300, cost_per_mw: 0.5, emissions_per_mw: 0.55 }
+];
+
+// === global flags ===
+const activeFilters = new Set(); // start UNscaled
+const BASE_S = 64; // default size when power scaling OFF
+const HALO_PAD = 6;
+
+const svg = d3.select('#map');
+const defs = d3.select('#defs');
+const root = d3.select('#root');
+
+// === helpers (use window.d3 to be robust) ===
+function makeCostColorScale(gens = currentGenerators){
+  const vals = (Array.isArray(gens) ? gens : [])
+    .map(g => g?.cost_per_mw)
+    .filter(v => Number.isFinite(v));
+  let minC = Math.min(...vals), maxC = Math.max(...vals);
+  if (!Number.isFinite(minC) || !Number.isFinite(maxC)) { minC = 0; maxC = 1; }
+  if (minC === maxC) { const pad = Math.max(1, Math.abs(minC)*0.1); minC -= pad; maxC += pad; }
+  const d0 = minC, d3max = maxC;
+  const d1 = d0 + (d3max - d0)*.33;
+  const d2 = d0 + (d3max - d0)*.66;
+  return window.d3.scaleLinear().domain([d0,d1,d2,d3max])
+    .range(["#2e7d32","#f9a825","#fb8c00","#c62828"]) // green→yellow→orange→red
+    .clamp(true);
+}
+function makePowerDiceScale(gens = currentGenerators){
+  const [minP, maxP] = window.d3.extent(gens, g => g.pmax || 0);
+  const MIN_S = 44, MAX_S = 120;
+  return window.d3.scaleSqrt()
+    .domain([Math.max(1, minP||1), Math.max(2, maxP||2)])
+    .range([MIN_S, MAX_S]).clamp(true);
+}
+function makeEmiStrokeScale(gens = currentGenerators){
+  const [minE, maxE] = window.d3.extent(gens, g => g.emissions_per_mw || 0);
+  return window.d3.scaleLinear().domain([minE||0, maxE||1]).range([0.6,4.5]).clamp(true);
+}
+function makeEmiSpacingScale(gens = currentGenerators){
+  const [minE, maxE] = window.d3.extent(gens, g => g.emissions_per_mw || 0);
+  return window.d3.scaleLinear().domain([minE||0, maxE||1]).range([12,6]).clamp(true);
+}
+function ensureHatch(defsSel, genId, strokeW, step){
+  const pid = `hatch-${genId}`;
+  let pat = defsSel.select(`#${CSS.escape(pid)}`);
+  if (pat.empty()){
+    pat = defsSel.append('pattern')
+      .attr('id', pid)
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', step).attr('height', step)
+      .attr('patternTransform', 'rotate(45)');
+    pat.append('line')
+      .attr('x1', 0).attr('y1', 0)
+      .attr('x2', 0).attr('y2', step)
+      .attr('stroke', '#000')
+      .attr('stroke-width', strokeW)
+      .attr('stroke-linecap', 'butt');
+  } else {
+    pat.attr('width', step).attr('height', step);
+    pat.select('line').attr('y2', step).attr('stroke-width', strokeW);
+  }
+  return `url(#${pid})`;
+}
+
+// === UI wiring ===
+function wireToggle(key, elId, statusId){
+  const el = document.getElementById(elId);
+  const status = document.getElementById(statusId);
+  if (!el) return;
+  if (el.dataset.wired === '1') return; // wire once
+  el.dataset.wired = '1';
+
+  const setState = (on) => {
+    if (on) activeFilters.add(key); else activeFilters.delete(key);
+    el.classList.toggle('selected', on);
+    if (status) status.textContent = on ? 'Scaling ON' : 'Click to scale';
+  };
+  setState(activeFilters.has(key));
+
+  el.addEventListener('click', (ev) => {
+    ev.preventDefault(); ev.stopPropagation();
+    setState(!activeFilters.has(key));
+    update();
+  }, { passive:false });
+}
+
+wireToggle('power','scale-power','status-power');
+wireToggle('cost','scale-cost','status-cost');
+wireToggle('emissions','scale-emissions','status-emissions');
+
+// === draw once ===
+const gGens = root.selectAll('g.map-gen-group')
+  .data(currentGenerators, d => d.id)
+  .join(enter => {
+    const g = enter.append('g').attr('class','map-gen-group')
+      .attr('transform', d => `translate(${d.x},${d.y})`);
+    // base rect
+    g.append('rect').attr('class','map-gen').attr('rx',10).attr('ry',10);
+    // halo
+    g.append('rect').attr('class','map-gen-halo');
+    // hatch overlay
+    g.append('rect').attr('class','gen-hatch').attr('pointer-events','none');
+    // pips container
+    g.append('g').attr('class','dice-pips');
+    return g;
+  });
+
+// === pips helper ===
+function drawDicePipsScaled(g, W, H, maxPips, curPips, locked){
+  const pipG = g.select('g.dice-pips');
+  pipG.selectAll('*').remove();
+  const grid=3, pad=Math.max(6, Math.min(W,H)*0.10);
+  const boxW=W-pad*2, boxH=H-pad*2; const cellW=boxW/grid, cellH=boxH/grid;
+  const r=Math.max(3, Math.min(cellW,cellH)*0.22);
+  const positions=[];
+  for(let gy=grid-1; gy>=0; gy--){ for(let gx=0; gx<grid; gx++){ positions.push({
+    x:-boxW/2+gx*cellW+cellW/2, y:-boxH/2+gy*cellH+cellH/2 }); } }
+  const data=positions.slice(0, Math.min(9,Math.max(1,maxPips)))
+    .map((p,i)=>({...p,i}));
+  pipG.selectAll('circle.pip').data(data, d=>d.i).join('circle')
+    .attr('class','pip')
+    .attr('cx',d=>d.x).attr('cy',d=>d.y).attr('r',r)
+    .attr('stroke','#111').attr('stroke-width',1)
+    .attr('fill', d => (d.i < curPips ? '#ffffff' : '#000000'))
+    .style('cursor', locked ? 'default' : 'pointer')
+    .on('click', function(ev,d){ if(locked) return; onPipClick(g, d.i, maxPips, curPips); });
+}
+
+function onPipClick(groupSel, idx, maxPips, curPips){
+  // find datum
+  const id = groupSel.select('.map-gen').datum()?.id || groupSel.select('.map-gen').attr('id');
+  const gen = currentGenerators.find(x => x.id === id);
+  if (!gen) return;
+  const BLOCK_MW=100;
+  let newPips = (idx === 0 && curPips>0) ? 0 : (idx+1);
+  newPips = Math.max(0, Math.min(maxPips, newPips));
+  const snapped = Math.round((newPips*BLOCK_MW)/50)*50; // snap to 50
+  gen.pg = snapped;
+  update();
+}
+
+// === main update ===
+function update(){
+  const gens = currentGenerators;
+  const costColor  = makeCostColorScale(gens);
+  const sideByPmax = makePowerDiceScale(gens);
+  const emiStroke  = makeEmiStrokeScale(gens);
+  const emiSpacing = makeEmiSpacingScale(gens);
+
+  const scalePower = activeFilters.has('power');
+  const colorCost  = activeFilters.has('cost');
+  const scaleEmi   = activeFilters.has('emissions');
+  const BASE = BASE_S;
+
+  // legend preview
+  const legend = d3.select('#cost-legend');
+  const dom = costColor.domain();
+  legend.selectAll('div.sw').data([dom[0], (dom[0]+dom[3])/2, dom[3]]).join('div')
+    .attr('class','sw chip').style('background', d => costColor(d));
+
+  gGens.each(function(d){
+    const g = d3.select(this);
+    const id = d.id;
+
+    const pmax = d.pmax || 0;
+    const S = scalePower ? sideByPmax(pmax) : BASE;
+    const W=S, H=S;
+    const isOn = (d.pg || 0) > 0;
+
+    // base rect
+    g.select('.map-gen')
+      .attr('id', id)
+      .attr('x', -W/2).attr('y', -H/2)
+      .attr('width', W).attr('height', H)
+      .attr('fill', colorCost ? costColor(d.cost_per_mw ?? 0) : '#ffffff')
+      .attr('stroke','#111').attr('stroke-width',1.4);
+
+    // halo
+    g.select('.map-gen-halo')
+      .attr('x', -W/2 - HALO_PAD).attr('y', -H/2 - HALO_PAD)
+      .attr('width', W + HALO_PAD*2).attr('height', H + HALO_PAD*2)
+      .attr('class', isOn ? 'map-gen-halo gen-halo-on' : 'map-gen-halo gen-halo-off');
+
+    // hatch
+    const hatch = g.select('.gen-hatch')
+      .attr('x', -W/2).attr('y', -H/2)
+      .attr('width', W).attr('height', H);
+    // reset first
+    hatch.attr('fill', 'none').attr('opacity', 0).attr('stroke','none');
+    if (scaleEmi) {
+      const url = ensureHatch(defs, id, emiStroke(d.emissions_per_mw||0), emiSpacing(d.emissions_per_mw||0));
+      hatch.attr('fill', url).attr('opacity', 0.4);
+    }
+
+    // pips
+    const BLOCK_MW=100; const maxPips=Math.max(1,Math.min(9, Math.round(pmax/BLOCK_MW)));
+    const curPips=Math.max(0,Math.min(maxPips, Math.round((d.pg||0)/BLOCK_MW)));
+    drawDicePipsScaled(g, W, H, maxPips, curPips, false);
+  });
+}
+
+update();
+</script>
+</body>
+</html>

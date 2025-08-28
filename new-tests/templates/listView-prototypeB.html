@@ -653,22 +653,22 @@ async function loadScenario(scenarioId){
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
 
-  currentScenarioId   = scenarioId;
-  currentScenarioData = data.scenario || {};
-  currentGenerators   = data.generators || [];
-  const lines         = data.lines || data.powerflow?.lines || [];
+  currentScenarioId   = scenarioId;              // (if you track it)
+currentScenarioData = data.scenario ? data.scenario : data;
+currentGenerators   = data.generators || [];
+const lines         = data.lines || data.powerflow?.lines || [];
+window.currentLines = lines;
 
-  window.currentLines = lines; // if other modules rely on it
+// Build the task card first (creates #check-power/#check-lines DOM)
+setupTaskSection(currentScenarioData);
 
-  renderGenerators(currentGenerators);
-  renderLines(lines, data.solved !== false);
-  renderOverview(currentGenerators, currentScenarioData, lines);
-  updateLinesCard(lines);
-  updateMapGeneratorsFromScenario();
-  setupTaskSection(currentScenarioData);
-  // No second “scenario UI” call — renderOverview already computed + applied it
+// THEN render everything that might toggle those checkboxes
+renderGenerators(currentGenerators);
+renderLines(lines, data.solved !== false);
+renderOverview(currentGenerators, currentScenarioData, lines);
+updateLinesCard(lines);
+updateMapGeneratorsFromScenario();
 }
-
 
     function populateScenarioDropdown(scenarios, defaultId) {
       const select = document.getElementById("scenario-select");
@@ -724,7 +724,7 @@ function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
     return rate > 0 && flow > rate;
   }).length;
 
-  const meetsPower      = targetMW > 0 ? totals.power >= targetMW : true;
+  const meetsPower = (targetMW > 0) ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05) : true;
   const withinCost      = (maxCost == null) ? true : totals.cost      <= maxCost;
   const withinEmissions = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
   const noOverloads     = overloadedCount === 0;
@@ -860,8 +860,12 @@ function renderOverview(gens, scenarioData = {}, linesIn = []) {
 
   const okPill = document.getElementById("lines-ok-pill");
   if (okPill) {
-    const solved = overloadedCount === 0 && target > 0 && totalPower >= target;
-    okPill.style.display = solved ? "inline-block" : "none";
+    const within = target > 0
+  ? (totalPower >= target * 0.95 && totalPower <= target * 1.05)
+  : false;
+
+const solved = overloadedCount === 0 && within;
+okPill.style.display = solved ? "inline-block" : "none";
   }
 
   // --- power blocks grid render ---
@@ -909,22 +913,34 @@ function deltaInfo(curr, prev) {
   return { cls: "neutral", txt: "–" };
 }
 
-function makeMini(line, pct, prevPct) {
-  const key = getLineKey(line);
-  const di  = deltaInfo(pct, prevPct);
-  const klass = loadClass(pct);
-  const name = `L ${line.from_bus ?? line.from}→${line.to_bus ?? line.to}`;
+// Helper: small inline chevron SVG (uses existing chevronPath())
+function miniChevronSVG(color) {
+  const size = 10; // tuned to fit the card nicely
   return `
-    <div class="line-mini ${klass}" data-line="${key}">
-      <div class="chev"></div>
-      <div class="txt">
-        <span class="name">${name}</span>
-        <span class="load">${Math.round(pct)}%</span>
-        <span class="delta ${di.cls}">${di.txt}</span>
-      </div>
-    </div>
-  `;
+    <svg width="16" height="16" viewBox="-1 -1 24 24" aria-hidden="true">
+      <path d="${chevronPath(size)}" fill="${color}" stroke="#111" stroke-width="0.6"/>
+    </svg>`;
 }
+
+// MapView-style mini (NO line name; just load + delta)
+function makeMini(line, pct, prevPct, compact=false) {
+  const accent = getLoadColor(pct / 100); // your getLoadColor expects 0..1
+  const delta  = Math.round(pct - (prevPct ?? pct));
+  const dCls   = delta > 0 ? "up" : (delta < 0 ? "down" : "neutral");
+  const dTxt   = delta > 0 ? `+${delta}%` : (delta < 0 ? `${delta}%` : `–`);
+
+  const borderW = compact ? "1.5px" : "3px"; // rich row vs top row
+
+  return `
+    <div class="line-card" style="--accent:${accent}; border-color:${accent}; border-width:${borderW};">
+      <div class="left">${miniChevronSVG(accent)}</div>
+      <div class="right">
+        <div class="load">${Math.round(pct)}%</div>
+        <div class="delta ${dCls}">${dTxt}</div>
+      </div>
+    </div>`;
+}
+
 
 /**
  * Populate Lines card like MapView B:
@@ -938,40 +954,44 @@ function updateLinesCard(linesIn) {
     : (linesIn == null ? [] :
        (typeof linesIn === "object" && !("length" in linesIn)) ? Object.values(linesIn) : Array.from(linesIn));
 
-  const richRow = document.getElementById("lines-row-rich");
-  const topRow  = document.getElementById("lines-row-top");
-  const countEl = document.getElementById("overview-lines");
-
+  const richRow = document.getElementById("row-rich");
+  const topRow  = document.getElementById("row-top");
   if (!richRow || !topRow) return;
 
-  // Compute % and sort by severity
-  const withPct = lines.map(l => {
-    const pct = linePct(l);
-    const key = getLineKey(l);
-    const prev = _prevLineFlow[key] ?? pct;
-    _prevLineFlow[key] = pct;
-    return { line: l, pct, prev };
+  const countEl = document.getElementById("overview-lines");
+  const flow = (window._prevLineFlow ||= {});
+
+  // Compute % loads, remember previous, sort by severity
+  const withPct = lines.map(line => {
+    const pct  = linePct(line);
+    const key  = getLineKey(line);
+    const prev = (flow[key] ?? pct);
+    flow[key]  = pct;
+    return { line, pct, prev, key };
   }).sort((a,b) => b.pct - a.pct);
 
   const overloaded = withPct.filter(x => x.pct >= 100);
   const others     = withPct.filter(x => x.pct < 100);
 
-  // Count & pill handled in renderOverview; keep count synced here if present
-  if (countEl) countEl.textContent = overloaded.length;
+  // Sync count (badge/pill elsewhere also reads this)
+  if (countEl) countEl.textContent = String(overloaded.length);
 
-  // Top 3 overloaded
-  const rich = overloaded.slice(0, 3)
-    .map(x => makeMini(x.line, x.pct, x.prev)).join("");
+  // Top 3 overloaded (rich row, thick border)
+  const topOver = overloaded.slice(0, 3);
 
-  // Next best (up to 6), excluding the ones already shown
-  const shownKeys = new Set(overloaded.slice(0,3).map(x => getLineKey(x.line)));
-  const top = others.filter(x => !shownKeys.has(getLineKey(x.line)))
-    .slice(0, 6)
-    .map(x => makeMini(x.line, x.pct, x.prev)).join("");
+  // Next up to 6 top lines excluding the ones already shown (compact row)
+  const shown   = new Set(topOver.map(x => x.key));
+  const nextTop = others.filter(x => !shown.has(x.key)).slice(0, 6);
 
-  richRow.innerHTML = rich || "";
-  topRow.innerHTML  = top  || "";
+  richRow.innerHTML = topOver
+    .map(x => makeMini(x.line, x.pct, x.prev, /*compact=*/false))
+    .join("");
+
+  topRow.innerHTML = nextTop
+    .map(x => makeMini(x.line, x.pct, x.prev, /*compact=*/true))
+    .join("");
 }
+
 
 
 
@@ -1748,22 +1768,60 @@ zoomGroup.selectAll("path.map-load")
 });
 
 function setupTaskSection(scenario){
-  const targetSpan = document.getElementById("constraint-power");
-  if (targetSpan) targetSpan.textContent = String(scenario?.target_mw ?? "–");
+  const container = document.getElementById("overview-task-section");
 
-  const maxCost = (scenario?.max_cost != null) ? Number(scenario.max_cost) : null;
-  const budgetItem = document.getElementById("budget-check");
-  const costContainer = document.getElementById("constraint-cost-container");
-  const costSpan = document.getElementById("constraint-cost");
-  if (budgetItem)     budgetItem.style.display = (maxCost != null) ? "" : "none";
-  if (costContainer)  costContainer.style.display = (maxCost != null) ? "" : "none";
-  if (costSpan && maxCost != null) costSpan.textContent = String(maxCost);
+  // If no scenario (or empty object), keep the placeholder
+  if (!scenario || Object.keys(scenario).length === 0) {
+    container.innerHTML = `
+      <div class="task-card">
+        <div class="overview-label">Scenario Task</div>
+        <div id="task-placeholder" class="task-placeholder">No Scenario Loaded</div>
+      </div>`;
+    return;
+  }
 
-  const lockedAny = (Array.isArray(scenario?.locked_generators) && scenario.locked_generators.length)
-                 || (Array.isArray(scenario?.disabled_generators) && scenario.disabled_generators.length);
-  const lockRow = document.getElementById("constraint-locked");
-  if (lockRow) lockRow.style.display = lockedAny ? "" : "none";
+  const hasBudget  = scenario.max_cost !== undefined && scenario.max_cost !== null;
+  const lockedList = scenario.locked_generators || scenario.locked || [];
+  const disabList  = scenario.disabled_generators || scenario.disabled || [];
+  const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
+  const hasDisab   = Array.isArray(disabList)   && disabList.length > 0;
 
+  container.innerHTML = `
+    <div class="task-card">
+      <div class="overview-label">Scenario Task</div>
+      <div class="task-card" id="task-checklist">
+        <div class="task-content">
+          <!-- LEFT: REQUIREMENTS -->
+          <div class="task-left">
+            <div class="task-title">Requirements</div>
+            <ul id="task-requirements">
+<li>
+  <input type="checkbox" disabled id="check-power" />
+  Meet target power${scenario.target_mw != null ? ` (${scenario.target_mw} MW)` : ""}
+</li>
+              <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
+              ${hasBudget ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>` : ``}
+            </ul>
+          </div>
+
+          <!-- RIGHT: CONSTRAINTS (new copy) -->
+          <div class="task-right">
+            <div class="task-title">Constraints</div>
+            <div class="task-subtitle" id="task-constraints">
+              ${hasLocked ? `<div id="constraint-locked">Some generators are locked</div>` : ``}
+              ${hasDisab  ? `<div id="constraint-disabled">Some generators are disabled</div>` : ``}
+            </div>
+          </div>
+        </div>
+
+        <div class="task-actions">
+          <button id="submit-button" disabled>Submit Solution</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire submit
   const submitBtn = document.getElementById("submit-button");
   if (submitBtn){
     submitBtn.onclick = () => {
@@ -1772,7 +1830,12 @@ function setupTaskSection(scenario){
       showResultOverlay();
     };
   }
+
+  // Apply current state to the just-built UI
+  const state = evaluateScenarioState(window.currentGenerators || [], window.currentLines || [], scenario);
+  applyScenarioUI(state);
 }
+
 
 
 function showResultOverlay() {
