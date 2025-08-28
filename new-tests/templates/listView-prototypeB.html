@@ -592,6 +592,7 @@
 
     let totalPower = 0, totalCost = 0, totalEmissions = 0;
 
+    let hoveredGeneratorId = null;   // NEW: tracks list hover
     let currentScenarioId = "";
     let currentScenarioData = null;
     let availableScenarios = [];
@@ -648,6 +649,37 @@ function hideTooltip() {
       }
     }
 
+// Settings lifted from MapView B
+// === Generator layout constants (global) ===
+const BLOCK_UNIT = 100, HALF_STEP = BLOCK_UNIT/2, PAD_INNER = 10, BLOCK_GAP = 4;
+const MIN_GEN_W = 50, WIDTH_VARIATION = 80, MAX_GEN_W = MIN_GEN_W + WIDTH_VARIATION;
+const MAX_GEN_H = 220, HALO_PAD = 8;
+
+const roundCapToHalf = pmax => Math.ceil((pmax||0)/HALF_STEP)*HALF_STEP;
+const capBlocks = p => {
+  const cap = roundCapToHalf(p);
+  const full = Math.floor(cap/BLOCK_UNIT);
+  const half = (cap % BLOCK_UNIT) === HALF_STEP;
+  return full + (half ? 1 : 0);
+};
+function computeBlockH(gens){
+  const ext = d3.extent(gens || [], g => g.pmax || 0);
+  const maxB = capBlocks(ext[1] || 0);
+  const avail = MAX_GEN_H - PAD_INNER*2 - (maxB-1)*BLOCK_GAP;
+  return Math.min(28, avail/Math.max(1, maxB));
+}
+function getWidthScale(){
+  const ext = d3.extent((window.currentGenerators || []), g => g.cost_per_mw || 0);
+  return d3.scaleLinear().domain([Math.max(1, ext[0]||1), ext[1]||1]).range([MIN_GEN_W, MAX_GEN_W]);
+}
+function emissionsColor(gen){
+  const e = gen.emissions_per_mw||0;
+  const ext = d3.extent((window.currentGenerators || []), g => g.emissions_per_mw||0);
+  const sat = d3.scaleLinear().domain([ext[1]||1, ext[0]||0]).range([20,85]).clamp(true);
+  return `hsl(140, ${sat(e)}%, 45%)`;
+}
+
+
 
 async function loadScenario(scenarioId){
   const res = await fetch(`/api/scenario/${scenarioId}`);
@@ -703,6 +735,12 @@ function normalizeLines(linesIn){
   return Array.from(linesIn);
 }
 function nz(n){ return Number(n || 0); }
+
+
+
+
+
+
 
 // --- NEW: pure state computation (no DOM here) ---
 function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
@@ -1218,11 +1256,11 @@ function getSortFunction(key, order) {
 
 function createGeneratorCard(gen, maxPmax) {
   const genId = `Gen${gen.bus}`;
+  const card = document.createElement("div");
+  card.dataset.genId = genId; // e.g., "Gen23"
   const locked = currentScenarioData?.locked_generators?.includes(genId);
   const disabled = currentScenarioData?.disabled_generators?.includes(genId);
-  const status = gen.user_active ? "active" : "inactive";
 
-  const card = document.createElement("div");
   card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
 
@@ -1417,27 +1455,15 @@ right.appendChild(toggle);
   updateMapGeneratorsFromScenario();  // update stroke styling
 });
 
-    card.addEventListener("mouseenter", () => {
-      const genId = `Gen${gen.bus}`;
-      const node = document.getElementById(genId);
-      if (node) {
-        const cx = parseFloat(node.getAttribute("data-x"));
-        const cy = parseFloat(node.getAttribute("data-y"));
+card.addEventListener("mouseenter", () => {
+  hoveredGeneratorId = `Gen${gen.bus}`;
+  updateMapGeneratorsFromScenario();     // show halo
+});
 
-        d3.select(`#${CSS.escape(genId)}`).classed("hovered", true);
-
-        tooltipText
-          .text(gen.station_name)
-          .attr("x", cx + 8)
-          .attr("y", cy - 8)
-          .style("display", "block");
-      }
-    });
-
-    card.addEventListener("mouseleave", () => {
-      d3.select(`#Gen${gen.bus}`).classed("hovered", false);
-      tooltipText.style("display", "none");
-    });
+card.addEventListener("mouseleave", () => {
+  if (hoveredGeneratorId === `Gen${gen.bus}`) hoveredGeneratorId = null;
+  updateMapGeneratorsFromScenario();     // hide halo (unless selected)
+});
 
 
   return card;
@@ -1628,36 +1654,6 @@ const softShadow = defs.append("filter")
 softShadow.append("feDropShadow")
   .attr("dx",0).attr("dy",2).attr("stdDeviation",2.5).attr("flood-opacity",0.25);
 
-// Settings lifted from MapView B
-// === Generator layout constants (global) ===
-const BLOCK_UNIT = 100, HALF_STEP = BLOCK_UNIT/2, PAD_INNER = 10, BLOCK_GAP = 4;
-const MIN_GEN_W = 50, WIDTH_VARIATION = 80, MAX_GEN_W = MIN_GEN_W + WIDTH_VARIATION;
-const MAX_GEN_H = 220, HALO_PAD = 8;
-
-const roundCapToHalf = pmax => Math.ceil((pmax||0)/HALF_STEP)*HALF_STEP;
-const capBlocks = p => {
-  const cap = roundCapToHalf(p);
-  const full = Math.floor(cap/BLOCK_UNIT);
-  const half = (cap % BLOCK_UNIT) === HALF_STEP;
-  return full + (half ? 1 : 0);
-};
-function computeBlockH(gens){
-  const ext = d3.extent(gens || [], g => g.pmax || 0);
-  const maxB = capBlocks(ext[1] || 0);
-  const avail = MAX_GEN_H - PAD_INNER*2 - (maxB-1)*BLOCK_GAP;
-  return Math.min(28, avail/Math.max(1, maxB));
-}
-function getWidthScale(){
-  const ext = d3.extent((window.currentGenerators || []), g => g.cost_per_mw || 0);
-  return d3.scaleLinear().domain([Math.max(1, ext[0]||1), ext[1]||1]).range([MIN_GEN_W, MAX_GEN_W]);
-}
-function emissionsColor(gen){
-  const e = gen.emissions_per_mw||0;
-  const ext = d3.extent((window.currentGenerators || []), g => g.emissions_per_mw||0);
-  const sat = d3.scaleLinear().domain([ext[1]||1, ext[0]||0]).range([20,85]).clamp(true);
-  return `hsl(140, ${sat(e)}%, 45%)`;
-}
-
 
 const generatorNodes = nodes.filter(d => d.type === "generator");
 const genGroups = zoomGroup.selectAll("g.map-gen-group")
@@ -1666,11 +1662,13 @@ const genGroups = zoomGroup.selectAll("g.map-gen-group")
   .attr("class","map-gen-group")
   .attr("transform", d => `translate(${d.x},${d.y})`);
 
+// was .attr("stroke-width", 3)
 genGroups.append("rect")
   .attr("class","map-gen-halo")
-  .attr("fill","none").attr("stroke","#42a5f5").attr("stroke-width",3)
+  .attr("fill","none").attr("stroke","#42a5f5").attr("stroke-width",6)
   .attr("rx",12).attr("ry",12).attr("opacity",0)
   .style("pointer-events","none");
+
 
 genGroups.append("rect")
   .attr("class","map-gen gen-card")
@@ -1679,9 +1677,6 @@ genGroups.append("rect")
   .attr("data-y", d=>d.y)          // ← add
   .attr("x",-25).attr("y",-25).attr("width",50).attr("height",50)
   .attr("rx",10).attr("ry",10);
-
-genGroups.append("clipPath").attr("id", d=>`clip-${d.id}`).append("rect");
-genGroups.append("g").attr("class","blocks").attr("clip-path", d=>`url(#clip-${d.id})`);
 
 const LOCK_SRC = "/new-tests/lock.png";
 const LOCK_FALLBACK = "data:image/svg+xml;utf8,\
@@ -1755,16 +1750,6 @@ zoomGroup.selectAll("path.map-load")
       d3.select(this).classed("hovered", false);
     });
 
-  // Optional: add generator label
-  /*
-  zoomGroup.selectAll("text.map-gen-label")
-    .data(nodes.filter(d => d.type === "generator"))
-    .enter()
-    .append("text")
-    .attr("x", d => d.x + 6)
-    .attr("y", d => d.y + 3)
-    .attr("font-size", "6px")
-    .text(d => d.id); */
 });
 
 function setupTaskSection(scenario){
@@ -1865,101 +1850,37 @@ function showResultOverlay() {
 }
 
 
-function updateMapGeneratorsFromScenario(){
-  const SCALED_BLOCK_H = computeBlockH(currentGenerators);
-  const widthScale = getWidthScale();
+function updateMapGeneratorsFromScenario() {
+  if (!window.currentScenarioData || !window.currentGenerators) return;
 
-  const sc = currentScenarioData || {};
-  const normalizeId = v => (String(v).startsWith("Gen") ? String(v) : `Gen${v}`);
+  const lockedSet   = new Set(currentScenarioData.locked_generators || currentScenarioData.locked || []);
+  const disabledSet = new Set(currentScenarioData.disabled_generators || currentScenarioData.disabled || []);
 
-  const lockedSet   = new Set((sc.locked_generators   || sc.locked   || []).map(normalizeId));
-  const disabledSet = new Set((sc.disabled_generators || sc.disabled || []).map(normalizeId));
+  // Build a quick lookup of "on/off" by id from active list,
+  // or however your app currently determines ON state.
+  const onSet = new Set(currentGenerators.active.map(g => g.name || g.id));
 
-  d3.selectAll(".map-gen-group").each(function(){
+  d3.selectAll("g.map-gen-group").each(function() {
     const g = d3.select(this);
-    const id = g.select(".map-gen").attr("id");
-    const gen = (currentGenerators || []).find(x => `Gen${x.bus}` === id) || {pg:0,pmax:0,cost_per_mw:1,emissions_per_mw:0};
-
-    const capsTotal = capBlocks(gen.pmax||0);
-    const H = Math.min(MAX_GEN_H, PAD_INNER*2 + capsTotal*SCALED_BLOCK_H + Math.max(0,capsTotal-1)*BLOCK_GAP);
-    const W = Math.max(MIN_GEN_W, widthScale(gen.cost_per_mw || 0));
-    const innerW = W - PAD_INNER*2;
-    const topY = -H/2 + PAD_INNER;
-    const isOn = (gen.pg||0) > 0;
-
-    // frame
-    g.select(".map-gen")
-      .attr("x", -W/2).attr("y", -H/2).attr("width", W).attr("height", H)
-      .attr("rx", 10).attr("ry", 10)
-      .classed("gen-card--on", isOn)
-      .classed("gen-card--dice-on", false)
-      .classed("gen-card--dice-off", false);
-
-    // halo
-    g.select(".map-gen-halo")
-      .attr("x", -W/2-HALO_PAD).attr("y", -H/2-HALO_PAD)
-      .attr("width", W+HALO_PAD*2).attr("height", H+HALO_PAD*2)
-      .attr("opacity", id === selectedGeneratorId ? 1 : 0);
-
-    // clip
-    g.select(`#clip-${CSS.escape(id)} rect`)
-      .attr("x", -W/2 + PAD_INNER).attr("y", -H/2 + PAD_INNER)
-      .attr("width", innerW).attr("height", Math.max(0, H - PAD_INNER*2));
-
-    // capacity slots (top→down; top may be half)
-    const cap = roundCapToHalf(gen.pmax||0);
-    const full = Math.floor(cap / BLOCK_UNIT);
-    const hasHalf = (cap % BLOCK_UNIT) === HALF_STEP;
-    const slots = [
-      ...(hasHalf ? [{ size: HALF_STEP }] : []),
-      ...Array.from({length: full}, () => ({ size: BLOCK_UNIT }))
-    ];
-
-    const bgs = g.select(".blocks").selectAll("rect.gen-block-bg").data(slots);
-    bgs.join(e => e.append("rect").attr("class","gen-block-bg"),
-             u => u, x => x.remove())
-      .attr("x", -innerW/2)
-      .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-      .attr("width", b => b.size===HALF_STEP ? innerW/2 : innerW)
-      .attr("height", SCALED_BLOCK_H)
-      .attr("rx", 6).attr("ry", 6)
-      .attr("fill", "transparent").attr("stroke", "#000").attr("stroke-width", .8);
-
-    const fills = g.select(".blocks").selectAll("rect.gen-block-fill").data(slots);
-    fills.join(e => e.append("rect").attr("class","gen-block-fill"),
-               u => u, x => x.remove())
-      .attr("x", -innerW/2)
-      .attr("y", (b,i) => topY + i*(SCALED_BLOCK_H + BLOCK_GAP))
-      .attr("height", SCALED_BLOCK_H)
-      .attr("rx", 6).attr("ry", 6)
-      .attr("width", b => {
-        // quantize pg to 50 MW like MapView, fill each slot fully or not at all
-        const q = Math.round((gen.pg||0)/HALF_STEP)*HALF_STEP;
-        const slotThresh = (hasHalf && i===0) ? HALF_STEP : BLOCK_UNIT;
-        return q >= (cap - Array.from({length:i+1}).reduce((s,_,k)=>s + (k===0 && hasHalf ? HALF_STEP:BLOCK_UNIT),0) + slotThresh)
-          ? (b.size===HALF_STEP ? innerW/2 : innerW) : 0;
-      })
-      .attr("fill", emissionsColor(gen));
-
-    // emissions ring (visible when emissions filter used; keep visible off for now)
-    g.selectAll("rect.gen-emi-ring")
-      .data([0])
-      .join("rect")
-      .attr("class","gen-emi-ring")
-      .attr("x",-W/2).attr("y",-H/2).attr("width",W).attr("height",H)
-      .style("--emi", emissionsColor(gen))
-      .attr("opacity", 0);
-
-    // overlays
+    const id = g.select(".map-gen.gen-card").attr("id");
+    const isOn = onSet.has(id);
     const isLocked = lockedSet.has(id);
     const isDisabled = disabledSet.has(id);
-        g.select(".map-gen-lock").style("display", lockedSet.has(id) ? null : "none");
-    g.select(".map-gen-disabled").style("display", disabledSet.has(id) ? null : "none");
- 
-    // stroke emphasis for selection
-    g.select(".map-gen")
-      .attr("stroke", id===selectedGeneratorId ? "#42a5f5" : null)
-      .attr("stroke-width", id===selectedGeneratorId ? 3 : null);
+    const isSelected = (id === window.selectedGeneratorId);
+
+    // Main square
+    g.select(".map-gen.gen-card")
+      .attr("fill", isOn ? "var(--gen-on)" : "#fff")
+      .attr("stroke", isSelected ? "#42a5f5" : "#222")
+      .attr("stroke-width", isSelected ? 3 : 1.2);
+
+    // Halo for selection/hover emphasis
+    g.select(".map-gen-halo")
+      .attr("opacity", isSelected ? 0.9 : 0);
+
+    // Lock / disabled overlays
+    g.select(".map-gen-lock").style("display", isLocked   ? null : "none");
+    g.select(".map-gen-disabled").style("display", isDisabled ? null : "none");
   });
 }
 
@@ -1991,14 +1912,25 @@ function applyGeneratorState(state) {
     bindSortListeners();     // ✅ Only here
     updateSortButtonStyles();   // ✅ This applies the correct style immediately
     fetchAllScenarios();     // ✅ Normal startup logic
+
   });
 
   </script>
 <script>
   window.addEventListener("DOMContentLoaded", () => {
     // 1) Move existing Admin controls (scenario select + reset) into #admin-panel.
-    const adminPanel = document.getElementById("admin-panel");
-    const adminToggle = document.getElementById("admin-toggle");
+    const adminBtn   = document.getElementById('admin-toggle');
+const adminPanel = document.getElementById('admin-panel'); // ← add this
+
+document.addEventListener('click', (e) => {
+  const inside = el => el && (el === e.target || el.contains(e.target));
+  if (![filtersPanel, legendPanel, adminPanel].some(inside) &&
+      ![filtersBtn,   legendBtn,  adminBtn  ].some(inside)) {
+    filtersPanel?.classList.add('collapsed');
+    legendPanel?.classList.add('collapsed');
+    adminPanel?.classList.add('collapsed'); // safe optional
+  }
+});
 
     // Source elements
     const row4 = document.getElementById("row-4");
@@ -2075,6 +2007,24 @@ window.addEventListener('DOMContentLoaded', () => {
     oldLegend.remove();
   }
 
+  document.getElementById("generators-container")
+  .addEventListener("click", (e) => {
+    const card = e.target.closest(".generator-card");
+    if (!card) return;
+
+    const genId = card.dataset.genId;
+    if (!genId) return;
+
+    // mark selection in memory + UI
+    selectedGeneratorId = genId;
+    document.querySelectorAll(".generator-card.selected")
+      .forEach(el => el.classList.remove("selected"));
+    card.classList.add("selected");
+
+    // update the map (halo + stroke)
+    updateMapGeneratorsFromScenario();
+  }, true); // capture = true to run even if inner widgets stop propagation
+
   // --- Toggle behavior (like Admin)
   const filtersBtn = document.getElementById('map-filters-toggle');
   const legendBtn  = document.getElementById('map-legend-toggle');
@@ -2104,15 +2054,6 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-console.group("🔒 Lock/Disabled debug");
-console.log("scenario keys:", Object.keys(currentScenarioData||{}));
-console.log("locked:", currentScenarioData.locked_generators || currentScenarioData.locked || []);
-console.log("disabled:", currentScenarioData.disabled_generators || currentScenarioData.disabled || []);
-console.log("overlay images present?",
-  !!document.querySelector(".map-gen-lock"),
-  !!document.querySelector(".map-gen-disabled"));
-console.groupEnd();
-
 </script>
 <script>
   function chevronPath(scale){
@@ -2120,20 +2061,84 @@ console.groupEnd();
     return `M 0 0 L ${length} ${-width} L ${length*0.8} 0 L ${length} ${width} Z`;
   }
 </script>
+
 <script>
-function debugLocks() {
-  const sc = window.currentScenarioData || {};
-  console.group("🔒 Lock/Disabled debug");
-  console.log("scenario keys:", Object.keys(sc));
-  console.log("locked:",   sc.locked_generators   ?? sc.locked   ?? []);
-  console.log("disabled:", sc.disabled_generators ?? sc.disabled ?? []);
-  console.log("overlay images present?",
-    !!document.querySelector(".map-gen-lock"),
-    !!document.querySelector(".map-gen-disabled"));
-  console.groupEnd();
-}
-// Call after a scenario is loaded:
-window.addEventListener("load", () => setTimeout(debugLocks, 0));
+window.addEventListener("DOMContentLoaded", () => {
+  const adminPanel    = document.getElementById("admin-panel");
+  const adminToggle   = document.getElementById("admin-toggle");
+  const filtersPanel  = document.getElementById("map-filters-panel");
+  const filtersToggle = document.getElementById("map-filters-toggle");
+  const legendPanel   = document.getElementById("map-legend-panel");
+  const legendToggle  = document.getElementById("map-legend-toggle");
+
+  // Move contents safely (children only)
+  const row4 = document.getElementById("row-4");
+  const ctrlLeft = row4?.querySelector(".controls-left");
+  if (ctrlLeft && adminPanel) {
+    [...ctrlLeft.childNodes].forEach(n => adminPanel.appendChild(n));
+    row4.style.display = "none";
+  }
+  const oldFilters = document.getElementById("map-filters");
+  if (oldFilters && filtersPanel) {
+    [...oldFilters.childNodes].forEach(n => filtersPanel.appendChild(n));
+    oldFilters.remove();
+  }
+  const oldLegend = document.getElementById("map-legend-bar");
+  if (oldLegend && legendPanel) {
+    [...oldLegend.childNodes].forEach(n => legendPanel.appendChild(n));
+    oldLegend.remove();
+  }
+
+  // Toggle helper
+  const togglePanel = (btn, panel) => {
+    if (!btn || !panel) return;
+    btn.addEventListener("click", () => {
+      const isCollapsed = panel.classList.contains("collapsed");
+      [adminPanel, filtersPanel, legendPanel].forEach(p => { if (p && p !== panel) p.classList.add("collapsed"); });
+      panel.classList.toggle("collapsed", !isCollapsed);
+    });
+  };
+  togglePanel(adminToggle,   adminPanel);
+  togglePanel(filtersToggle, filtersPanel);
+  togglePanel(legendToggle,  legendPanel);
+
+  // Click-away close (same scope, so no undefineds)
+  document.addEventListener("click", (e) => {
+    const inside = el => el && (el === e.target || el.contains(e.target));
+    if (![adminPanel, filtersPanel, legendPanel].some(inside) &&
+        ![adminToggle, filtersToggle, legendToggle].some(inside)) {
+      [adminPanel, filtersPanel, legendPanel].forEach(p => p?.classList.add("collapsed"));
+    }
+  });
+});
+
+
+const listsRoot = document.getElementById("generators-container");
+
+listsRoot.addEventListener("mouseover", (e) => {
+  const card = e.target.closest(".generator-card");
+  if (!card) return;
+  const id = card.dataset.genId;
+  d3.selectAll(".map-gen-halo")
+    .attr("opacity", function() {
+      const gid = d3.select(this.parentNode).select(".map-gen.gen-card").attr("id");
+      return gid === id ? 0.9 : (gid === window.selectedGeneratorId ? 0.9 : 0);
+    });
+});
+
+listsRoot.addEventListener("mouseout", (e) => {
+  const related = e.relatedTarget;
+  if (related && listsRoot.contains(related)) return; // still inside lists
+  // restore halos to "selected only"
+  d3.selectAll(".map-gen-halo")
+    .attr("opacity", function() {
+      const gid = d3.select(this.parentNode).select(".map-gen.gen-card").attr("id");
+      return gid === window.selectedGeneratorId ? 0.9 : 0;
+    });
+});
+
 </script>
+
+
 </body>
 </html>

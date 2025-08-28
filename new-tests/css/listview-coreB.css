@@ -651,3 +651,4 @@ button:hover{ filter: brightness(0.98); }
 #scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .66rem; }
 #scale-lines .line-card:hover  { background: #f7f9fb; }
 
+.gen-card--on { fill: #4caf50; stroke: #1b5e20; stroke-width: 1.6; }
