@@ -597,6 +597,7 @@
     let currentScenarioData = null;
     let availableScenarios = [];
     let currentGenerators = [];
+    window.currentGenerators = currentGenerators;
     let previousLineFlows = {};  // keyed by `from_bus-to_bus`
     let activeGenerators = [];
     let inactiveGenerators = [];
@@ -605,6 +606,8 @@
 const formatMW  = v => `${Math.round(Number(v||0))} MW`;
 const formatUSD = v => `$${Math.round(Number(v||0))}`;
 const formatCO2 = v => `${Math.round(Number(v||0))} CO₂`;
+
+
 
 
     let historyStack = [];
@@ -1205,8 +1208,18 @@ function getLoadColor(pct) {
 
 
 
-function renderGenerators(gens) {
-  currentGenerators = gens;
+function renderGenerators(gens){
+  // 1) Make data globally visible for the updater
+  window.currentGenerators = Array.isArray(gens) ? gens : (
+    Array.isArray(window.activeGenerators) || Array.isArray(window.inactiveGenerators)
+      ? [...(window.activeGenerators || []), ...(window.inactiveGenerators || [])]
+      : []
+  );
+
+  // 2) Seed user_active from pg so some gens can be ON
+  if (typeof markUserActiveStatus === 'function') {
+    markUserActiveStatus(window.currentGenerators);
+  }
 
   const lockedGens = gens.filter(g => g.locked);
   const disabledGens = gens.filter(g => g.disabled);
@@ -1219,8 +1232,11 @@ function renderGenerators(gens) {
 
   renderColumn("inactive", inactiveGenerators);
   renderColumn("active", activeGenerators);
+  // 3) Now recolor the map (rects already exist by this point)
+  if (typeof updateMapGeneratorsFromScenario === 'function') {
+    updateMapGeneratorsFromScenario();
+  }
 }
-
 function renderColumn(type, gens) {
   const container = document.querySelector(`#${type}-container .generator-body`);
   container.innerHTML = "";
@@ -1597,9 +1613,7 @@ function updateSortButtonStyles() {
 }
 
 
-// SVG 
-
-// Add SVG container with zoom
+// 1. Create the SVG container
 const mapContainer = d3.select("#map-wrapper")
   .append("svg")
   .attr("width", "100%")
@@ -1607,28 +1621,39 @@ const mapContainer = d3.select("#map-wrapper")
   .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
   .attr("preserveAspectRatio", "xMidYMid meet");
 
+// 2. Add defs ONCE here (for filters etc.)
+const defs = mapContainer.append("defs");
+
+const glow = defs.append("filter")
+  .attr("id", "glowBlue")
+  .attr("x", "-50%").attr("y", "-50%")
+  .attr("width", "200%").attr("height", "200%");
+glow.append("feDropShadow")
+  .attr("dx", 0).attr("dy", 0)
+  .attr("stdDeviation", 2)
+  .attr("flood-color", "#3b82f6")
+  .attr("flood-opacity", 0.8);
+
+const softShadow = defs.append("filter")
+  .attr("id","softShadow")
+  .attr("x","-20%").attr("y","-20%")
+  .attr("width","140%").attr("height","140%");
+softShadow.append("feDropShadow")
+  .attr("dx",0).attr("dy",2)
+  .attr("stdDeviation",2.5)
+  .attr("flood-opacity",0.25);
+
+// 3. Set up zoomGroup etc.
 const zoomGroup = mapContainer.append("g").attr("id", "zoom-group");
 
-const tooltipText = zoomGroup.append("text")
-  .attr("id", "map-label")
-  .attr("text-anchor", "start")
-  .attr("font-size", "10px")
-  .attr("fill", "#fff")
-  .style("pointer-events", "none")
-  .style("display", "none");
-
+// ✅ attach zoom to THIS svg
 const zoomBehavior = d3.zoom()
   .scaleExtent([0.2, 5])
-  .on("zoom", (event) => {
-    zoomGroup.attr("transform", event.transform);
-  });
+  .on("zoom", (event) => zoomGroup.attr("transform", event.transform));
 
 mapContainer.call(zoomBehavior);
 
-const initialZoom = d3.zoomIdentity.translate(svgWidth * 0.2, svgHeight * 0.2).scale(0.4);
-mapContainer.call(zoomBehavior.transform, initialZoom);
-
-// === Fetch and Draw Map ===
+// 4. THEN fetch data and draw shapes
 Promise.all([
   fetch("/new-tests/full_nodes.json").then(res => res.json()),
   fetch("/new-tests/full_lines.json").then(res => res.json())
@@ -1644,16 +1669,6 @@ Promise.all([
     .attr("stroke", "#888")
     .attr("stroke-width", 1.5)
     .attr("fill", "none");
-
-  // Generators
-// === MapView-style Generator Rectangles =====================================
-const defs = d3.select("#zoom-group").append("defs");
-const softShadow = defs.append("filter")
-  .attr("id", "softShadow").attr("x","-20%").attr("y","-20%")
-  .attr("width","140%").attr("height","140%");
-softShadow.append("feDropShadow")
-  .attr("dx",0).attr("dy",2).attr("stdDeviation",2.5).attr("flood-opacity",0.25);
-
 
 const generatorNodes = nodes.filter(d => d.type === "generator");
 const genGroups = zoomGroup.selectAll("g.map-gen-group")
@@ -1673,10 +1688,12 @@ genGroups.append("rect")
 genGroups.append("rect")
   .attr("class","map-gen gen-card")
   .attr("id", d=>d.id)
-  .attr("data-x", d=>d.x)          // ← add
-  .attr("data-y", d=>d.y)          // ← add
+  .attr("data-bus", d=>d.bus)       // ← add this line
+  .attr("data-x", d=>d.x)
+  .attr("data-y", d=>d.y)
   .attr("x",-25).attr("y",-25).attr("width",50).attr("height",50)
   .attr("rx",10).attr("ry",10);
+
 
 const LOCK_SRC = "/new-tests/lock.png";
 const LOCK_FALLBACK = "data:image/svg+xml;utf8,\
@@ -1727,12 +1744,25 @@ zoomGroup.selectAll("path.map-load")
   .append("path")
   .attr("class", "map-load")
   .attr("id", d => d.id)
-  .attr("d", d => {
-    const size = 20;
-    const x = d.x;
-    const y = d.y;
-    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
-  })
+ .attr("d", d => {
+  const size  = 30;                 // overall height of the house
+  const x     = d.x;
+  const y     = d.y;
+  const roofH = size * 0.45;        // roof height (tweak if you want)
+  const top   = y - size / 2;       // top peak
+  const eaveY = top + roofH;        // where roof meets the walls
+  const baseY = y + size / 2;       // bottom of the house
+  const left  = x - size / 2;
+  const right = x + size / 2;
+
+  // Points: peak → left eave → left base → right base → right eave → close
+  return `M ${x},${top}
+          L ${left},${eaveY}
+          L ${left},${baseY}
+          L ${right},${baseY}
+          L ${right},${eaveY}
+          Z`;
+})
   .attr("transform", d => {
     if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
       return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
@@ -1793,8 +1823,8 @@ function setupTaskSection(scenario){
           <div class="task-right">
             <div class="task-title">Constraints</div>
             <div class="task-subtitle" id="task-constraints">
-              ${hasLocked ? `<div id="constraint-locked">Some generators are locked</div>` : ``}
-              ${hasDisab  ? `<div id="constraint-disabled">Some generators are disabled</div>` : ``}
+              ${hasLocked ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
+              ${hasDisab  ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
             </div>
           </div>
         </div>
@@ -1851,38 +1881,88 @@ function showResultOverlay() {
 
 
 function updateMapGeneratorsFromScenario() {
-  if (!window.currentScenarioData || !window.currentGenerators) return;
+  const gens = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
+  const scen = window.currentScenarioData || {};
 
-  const lockedSet   = new Set(currentScenarioData.locked_generators || currentScenarioData.locked || []);
-  const disabledSet = new Set(currentScenarioData.disabled_generators || currentScenarioData.disabled || []);
+  // Build lookups keyed like your rect ids: "Gen{bus}"
+  const keyFromGen = g => (g?.id) || (g?.bus != null ? `Gen${g.bus}` : null);
+  const byId = new Map();
+  const byBus = new Map();
+  for (const g of gens) {
+    const id = keyFromGen(g);
+    if (id) byId.set(String(id), g);
+    if (g?.bus != null) byBus.set(String(g.bus), g);
+  }
 
-  // Build a quick lookup of "on/off" by id from active list,
-  // or however your app currently determines ON state.
-  const onSet = new Set(currentGenerators.active.map(g => g.name || g.id));
+  // Debug: see what we’re matching with
+  const rects = Array.from(document.querySelectorAll('rect.map-gen.gen-card'));
+  const rectIds = rects.slice(0, 10).map(r => r.id);
+  const genKeys = Array.from(byId.keys()).slice(0, 10);
+  console.log(`[updater] gens=${gens.length}, rects=${rects.length}`);
+  console.log(`[updater] sample rect ids:`, rectIds);
+  console.log(`[updater] sample gen keys:`, genKeys);
 
-  d3.selectAll("g.map-gen-group").each(function() {
-    const g = d3.select(this);
-    const id = g.select(".map-gen.gen-card").attr("id");
-    const isOn = onSet.has(id);
-    const isLocked = lockedSet.has(id);
-    const isDisabled = disabledSet.has(id);
-    const isSelected = (id === window.selectedGeneratorId);
+  // Normalize scenario lists to id-format "Gen{bus}"
+  const toIdSet = (arr) => {
+    const s = new Set();
+    (arr || []).forEach(v => {
+      const sv = String(v);
+      const num = (sv.match(/\d+/) || [null])[0];
+      if (num) s.add(`Gen${num}`);
+      if (sv)  s.add(sv);
+    });
+    return s;
+  };
+  const lockedSet   = toIdSet(scen.locked_generators   || scen.locked   || []);
+  const disabledSet = toIdSet(scen.disabled_generators || scen.disabled || []);
 
-    // Main square
-    g.select(".map-gen.gen-card")
-      .attr("fill", isOn ? "var(--gen-on)" : "#fff")
-      .attr("stroke", isSelected ? "#42a5f5" : "#222")
-      .attr("stroke-width", isSelected ? 3 : 1.2);
+  const selectedId = window.selectedGeneratorId || null;
 
-    // Halo for selection/hover emphasis
-    g.select(".map-gen-halo")
-      .attr("opacity", isSelected ? 0.9 : 0);
+  let matched = 0, total = 0;
 
-    // Lock / disabled overlays
-    g.select(".map-gen-lock").style("display", isLocked   ? null : "none");
-    g.select(".map-gen-disabled").style("display", isDisabled ? null : "none");
+  d3.selectAll('rect.map-gen.gen-card').each(function () {
+    total++;
+    const rect = d3.select(this);
+    const id   = this.id || "";                 // e.g. "Gen24"
+    const bus  = (id.match(/\d+/) || [null])[0];// e.g. "24"
+    const g    = byId.get(id) || (bus ? byBus.get(bus) : null);
+
+    const pg         = Number(g?.pg ?? 0);
+    const userActive = !!g?.user_active;
+    const isOn       = (pg > 0) || userActive;
+
+    const isLocked   = lockedSet.has(id)   || !!g?.locked;
+    const isDisabled = disabledSet.has(id) || !!g?.disabled;
+    const isSelected = selectedId && id === selectedId;
+
+    // DIRECT paint – ignores CSS specificity issues
+    rect
+      .attr('fill', (isOn && !isDisabled) ? 'var(--gen-on, #27ae60)' : '#fff')
+      .attr('stroke', isSelected ? '#3b82f6' : '#222')
+      .attr('stroke-width', isSelected ? 3 : 1.2)
+      .attr('opacity', isDisabled ? 0.45 : 1)
+      .style('pointer-events', isDisabled ? 'none' : null)
+      .attr('stroke-dasharray', isLocked ? '4 3' : null);
+
+    // overlays/halo if present
+    const group = d3.select(this.parentNode);
+    const halo  = group.select('.map-gen-halo');
+    if (!halo.empty()) halo.attr('opacity', isSelected ? 0.9 : 0);
+
+    const lockImg = group.select('.map-gen-lock');
+    if (!lockImg.empty()) lockImg.style('display', isLocked ? null : 'none');
+    const disImg  = group.select('.map-gen-disabled');
+    if (!disImg.empty())  disImg.style('display', isDisabled ? null : 'none');
+
+    if (g) matched++;
   });
+
+  console.log(`[map gens] updated: matched=${matched}/${total}`);
 }
+
+
+
+
 
 
 
@@ -2064,30 +2144,41 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
-  const adminPanel    = document.getElementById("admin-panel");
-  const adminToggle   = document.getElementById("admin-toggle");
-  const filtersPanel  = document.getElementById("map-filters-panel");
-  const filtersToggle = document.getElementById("map-filters-toggle");
-  const legendPanel   = document.getElementById("map-legend-panel");
-  const legendToggle  = document.getElementById("map-legend-toggle");
+  // Safely look up optional controls
+const adminToggle   = document.getElementById('admin-toggle')   || { addEventListener:()=>{} };
+const adminPanel    = document.getElementById('admin-panel')    || {};
+const filtersBtn    = document.getElementById('map-filters-toggle') || { addEventListener:()=>{} };
+const $ = window.$ || undefined;  // jQuery not used in ListView; guard if referenced
+let ctrlLeft     = $('#ctrl-left');        // whatever your source container is
+let oldFilters   = $('#filters-old');
+let filtersPanel = $('#filters-panel');
+let oldLegend    = $('#legend-old');
+let legendPanel  = $('#legend-panel');
+
+// Only wire listeners if the element exists
+on(adminToggle, 'click', () => {
+  adminPanel?.classList.toggle('open');
+});
+
+on(filtersBtn, 'click', () => {
+  filtersPanel?.classList.toggle('open');
+});
+
+
+
 
   // Move contents safely (children only)
   const row4 = document.getElementById("row-4");
-  const ctrlLeft = row4?.querySelector(".controls-left");
-  if (ctrlLeft && adminPanel) {
-    [...ctrlLeft.childNodes].forEach(n => adminPanel.appendChild(n));
-    row4.style.display = "none";
-  }
-  const oldFilters = document.getElementById("map-filters");
-  if (oldFilters && filtersPanel) {
-    [...oldFilters.childNodes].forEach(n => filtersPanel.appendChild(n));
-    oldFilters.remove();
-  }
-  const oldLegend = document.getElementById("map-legend-bar");
-  if (oldLegend && legendPanel) {
-    [...oldLegend.childNodes].forEach(n => legendPanel.appendChild(n));
-    oldLegend.remove();
-  }
+  // If you move nodes around, guard everything
+if (ctrlLeft && adminPanel) {
+  [...ctrlLeft.childNodes].forEach(n => adminPanel.appendChild(n));
+}
+if (oldFilters && filtersPanel) {
+  [...oldFilters.childNodes].forEach(n => filtersPanel.appendChild(n));
+}
+if (oldLegend && legendPanel) {
+  [...oldLegend.childNodes].forEach(n => legendPanel.appendChild(n));
+}
 
   // Toggle helper
   const togglePanel = (btn, panel) => {

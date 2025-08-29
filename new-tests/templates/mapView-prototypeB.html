@@ -1730,11 +1730,24 @@ zoomGroup.selectAll("path.map-load")
   .attr("class", "map-load")
   .attr("id", d => d.id)
   .attr("d", d => {
-    const size = 20;
-    const x = d.x;
-    const y = d.y;
-    return `M ${x},${y - size / 2} L ${x - size / 2},${y + size / 2} L ${x + size / 2},${y + size / 2} Z`;
-  })
+  const size  = 30;                 // overall height of the house
+  const x     = d.x;
+  const y     = d.y;
+  const roofH = size * 0.45;        // roof height (tweak if you want)
+  const top   = y - size / 2;       // top peak
+  const eaveY = top + roofH;        // where roof meets the walls
+  const baseY = y + size / 2;       // bottom of the house
+  const left  = x - size / 2;
+  const right = x + size / 2;
+
+  // Points: peak → left eave → left base → right base → right eave → close
+  return `M ${x},${top}
+          L ${left},${eaveY}
+          L ${left},${baseY}
+          L ${right},${baseY}
+          L ${right},${eaveY}
+          Z`;
+})
   .attr("transform", d => {
     if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
       return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
@@ -2149,17 +2162,28 @@ drawPowerBlocks(
     const badges = g.select(".gen-badges");
     badges.selectAll("*").remove();
     if (isLocked) {
-      badges.append("text")
-        .attr("class", "gen-lock-icon")
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
-        .attr("x", 0).attr("y", 0)
-        .attr("font-size", Math.min(W, H) * 0.7)
-        .text("🔒");
-      g.classed("gen-locked", true);
-    } else {
-      g.classed("gen-locked", false);
-    }
+  badges.append("text")
+    .attr("class", "gen-locked-icon")
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("x", 0).attr("y", 0)
+    .attr("font-size", Math.min(W, H)*0.7)   // big as rect
+    .text("🔒");
+  g.classed("gen-locked", true);
+} else if (isDisabled) {
+  badges.append("text")
+    .attr("class", "gen-disabled-icon")
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("x", 0).attr("y", 0)
+    .attr("font-size", Math.min(W, H)*0.7)   // big as rect
+    .text("🚫");
+  g.classed("gen-disabled", true);
+} else {
+  g.classed("gen-locked", false)
+   .classed("gen-disabled", false);
+}
+
   });
 
   // if you keep these hooks:
@@ -2292,8 +2316,8 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
           <div class="task-right">
             <div class="task-title">Scenario Constraints</div>
             <div class="task-subtitle" id="task-constraints">
-              ${hasLocked ? `<div id="constraint-locked">Some generators are locked</div>` : ``}
-              ${hasDisabled ? `<div id="constraint-disabled">Some generators are disabled</div>` : ``}
+              ${hasLocked ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
+              ${hasDisabled ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
             </div>
           </div>
         </div>
@@ -2363,6 +2387,8 @@ function evaluateScenarioState(scenario, lines) {
     submitBtn.disabled = true;
   }
 }
+
+
 
 function showResultOverlay() {
   const overlay = document.createElement("div");
