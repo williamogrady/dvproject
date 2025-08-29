@@ -540,15 +540,17 @@
       <div id="right-map">
         <div id="map-panel" style="flex:1; display:flex; flex-direction:column; position:relative;">
 
+          <div id="map-wrapper" style="flex:1; position:relative;"></div>
+
           <!-- ✅ In‑panel icon toggles (like Admin) -->
-          <button id="map-filters-toggle" class="map-btn corner top-left" title="Map Filters">Filters</button>
+           <!--<button id="map-filters-toggle" class="map-btn corner top-left" title="Map Filters">Filters</button>
           <div id="map-filters-panel" class="map-panel horizontal collapsed"></div>
 
           <button id="map-legend-toggle" class="map-btn corner bottom-left" title="Legend">Legend</button>
-          <div id="map-legend-panel" class="map-panel horizontal collapsed"></div>
+          <div id="map-legend-panel" class="map-panel horizontal collapsed"></div>-->
 
           <!-- Keep your existing filter content + legend content in DOM;
-               we'll re-parent their inner content into the panels via JS. -->
+               we'll re-parent their inner content into the panels via JS. 
           <div id="map-filters" style="display:none;">
             <div class="map-filters-title">   </div>
             <div class="map-filters-options">
@@ -560,9 +562,7 @@
             </div>
           </div>
 
-          <div id="map-tooltip" style="position:absolute; display:none; padding:6px 10px; background:#222; color:#fff; border-radius:6px; font-size:.8rem; pointer-events:none; box-shadow:0 2px 6px rgba(0,0,0,0.4); z-index:1000;"></div>
-
-          <div id="map-wrapper" style="flex:1; position:relative;"></div>
+         
 
           <div id="map-legend-bar" style="display:none;">
             <div class="legend-title"></div>
@@ -572,7 +572,7 @@
               <div class="legend-entry"><span class="legend-triangle"></span> Load</div>
               <div class="legend-entry"><span class="legend-chevron">➤</span> Line Load</div>
             </div>
-          </div>
+          </div>-->
 
         </div><!-- /#map-panel -->
       </div><!-- /#right-map -->
@@ -1884,9 +1884,9 @@ function updateMapGeneratorsFromScenario() {
   const gens = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
   const scen = window.currentScenarioData || {};
 
-  // Build lookups keyed like your rect ids: "Gen{bus}"
+  // Build lookups
   const keyFromGen = g => (g?.id) || (g?.bus != null ? `Gen${g.bus}` : null);
-  const byId = new Map();
+  const byId  = new Map();
   const byBus = new Map();
   for (const g of gens) {
     const id = keyFromGen(g);
@@ -1894,22 +1894,14 @@ function updateMapGeneratorsFromScenario() {
     if (g?.bus != null) byBus.set(String(g.bus), g);
   }
 
-  // Debug: see what we’re matching with
-  const rects = Array.from(document.querySelectorAll('rect.map-gen.gen-card'));
-  const rectIds = rects.slice(0, 10).map(r => r.id);
-  const genKeys = Array.from(byId.keys()).slice(0, 10);
-  console.log(`[updater] gens=${gens.length}, rects=${rects.length}`);
-  console.log(`[updater] sample rect ids:`, rectIds);
-  console.log(`[updater] sample gen keys:`, genKeys);
-
-  // Normalize scenario lists to id-format "Gen{bus}"
+  // Normalize scenario sets to "Gen{bus}"
   const toIdSet = (arr) => {
     const s = new Set();
     (arr || []).forEach(v => {
       const sv = String(v);
       const num = (sv.match(/\d+/) || [null])[0];
       if (num) s.add(`Gen${num}`);
-      if (sv)  s.add(sv);
+      s.add(sv);
     });
     return s;
   };
@@ -1917,48 +1909,61 @@ function updateMapGeneratorsFromScenario() {
   const disabledSet = toIdSet(scen.disabled_generators || scen.disabled || []);
 
   const selectedId = window.selectedGeneratorId || null;
+  const hoveredId  = window.hoveredGeneratorId  || null;
 
   let matched = 0, total = 0;
 
   d3.selectAll('rect.map-gen.gen-card').each(function () {
     total++;
     const rect = d3.select(this);
-    const id   = this.id || "";                 // e.g. "Gen24"
-    const bus  = (id.match(/\d+/) || [null])[0];// e.g. "24"
-    const g    = byId.get(id) || (bus ? byBus.get(bus) : null);
+    const rectId   = this.id || "";                      // e.g., "Gen24"
+    const rectBus  = rect.attr("data-bus") || null;      // fallback bus
+    const idDigits = (rectId.match(/\d+/) || [null])[0];  // digits inside id
+    const g = byId.get(rectId)
+          || (idDigits ? byBus.get(idDigits) : null)
+          || (rectBus ? byBus.get(rectBus) : null);      // final fallback
 
     const pg         = Number(g?.pg ?? 0);
     const userActive = !!g?.user_active;
     const isOn       = (pg > 0) || userActive;
 
-    const isLocked   = lockedSet.has(id)   || !!g?.locked;
-    const isDisabled = disabledSet.has(id) || !!g?.disabled;
-    const isSelected = selectedId && id === selectedId;
+    const isLocked   = lockedSet.has(rectId)   || !!g?.locked;
+    const isDisabled = disabledSet.has(rectId) || !!g?.disabled;
+    const isSelected = selectedId === rectId;
+    const isHovered  = hoveredId  === rectId;
 
-    // DIRECT paint – ignores CSS specificity issues
-    rect
-      .attr('fill', (isOn && !isDisabled) ? 'var(--gen-on, #27ae60)' : '#fff')
-      .attr('stroke', isSelected ? '#3b82f6' : '#222')
-      .attr('stroke-width', isSelected ? 3 : 1.2)
-      .attr('opacity', isDisabled ? 0.45 : 1)
-      .style('pointer-events', isDisabled ? 'none' : null)
-      .attr('stroke-dasharray', isLocked ? '4 3' : null);
+    // IMPORTANT: use .style('fill', ...) not attr('fill', 'var(...)')
+// Fill/stroke (locked treated like normal)
+rect
+  .style('fill', (isOn && !isDisabled) ? '#4caf50' : '#ffffff')
+  .attr('stroke', isSelected ? '#3b82f6' : '#222')
+  .attr('stroke-width', isSelected ? 3 : (isHovered ? 2 : 1.2))
+  .attr('opacity', isDisabled ? 0.45 : 1)   // ✅ only disabled are faded
+  .style('pointer-events', isDisabled ? 'none' : null)
+  .attr('stroke-dasharray', null)           // ✅ no dashed border for locked
+  .classed('gen-card--dice-on',  (isOn && !isDisabled))
+  .classed('gen-card--dice-off', (!isOn || isDisabled));
 
-    // overlays/halo if present
-    const group = d3.select(this.parentNode);
-    const halo  = group.select('.map-gen-halo');
-    if (!halo.empty()) halo.attr('opacity', isSelected ? 0.9 : 0);
+// overlays/halo
+const group = d3.select(this.parentNode);
+const halo  = group.select('.map-gen-halo');
+if (!halo.empty()) halo.attr('opacity', (isSelected || isHovered) ? 0.9 : 0);
 
-    const lockImg = group.select('.map-gen-lock');
-    if (!lockImg.empty()) lockImg.style('display', isLocked ? null : 'none');
-    const disImg  = group.select('.map-gen-disabled');
-    if (!disImg.empty())  disImg.style('display', isDisabled ? null : 'none');
+// 🔒 Lock overlay (always shows if locked, but not faded)
+const lockImg = group.select('.map-gen-lock');
+if (!lockImg.empty()) lockImg.style('display', isLocked ? null : 'none');
+
+// 🚫 Disabled overlay (only for disabled)
+const disImg  = group.select('.map-gen-disabled');
+if (!disImg.empty()) disImg.style('display', isDisabled ? null : 'none');
+
 
     if (g) matched++;
   });
 
   console.log(`[map gens] updated: matched=${matched}/${total}`);
 }
+
 
 
 
@@ -1999,9 +2004,10 @@ function applyGeneratorState(state) {
 <script>
   window.addEventListener("DOMContentLoaded", () => {
     // 1) Move existing Admin controls (scenario select + reset) into #admin-panel.
-    const adminBtn   = document.getElementById('admin-toggle');
-const adminPanel = document.getElementById('admin-panel'); // ← add this
+   // const adminBtn   = document.getElementById('admin-toggle');
+// const adminPanel = document.getElementById('admin-panel'); // ← add this
 
+/*
 document.addEventListener('click', (e) => {
   const inside = el => el && (el === e.target || el.contains(e.target));
   if (![filtersPanel, legendPanel, adminPanel].some(inside) &&
@@ -2011,7 +2017,8 @@ document.addEventListener('click', (e) => {
     adminPanel?.classList.add('collapsed'); // safe optional
   }
 });
-
+*/
+/*
     // Source elements
     const row4 = document.getElementById("row-4");
     const ctrlLeft = row4?.querySelector(".controls-left");
@@ -2058,15 +2065,16 @@ document.addEventListener('click', (e) => {
     togglePanel(adminToggle, adminPanel);
     togglePanel(filtersToggle, filtersPanel);
     togglePanel(legendToggle, legendPanel);
+    */
   });
-
+/*
     document.addEventListener("click", (e) => {
   const inside = el => el && (el === e.target || el.contains(e.target));
   if (![adminPanel, filtersPanel, legendPanel].some(inside) &&
       ![adminToggle, filtersToggle, legendToggle].some(inside)) {
     [adminPanel, filtersPanel, legendPanel].forEach(p => p?.classList.add("collapsed"));
   }
-});
+});*/
 </script>
 
 <script>
@@ -2145,6 +2153,7 @@ window.addEventListener('DOMContentLoaded', () => {
 <script>
 window.addEventListener("DOMContentLoaded", () => {
   // Safely look up optional controls
+  /*
 const adminToggle   = document.getElementById('admin-toggle')   || { addEventListener:()=>{} };
 const adminPanel    = document.getElementById('admin-panel')    || {};
 const filtersBtn    = document.getElementById('map-filters-toggle') || { addEventListener:()=>{} };
@@ -2155,6 +2164,7 @@ let filtersPanel = $('#filters-panel');
 let oldLegend    = $('#legend-old');
 let legendPanel  = $('#legend-panel');
 
+
 // Only wire listeners if the element exists
 on(adminToggle, 'click', () => {
   adminPanel?.classList.toggle('open');
@@ -2164,9 +2174,9 @@ on(filtersBtn, 'click', () => {
   filtersPanel?.classList.toggle('open');
 });
 
+*/
 
-
-
+/*
   // Move contents safely (children only)
   const row4 = document.getElementById("row-4");
   // If you move nodes around, guard everything
@@ -2201,7 +2211,9 @@ if (oldLegend && legendPanel) {
       [adminPanel, filtersPanel, legendPanel].forEach(p => p?.classList.add("collapsed"));
     }
   });
+  */
 });
+
 
 
 const listsRoot = document.getElementById("generators-container");
