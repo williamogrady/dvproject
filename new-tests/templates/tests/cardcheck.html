@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generator Card — Compact 3-Column Test (Fixed)</title>
+  <style>
+    :root{
+      --bg: #f5f7fb;
+      --text: #0e1320;
+      --text-faint: #677089;
+      --border: #d9dee8;
+      --card: #ffffff;
+      --card-muted: #eef1f5;
+      --gen-on: #3bb273;
+      --gen-off:#e8eaee;
+      --card-w: 980px;      /* slider sets this */
+      --fs-base: 14px;      /* JS scales 12→15 based on width */
+    }
+    *{ box-sizing: border-box; }
+    html,body{ margin:0; }
+    body{ background: var(--bg); color: var(--text); font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+
+    .wrap{ max-width: 980px; margin: 28px auto; padding: 0 16px; }
+    h1{ font-size: 18px; margin: 0 0 10px; }
+    .sub{ color: var(--text-faint); margin-bottom: 8px; }
+
+    .controls{ display:flex; align-items:center; gap:10px; margin: 8px 0 14px; }
+    .controls label{ font-weight:600; }
+    .controls input[type=range]{ width: 260px; }
+    .controls #wVal{ min-width: 52px; text-align: right; color: var(--text-faint); }
+
+    /* List spacing so cards are never smushed */
+    .generator-body{ display: grid; gap: 12px; }
+
+    /* ===== Compact 3-col card: left | center | right ===== */
+    .generator-card{
+      display: grid;
+      grid-template-columns: clamp(44px,6vw,72px) minmax(0,1fr) clamp(40px,8%,72px);
+      align-items: stretch;             /* side columns fill height */
+      gap: 12px;
+      padding: 0;                       /* no vertical padding; sections control their own */
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+
+      /* slider-driven width */
+      width: var(--card-w, auto);
+      justify-self: start;
+      font-size: var(--fs-base);
+      overflow: hidden;                 /* keep rounded corners clean */
+    }
+
+    /* Left column */
+    .gen-section.left{
+      padding: 0 4px;                   /* no top/bottom padding */
+      color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.18);
+      display: grid; gap: 3px; align-content: center;
+      border-radius: 12px 0 0 12px;     /* outer curve */
+      align-self: stretch; height: 100%;
+    }
+    .gen-name{ font-weight: 700; font-size: calc(var(--fs-base) * 0.88); line-height: 1.1; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .gen-number,.gen-type{ font-size: calc(var(--fs-base) * 0.78); opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Left tints by type */
+    .fuel-CCGT { background: linear-gradient(135deg,#0b5,#0a7); }
+    .fuel-Coal { background: linear-gradient(135deg,#444,#222); }
+    .fuel-Hydro{ background: linear-gradient(135deg,#1e88e5,#1565c0); }
+    .fuel-Wind { background: linear-gradient(135deg,#6a1b9a,#4527a0); }
+    .fuel-Solar{ background: linear-gradient(135deg,#f6c343,#f4a261); color:#202020; text-shadow: none; }
+
+    /* Center column: exactly 2 rows, with vertical breathing room */
+    .gen-section.center{ min-width:0; display:grid; grid-template-rows: auto auto; gap: 6px; padding: 8px 0; }
+
+    /* Power row */
+    .gen-power{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+    .power-label{ font-size: calc(var(--fs-base) * 0.8); color: var(--text-faint); }
+    .power-block-row{ display:flex; gap:4px; row-gap:4px; align-items:center; flex-wrap: wrap; max-width:100%; }
+    .power-block{ width: var(--pb,14px); height: var(--pb,14px); border-radius:3px; background: var(--gen-off); border:1px solid rgba(0,0,0,.15); }
+    .power-block.on{ background: var(--gen-on); }
+    .power-block.half{ width: calc(var(--pb,14px) / 2); }
+    .off-pill{ height: 18px; line-height: 16px; padding: 0 8px; font-size: calc(var(--fs-base) * 0.68); border-radius:999px; border:1px solid rgba(0,0,0,.2); background:#444; color:#fff; cursor:pointer; }
+    .mw-label{ margin-left: 8px; font-size: calc(var(--fs-base) * 0.78); color: var(--text-faint); }
+
+    /* Metrics row: chips with white text on colored pill */
+    .gen-metrics{ display:flex; flex-wrap:wrap; gap:8px 12px; min-width:0; }
+    .metric{ display:flex; align-items:center; gap:8px; min-width:0; flex: 0 1 auto; }
+    .metric-label{ font-size: calc(var(--fs-base) * 0.8); color: var(--text-faint); }
+    .metric-chip{ background: var(--chip-bg,#888); color:#fff; font-weight:800; font-size: calc(var(--fs-base) * 0.86); line-height:1; padding:2px 10px; border-radius: 999px; white-space:nowrap; }
+    .metric-unit{ font-size: calc(var(--fs-base) * 0.8); color: var(--text-faint); }
+
+    /* RIGHT column: vertical action area */
+    .gen-section.right{
+      display: grid; place-items: center; align-content: center;
+      align-self: stretch; height: 100%; padding: 0;
+      border-left: 1px solid var(--border);
+      border-radius: 0 12px 12px 0;  /* rounded outer edge */
+      cursor: pointer; user-select: none;
+    }
+    .gen-section.right:hover{ filter: brightness(0.98); }
+    .gen-section.right:active{ transform: translateY(1px); }
+    .gen-action-icon{ font-size: clamp(18px, 2.2vw, 24px); line-height: 1; color: #fff; font-weight: 700; }
+
+    /* Right action backgrounds by state + outlines for +/- */
+    .gen-section.right[data-state="minus"],
+    .gen-section.right[data-state="locked"]{ background:#1f6b3a; }
+    .gen-section.right[data-state="plus"]{ background:#2f3540; }
+    .gen-section.right[data-state="disabled"]{ background:#e0e4ea; }
+
+    /* Utility */
+    .muted{ color: var(--text-faint); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Generator Card – Compact 3-Column (Fixed)</h1>
+    <div class="sub">Right column is a full-height vertical button; chips are white-on-color; power blocks wrap to two rows; slider changes card width.</div>
+
+    <div class="controls">
+      <label for="w">Card width:</label>
+      <input id="w" type="range" min="360" max="980" step="10" value="980" />
+      <span id="wVal">980px</span>
+    </div>
+
+    <div class="generator-body" id="list"></div>
+  </div>
+
+  <script>
+    // --- Sample data
+    let gens = [
+      { id:"Gen24", name:"RIVERS", bus:24, type:"CCGT", pmax:600, pg:450, user_active:true,  disabled:false, locked:false, cost_per_mw:4.2, emissions_per_mw:0.65 },
+      { id:"Gen10", name:"OLIVE",  bus:10, type:"Coal", pmax:900, pg:0,   user_active:false, disabled:false, locked:false, cost_per_mw:7.6, emissions_per_mw:1.80 },
+      { id:"Gen51", name:"TANNERS-2", bus:51, type:"Hydro", pmax:300, pg:300, user_active:true, disabled:false, locked:true, cost_per_mw:1.2, emissions_per_mw:0.10 },
+      { id:"Gen70", name:"NORTHWIND", bus:70, type:"Wind", pmax:1200, pg:600, user_active:true, disabled:true, locked:false, cost_per_mw:2.5, emissions_per_mw:0.00 },
+      { id:"Gen88", name:"SUNFIELD ARRAY LONGER NAME", bus:88, type:"Solar", pmax:350, pg:175, user_active:true, disabled:false, locked:false, cost_per_mw:3.1, emissions_per_mw:0.05 },
+      { id:"Gen33", name:"LOWCAP", bus:33, type:"CCGT", pmax:250, pg:0, user_active:false, disabled:false, locked:false, cost_per_mw:5.0, emissions_per_mw:0.90 }
+    ];
+
+    const listEl = document.getElementById('list');
+
+    // --- width control
+    let cardW = 980;
+    const wInput = document.getElementById('w');
+    const wVal = document.getElementById('wVal');
+    function applyWidth(w){
+      cardW = w;
+      document.documentElement.style.setProperty('--card-w', w + 'px');
+      // Responsive type: 12px at 360px → 15px at 980px
+      const t = Math.max(0, Math.min(1, (w - 360) / 620));
+      const base = Math.round(12 + t * 3); // 12..15
+      document.documentElement.style.setProperty('--fs-base', base + 'px');
+      if (wVal) wVal.textContent = w + 'px';
+    }
+    if (wInput){
+      applyWidth(parseInt(wInput.value,10) || 980);
+      wInput.addEventListener('input', e => { applyWidth(parseInt(e.target.value,10)); render(); });
+    }
+
+    function getCostColor(cost){
+      if (cost < 2) return '#2e7d32';
+      if (cost < 5) return '#66bb6a';
+      if (cost < 7) return '#f6c343';
+      return '#e02424';
+    }
+    function getEmissionColor(em){
+      // Wider, lighter-to-darker gray range for emissions
+      if (em < 0.25) return '#e2e8f0'; // very light
+      if (em < 0.50) return '#cbd5e1'; // light
+      if (em < 1.00) return '#94a3b8'; // mid
+      if (em < 1.50) return '#64748b'; // dark-mid
+      return '#334155';                // dark
+    }
+    function getEmissionTextColor(em){
+      // Light backgrounds → dark text; darker backgrounds → white
+      return (em < 0.50) ? '#111' : '#fff';
+    }
+    function leftTint(type){
+      const map = { CCGT:'fuel-CCGT', Coal:'fuel-Coal', Hydro:'fuel-Hydro', Wind:'fuel-Wind', Solar:'fuel-Solar' };
+      return map[type] || 'fuel-CCGT';
+    }
+
+    function render(){
+      listEl.innerHTML = '';
+      gens.forEach((gen, idx) => {
+        const card = document.createElement('div');
+        card.className = 'generator-card';
+
+        // LEFT
+        const left = document.createElement('div');
+        left.className = `gen-section left ${leftTint(gen.type)}`;
+        left.innerHTML = `
+          <div class="gen-name">${gen.name}</div>
+          <div class="gen-number">Bus ${gen.bus}</div>
+          <div class="gen-type">${gen.type}</div>
+        `;
+
+        // CENTER
+        const center = document.createElement('div');
+        center.className = 'gen-section center';
+        center.innerHTML = `
+          <div class="gen-power">
+            <div class="power-label">Power</div>
+          </div>
+          <div class="gen-metrics">
+            <div class="metric" title="${gen.cost_per_mw} per MW">
+              <span class="metric-label">Cost</span>
+              <span class="metric-chip" style="--chip-bg:${getCostColor(gen.cost_per_mw)}">$${gen.cost_per_mw}</span>
+              <span class="metric-unit">/MW</span>
+            </div>
+            <div class="metric" title="${gen.emissions_per_mw} tCO₂ per MW">
+              <span class="metric-label">Emissions</span>
+              <span class="metric-chip" style="--chip-bg:${getEmissionColor(gen.emissions_per_mw)}; color:${getEmissionTextColor(gen.emissions_per_mw)}">${gen.emissions_per_mw} tCO₂</span>
+              <span class="metric-unit">/MW</span>
+            </div>
+          </div>
+        `;
+
+        // Power blocks row (two rows max)
+        const powerRow = center.querySelector('.gen-power');
+        const blocks = document.createElement('div');
+        blocks.className = 'power-block-row';
+        powerRow.appendChild(blocks);
+
+        // optional OFF pill
+        if (gen.pg > 0 && gen.user_active && !gen.disabled && !gen.locked){
+          const off = document.createElement('div');
+          off.className = 'off-pill';
+          off.textContent = 'off';
+          off.title = 'Turn off generator but keep it active';
+          off.addEventListener('click', () => {
+            gens[idx] = { ...gen, pg: 0, user_active: true };
+            render();
+          });
+          blocks.appendChild(off);
+        }
+
+        // levels up to pmax in 100s
+        const levels = [];
+        let cur = 0;
+        while (cur + 100 <= gen.pmax){ cur += 100; levels.push(cur); }
+        if (cur < gen.pmax) levels.push(gen.pmax);
+
+        // initial size guess, then refine after mount
+        const columns = Math.ceil(levels.length / 2); // aim for 2 rows
+        const gap = 4;
+        const centerWguess = Math.max(120, (parseInt(getComputedStyle(card).width)||cardW) - 72 - 40 - 24);
+        const pbGuess = Math.max(12, Math.min(16, Math.floor((centerWguess - gap * (columns - 1)) / Math.max(1, columns))));
+        blocks.style.setProperty('--pb', pbGuess + 'px');
+
+        // Add blocks
+        levels.forEach((level, i) => {
+          const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+          const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+          const b = document.createElement('div');
+          b.className = 'power-block' + (isHalf ? ' half' : '');
+          if (gen.pg >= level - 50) b.classList.add('on');
+          b.title = level + ' MW';
+          if (gen.user_active && !gen.disabled && !gen.locked){
+            b.style.cursor = 'pointer';
+            b.addEventListener('mousedown', () => {
+              const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+              const newPg = Math.round(gen.pmax * percent/100);
+              gens[idx] = { ...gen, pg: newPg, user_active: true };
+              render();
+            });
+          }
+          blocks.appendChild(b);
+        });
+
+        // small pg/pmax label
+        const label = document.createElement('span');
+        label.className = 'mw-label';
+        label.textContent = `${Math.round(gen.pg)} / ${Math.round(gen.pmax)} MW`;
+        powerRow.appendChild(label);
+
+        // RIGHT (vertical action area)
+        const right = document.createElement('div');
+        right.className = 'gen-section right';
+        right.setAttribute('role','button');
+        right.tabIndex = 0;
+
+        let state, icon, title;
+        if (gen.locked)      { state = 'locked';   icon = '🔒'; title = 'Locked'; }
+        else if (gen.disabled){ state = 'disabled'; icon = '⛔'; title = 'Disabled'; }
+        else if (gen.user_active){ state = 'minus'; icon = '−';  title = 'Deactivate'; }
+        else { state = 'plus'; icon = '+'; title = 'Activate'; }
+
+        right.dataset.state = state;
+        right.title = title;
+        const ic = document.createElement('div'); ic.className = 'gen-action-icon'; ic.textContent = icon; right.appendChild(ic);
+
+        const toggle = () => {
+          if (gen.locked || gen.disabled) return;
+          const activating = !gen.user_active;
+          gens[idx] = { ...gen, user_active: activating, pg: activating ? gen.pg : 0 };
+          render();
+        };
+        right.addEventListener('click', toggle);
+        right.addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); toggle(); } });
+
+        // Mount
+        card.appendChild(left);
+        card.appendChild(center);
+        card.appendChild(right);
+        listEl.appendChild(card);
+
+        // refine block size from actual center width so we get 2 rows, not tiny blocks
+        const centerW = center.getBoundingClientRect().width || 0;
+        if (centerW){
+          const cols = Math.ceil(levels.length / 2);
+          const usable = Math.max(80, centerW - 64); // room for label/margins
+          const pb2 = Math.max(12, Math.min(16, Math.floor((usable - gap * (cols - 1)) / Math.max(1, cols))));
+          blocks.style.setProperty('--pb', pb2 + 'px');
+        }
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

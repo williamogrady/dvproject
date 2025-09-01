@@ -403,6 +403,122 @@
 
 </style>
 
+<style id="gen-card-reset-compact">
+  /* Spacing between cards */
+  #row-2-work .generator-body{
+    display: grid !important;
+    gap: 12px !important;
+  }
+
+  /* Compact 3-col card: LEFT | CENTER | RIGHT */
+#row-2-work .generator-card{
+  display: grid !important;
+  /* Left | Center | Right: size relative to the CARD, not the viewport */
+  grid-template-columns: minmax(44px, 12%) minmax(0,1fr) minmax(36px, 10%) !important;
+  align-items: stretch !important;
+  gap: 12px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+
+  /* NEW: ensure cards never overflow their list column */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+  /* LEFT column (full-height; outer curve) */
+  #row-2-work .gen-section.left{
+    padding: 0 4px;                    /* no top/bottom padding */
+    color:#fff; text-shadow: 0 1px 0 rgba(0,0,0,.18);
+    display:grid; gap:3px; align-content:center;
+    border-radius: 12px 0 0 12px;
+    align-self: stretch; height: 100%;
+  }
+  
+#row-2-work .gen-section.left .gen-name{
+  font-size: clamp(.75rem,1.0vw,.85rem); /* was .78.. .88 */
+  font-weight:700; line-height:1.08;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+#row-2-work .gen-section.left .gen-number,
+#row-2-work .gen-section.left .gen-type{
+  font-size: clamp(.66rem,.95vw,.76rem);
+}
+
+
+  /* CENTER column: exactly 2 rows + vertical breathing room */
+#row-2-work .gen-section.center{
+  min-width:0; display:grid; grid-template-rows:auto auto;
+  gap:6px; padding: 6px 0;   /* was 8px 0 */
+}
+#row-2-work .gen-metrics{ display:flex; flex-wrap:wrap; gap:6px 8px; min-width:0; } /* was 8px 12px */
+#row-2-work .metric-chip{ padding: 1px 8px; font-size:.84rem; } /* slightly tighter */
+#row-2-work .gen-section.center .power-label{ font-size:.78rem; } /* a hair smaller */
+
+  #row-2-work .gen-section.center .gen-power{
+    display:flex; align-items:center; gap:8px; flex-wrap:nowrap;
+  }
+  #row-2-work .gen-section.center .power-label{
+    font-size:.80rem; color:var(--text-faint);
+  }
+
+  /* Power blocks — wrap (up to 2 rows; JS sizes to avoid tiny squares) */
+  #row-2-work .power-block-row{
+    display:flex; gap:4px; row-gap:4px;
+    align-items:center; flex-wrap: wrap; max-width:100%;
+  }
+  #row-2-work .power-block{
+    width: var(--pb,14px); height: var(--pb,14px);
+    border-radius:3px; border:1px solid rgba(0,0,0,.15);
+    background: var(--gen-off);
+  }
+  #row-2-work .power-block.on { background: var(--gen-on); }
+  #row-2-work .power-block.half{ width: calc(var(--pb,14px) / 2); }
+
+  /* Small OFF pill */
+  #row-2-work .power-block.off-pill{
+    height: 18px; line-height: 16px; padding: 0 8px;
+    font-size: .68rem; border-radius: 999px; border:1px solid rgba(0,0,0,.2);
+    background:#444; color:#fff; cursor:pointer;
+  }
+
+  /* Metrics row — chips with text color handled inline for emissions */
+  #row-2-work .gen-metrics{ display:flex; flex-wrap:wrap; gap:8px 12px; min-width:0; }
+  #row-2-work .metric{ display:flex; align-items:center; gap:8px; min-width:0; flex: 0 1 auto; }
+  #row-2-work .metric-label{ font-size:.80rem; color:var(--text-faint); }
+  #row-2-work .metric-chip{
+    background: var(--chip-bg,#888);
+    color:#fff; font-weight:800; font-size:.86rem; line-height:1;
+    padding:2px 10px; border-radius:999px; white-space:nowrap;
+  }
+  #row-2-work .metric-unit{ font-size:.80rem; color:var(--text-faint); }
+
+  /* RIGHT column — vertical action area (full height, darker colors, white icon) */
+  #row-2-work .gen-section.right{
+    display:grid !important; place-items:center; align-content:center;
+    align-self:stretch; height:100%; padding:0;
+    border-left:1px solid var(--border);
+    border-radius: 0 12px 12px 0;
+    cursor:pointer; user-select:none;
+  }
+  #row-2-work .gen-section.right:hover{ filter: brightness(0.98); }
+  #row-2-work .gen-action-icon{ font-size: clamp(18px, 2.2vw, 24px); line-height:1; color:#fff; font-weight:700; }
+
+  /* State backgrounds (darker) */
+  #row-2-work .gen-section.right[data-state="minus"],
+  #row-2-work .gen-section.right[data-state="locked"]{ background:#1f6b3a; }
+  #row-2-work .gen-section.right[data-state="plus"]{ background:#2f3540; }
+  #row-2-work .gen-section.right[data-state="disabled"]{ background:#e0e4ea; cursor:not-allowed; opacity:.95; }
+
+  /* Kill legacy floating +/- so nothing overlays */
+  #row-2-work .plus-button, #row-2-work .minus-button{ display:none !important; }
+</style>
+
+
+
 
 </head>
 <body>
@@ -682,28 +798,96 @@ function emissionsColor(gen){
   return `hsl(140, ${sat(e)}%, 45%)`;
 }
 
+// --- ID utilities ---
+function normalizeGenId(x){ const m = String(x).match(/\d+/); return m ? `Gen${m[0]}` : String(x); }
+function getMapGenIds(){
+  return new Set([...document.querySelectorAll('rect.map-gen.gen-card')].map(n => n.id));
+}
+function getApiGenIds(gens){
+  return new Set((gens || []).map(g => `Gen${g.bus}`));
+}
+
+/** Compute universe + overlap/mismatches between API and Map */
+function computeGenUniverse(){
+  const mapIds = getMapGenIds();
+  const apiIds = getApiGenIds(window.currentGenerators || []);
+  const intersection = [...mapIds].filter(id => apiIds.has(id));
+  const onlyMap =    [...mapIds].filter(id => !apiIds.has(id));
+  const onlyApi =    [...apiIds].filter(id => !mapIds.has(id));
+  return { mapIds, apiIds, intersection, onlyMap, onlyApi };
+}
+
+/** Make scenario sets safe: drop any ids that aren't usable */
+function sanitizeScenarioSets(scen){
+  const s = scen || {};
+  const { intersection } = computeGenUniverse();
+  const allowed = new Set(intersection);
+  const normKeep = arr => (arr || [])
+    .map(normalizeGenId)
+    .filter(id => allowed.has(id));
+
+  // Preserve original keys if you like; here we normalize to locked_/disabled_generators
+  return {
+    ...s,
+    locked_generators:   normKeep(s.locked_generators   || s.locked   || []),
+    disabled_generators: normKeep(s.disabled_generators || s.disabled || []),
+  };
+}
+
+/** Print what we can work with (and optionally show on-screen) */
+function listWorkingGenerators(renderToDom = false){
+  const { intersection, onlyApi, onlyMap } = computeGenUniverse();
+  console.groupCollapsed("✅ Usable generators (intersection of API × Map)");
+  console.table(intersection.map(id => ({ id, bus: Number(id.replace(/\D/g,'')) })));
+  if (onlyApi.length) console.warn("⚠ In API only (not on map):", onlyApi);
+  if (onlyMap.length) console.warn("⚠ On map only (not in API):", onlyMap);
+  console.groupEnd();
+
+  if (renderToDom){
+    const host = document.getElementById("admin-panel") || document.body;
+    const div = document.createElement("div");
+    div.className = "floating-panel horizontal";
+    div.style.maxHeight = "240px";
+    div.style.overflow = "auto";
+    div.innerHTML = `<strong>Working generators (${intersection.length})</strong>
+      <div style="font:12px/1.4 monospace; margin-top:6px;">${intersection.join(", ")}</div>`;
+    host.appendChild(div);
+  }
+}
+
+
 
 
 async function loadScenario(scenarioId){
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
 
-  currentScenarioId   = scenarioId;              // (if you track it)
-currentScenarioData = data.scenario ? data.scenario : data;
-currentGenerators   = data.generators || [];
-const lines         = data.lines || data.powerflow?.lines || [];
-window.currentLines = lines;
+  currentScenarioId   = scenarioId;
+  currentScenarioData = data.scenario ? data.scenario : data;
+    currentGenerators   = (data.generators || []).filter(g => g.bus !== 1);
+  const lines         = data.lines || data.powerflow?.lines || [];
+  window.currentLines = lines;
 
-// Build the task card first (creates #check-power/#check-lines DOM)
-setupTaskSection(currentScenarioData);
+  // 1) Build task card first
+  setupTaskSection(currentScenarioData);
 
-// THEN render everything that might toggle those checkboxes
+  // 3) Render UI
 renderGenerators(currentGenerators);
 renderLines(lines, data.solved !== false);
 renderOverview(currentGenerators, currentScenarioData, lines);
 updateLinesCard(lines);
 updateMapGeneratorsFromScenario();
+
+// 🔍 run after the map has had a tick to update
+setTimeout(() => window.debugScenarioVsMap(), 0);
+
+  // 4) Enforce: scenario sets must reference only usable gens
+  currentScenarioData = sanitizeScenarioSets(currentScenarioData);
+
+  // 5) List the generators we CAN work with
+  listWorkingGenerators(false); // set to true to show a floating list
 }
+
 
     function populateScenarioDropdown(scenarios, defaultId) {
       const select = document.getElementById("scenario-select");
@@ -1277,7 +1461,8 @@ function createGeneratorCard(gen, maxPmax) {
   const locked = currentScenarioData?.locked_generators?.includes(genId);
   const disabled = currentScenarioData?.disabled_generators?.includes(genId);
 
-  card.className = `generator-card ${status} ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
+  card.className = `generator-card ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
+
 
 
   //console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
@@ -1311,156 +1496,191 @@ function getEmissionColor(emissions) {
     <div class="gen-number">Bus ${gen.bus}</div>
     <div class="gen-type">${gen.fuel_type}</div>`;
 
-  // ========== CENTER SECTION ==========
-  const center = document.createElement("div");
-  center.className = "gen-section center";
-  center.innerHTML = `
-    <div class="gen-power"><div class="power-label">Power</div></div>
-    <div class="gen-impact-row">
-      <div class="gen-cost impact-wrapper">
-        <div class="impact-box" style="background:${getCostColor(gen.cost_per_mw)};">💲</div>
-        <div class="impact-label">${gen.cost_per_mw.toFixed(1)} / MW</div>
-      </div>
-      <div class="gen-emissions impact-wrapper">
-        <div class="impact-box" style="background:${getEmissionColor(gen.emissions_per_mw)};">☁️</div>
-        <div class="impact-label">${gen.emissions_per_mw.toFixed(1)} / MW</div>
-      </div>
-    </div>`;
+// ========== CENTER SECTION ==========
+const center = document.createElement("div");
+center.className = "gen-section center";
 
-  // === Power block row ===
-  const powerContainer = center.querySelector(".gen-power");
-  const blockRow = document.createElement("div");
-  blockRow.className = "power-block-row";
-  powerContainer.appendChild(blockRow);
+// cost color (unchanged)
+function getCostColor(cost) {
+  if (cost < 2) return '#2e7d32';
+  if (cost < 5) return '#66bb6a';
+  if (cost < 7) return '#f6c343';
+  return '#e02424';
+}
+// emissions color → widened light→dark gray + readable text color
+function getEmissionColor(em){
+  if (em < 0.25) return '#e2e8f0'; // very light
+  if (em < 0.50) return '#cbd5e1'; // light
+  if (em < 1.00) return '#94a3b8'; // mid
+  if (em < 1.50) return '#64748b'; // dark-mid
+  return '#334155';                // dark
+}
+function getEmissionTextColor(em){
+  return (em < 0.50) ? '#111' : '#fff';
+}
 
-  // Add "off" block if pg > 0
-  if (gen.pg > 0 && gen.user_active && !disabled && !locked) {
-    const offBlock = document.createElement("div");
-    offBlock.className = "power-block off-toggle";
-    offBlock.textContent = "off";
-    offBlock.style = `
-      background: #444; color: white;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 2px 6px; font-size: 0.7rem;
-      border-radius: 4px; cursor: pointer;
-    `;
-    offBlock.title = "Turn off generator but keep it active";
+center.innerHTML = `
+  <div class="gen-power">
+    <div class="power-label">Power</div>
+  </div>
+  <div class="gen-metrics">
+    <div class="metric" title="${gen.cost_per_mw} per MW">
+      <span class="metric-label">Cost</span>
+      <span class="metric-chip" style="--chip-bg:${getCostColor(gen.cost_per_mw)}">
+        $${gen.cost_per_mw}
+      </span>
+      <span class="metric-unit">/MW</span>
+    </div>
+    <div class="metric" title="${gen.emissions_per_mw} tCO₂ per MW">
+      <span class="metric-label">Emissions</span>
+      <span class="metric-chip"
+            style="--chip-bg:${getEmissionColor(gen.emissions_per_mw)};color:${getEmissionTextColor(gen.emissions_per_mw)}">
+        ${gen.emissions_per_mw} tCO₂
+      </span>
+      <span class="metric-unit">/MW</span>
+    </div>
+  </div>
+`;
 
-    offBlock.addEventListener("click", () => {
-      fetch(`/api/set_generation/${gen.index}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ percent: 0, user_active: true })
-      })
-        .then(res => res.json())
-        .then(data => {
-          currentGenerators = data.generators;
-          renderGenerators(currentGenerators);
-          renderLines(data.lines, data.solved !== false);
-          renderOverview(currentGenerators, currentScenarioData, window.currentLines);
-          updateMapGeneratorsFromScenario();
-        });
-    });
+// === Power blocks (wrap to TWO rows; JS sizes so they don't get tiny) ===
+const powerContainer = center.querySelector(".gen-power");
+const blockRow = document.createElement("div");
+blockRow.className = "power-block-row";
+powerContainer.appendChild(blockRow);
 
-    blockRow.appendChild(offBlock);
-  }
-
-  // Build blocks
-  let levels = [];
-  let current = 0;
-  while (current + 100 <= gen.pmax) {
-    current += 100;
-    levels.push(current);
-  }
-  if (current < gen.pmax) levels.push(gen.pmax);
-
-  function createBlock(level, isHalf = false) {
-    const block = document.createElement("div");
-    block.className = "power-block";
-    block.style.width = isHalf ? `10px` : `20px`;
-    block.style.height = "20px";
-    block.style.borderRadius = "4px";
-    block.style.background = gen.pg >= level - 50 ? "var(--gen-on)" : "var(--gen-off)";
-    block.style.border = "1px solid rgba(0, 0, 0, 0.2)";
-    block.title = `${level} MW`;
-
-    if (gen.user_active && !disabled && !locked) {
-      block.style.cursor = "pointer";
-      block.addEventListener("mousedown", () => {
-        const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
-        fetch(`/api/set_generation/${gen.index}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ percent, user_active: true })
-        })
-          .then(res => res.json())
-          .then(data => {
-            currentGenerators = data.generators;
-            renderGenerators(currentGenerators);
-            renderLines(data.lines, data.solved !== false);
-            renderOverview(currentGenerators, currentScenarioData, data.lines);
-            updateMapGeneratorsFromScenario(); // ✅ Reflect state change on map
-          });
-      });
-    }
-
-    return block;
-  }
-
-  levels.forEach((level, i) => {
-    const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
-    const isHalf = isRemainder && (gen.pmax % 100 <= 50);
-    blockRow.appendChild(createBlock(level, isHalf));
-  });
-
-  const maxLabel = document.createElement("span");
-  maxLabel.style.marginLeft = "8px";
-  maxLabel.style.fontSize = "0.75rem";
-  maxLabel.style.color = "var(--text-light)";
-  maxLabel.textContent = `${gen.pmax.toFixed(0)} MW max`;
-  blockRow.appendChild(maxLabel);
-
-  // ========== RIGHT SECTION ==========
-// ========== RIGHT SECTION ==========
-const right = document.createElement("div");
-right.className = "gen-section right";
-const toggle = document.createElement("div");
-
-if (locked) {
-  toggle.className = "minus-button locked-btn";
-  toggle.textContent = "🔒";               // as in the original file
-  toggle.title = "Locked by scenario";
-  toggle.style.cursor = "default";
-} else if (disabled) {
-  toggle.className = "minus-button disabled-btn";  // CSS paints /new-tests/disabled.png
-  toggle.title = "Disabled in this scenario";
-} else {
-  toggle.className = gen.user_active ? "minus-button" : "plus-button";
-  toggle.textContent = gen.user_active ? "−" : "+";
-  toggle.onclick = async () => {
-    const activating = !gen.user_active;
-    const percent = 0;
-    const user_active = activating;
-
+// Optional small OFF pill
+if (gen.pg > 0 && gen.user_active && !disabled && !locked) {
+  const offPill = document.createElement("div");
+  offPill.className = "power-block off-pill";
+  offPill.textContent = "off";
+  offPill.title = "Turn off generator but keep it active";
+  offPill.addEventListener("click", async () => {
     const res = await fetch(`/api/set_generation/${gen.index}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ percent, user_active })
+      body: JSON.stringify({ percent: 0, user_active: true })
     });
     const data = await res.json();
     currentGenerators = data.generators;
     renderGenerators(currentGenerators);
     renderLines(data.lines, data.solved !== false);
-    renderOverview(currentGenerators, currentScenarioData, data.lines);
+    renderOverview(currentGenerators, currentScenarioData, window.currentLines);
     updateMapGeneratorsFromScenario();
-  };
+  });
+  blockRow.appendChild(offPill);
 }
 
-right.appendChild(toggle);
+// Build levels
+let levels = [];
+let curLevel = 0;
+while (curLevel + 100 <= gen.pmax) { curLevel += 100; levels.push(curLevel); }
+if (curLevel < gen.pmax) levels.push(gen.pmax);
 
-  card.appendChild(left);
-  card.appendChild(center);
-  card.appendChild(right);
+// Create a block builder
+function createBlock(level, isHalf = false) {
+  const block = document.createElement("div");
+  block.className = "power-block" + (isHalf ? " half" : "");
+  block.title = `${level} MW`;
+  if (gen.pg >= level - 50) block.classList.add("on");
+
+  if (gen.user_active && !disabled && !locked) {
+    block.style.cursor = "pointer";
+    block.addEventListener("mousedown", async () => {
+      const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+      const res = await fetch(`/api/set_generation/${gen.index}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percent, user_active: true })
+      });
+      const data = await res.json();
+      currentGenerators = data.generators;
+      renderGenerators(currentGenerators);
+      renderLines(data.lines, data.solved !== false);
+      renderOverview(currentGenerators, currentScenarioData, data.lines);
+      updateMapGeneratorsFromScenario();
+    });
+  }
+  return block;
+}
+
+// Add blocks
+levels.forEach((level, i) => {
+  const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
+  const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+  blockRow.appendChild(createBlock(level, isHalf));
+});
+
+// tiny pg/pmax label
+const maxLabel = document.createElement("span");
+maxLabel.className = "mw-label";
+maxLabel.textContent = `${Math.round(gen.pg)} / ${Math.round(gen.pmax)} MW`;
+powerContainer.appendChild(maxLabel);
+
+// After mount, size blocks to target ~two rows (avoid tiny squares)
+requestAnimationFrame(() => {
+  const centerW = center.getBoundingClientRect().width || 0;
+  const columns = Math.ceil(levels.length / 2);      // aim for two rows
+  const gap = 4;
+  const usable = Math.max(80, centerW - 64);         // leave some room for label/margins
+  const pbPx = Math.max(12, Math.min(16, Math.floor((usable - gap * (columns - 1)) / Math.max(1, columns))));
+  blockRow.style.setProperty('--pb', pbPx + 'px');
+});
+
+
+// ========== RIGHT SECTION ==========
+const right = document.createElement("div");
+right.className = "gen-section right";
+right.setAttribute("role", "button");
+right.tabIndex = 0;
+
+const isLocked   = !!locked;
+const isDisabled = !!disabled;
+const isOn       = !!gen.user_active;
+
+let state, icon, title;
+if (isLocked)        { state = "locked";   icon = "🔒"; title = "Locked by scenario"; }
+else if (isDisabled) { state = "disabled"; icon = "⛔"; title = "Disabled in this scenario"; }
+else if (isOn)       { state = "minus";    icon = "−";  title = "Deactivate"; }
+else                 { state = "plus";     icon = "+";  title = "Activate"; }
+
+right.dataset.state = state;
+right.title = title;
+
+const iconEl = document.createElement("div");
+iconEl.className = "gen-action-icon";
+iconEl.textContent = icon;
+right.appendChild(iconEl);
+
+// Click/keyboard: toggle active (no-op if locked/disabled)
+const doToggle = async () => {
+  if (isLocked || isDisabled) return;
+  const activating  = !gen.user_active;
+  const user_active = activating;
+  const percent     = 0;
+
+  const res = await fetch(`/api/set_generation/${gen.index}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ percent, user_active })
+  });
+  const data = await res.json();
+  currentGenerators = data.generators;
+  renderGenerators(currentGenerators);
+  renderLines(data.lines, data.solved !== false);
+  renderOverview(currentGenerators, currentScenarioData, data.lines);
+  updateMapGeneratorsFromScenario();
+};
+right.addEventListener("click", doToggle);
+right.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doToggle(); }
+});
+
+
+
+card.appendChild(left);
+card.appendChild(center);
+card.appendChild(right);
+
 
   if (selectedGeneratorId === genId) {
     card.classList.add("selected");
@@ -1653,6 +1873,12 @@ const zoomBehavior = d3.zoom()
 
 mapContainer.call(zoomBehavior);
 
+// Initial pan/zoom (scale, translateX, translateY)
+mapContainer.call(
+  zoomBehavior.transform,
+  d3.zoomIdentity.translate(25, 90).scale(0.2)
+);
+
 // 4. THEN fetch data and draw shapes
 Promise.all([
   fetch("/new-tests/full_nodes.json").then(res => res.json()),
@@ -1670,7 +1896,9 @@ Promise.all([
     .attr("stroke-width", 1.5)
     .attr("fill", "none");
 
-const generatorNodes = nodes.filter(d => d.type === "generator");
+const generatorNodes = nodes.filter(d =>
+  d.type === "generator" && d.id !== "Gen82" && String(d.bus) !== "82"
+);
 const genGroups = zoomGroup.selectAll("g.map-gen-group")
   .data(generatorNodes, d=>d.id)
   .enter().append("g")
@@ -1695,18 +1923,16 @@ genGroups.append("rect")
   .attr("rx",10).attr("ry",10);
 
 
-const LOCK_SRC = "/new-tests/lock.png";
-const LOCK_FALLBACK = "data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
-<path fill='%23c3cbe0' d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z'/>\
-</svg>";
+genGroups.append("text")
+  .attr("class", "map-gen-lock-emoji")
+  .attr("text-anchor", "middle")
+  .attr("dominant-baseline", "middle")
+  .attr("x", 0)
+  .attr("y", 0)
+  .text("🔒")
+  .style("pointer-events", "none")
+  .style("display", "none");   // shown when locked
 
-d3.selectAll(".map-gen-lock").attr("href", LOCK_SRC)
-  .each(function(){  // preload to test availability
-    const img = new Image();
-    img.onerror = () => d3.selectAll(".map-gen-lock").attr("href", LOCK_FALLBACK);
-    img.src = LOCK_SRC;
-  });
 
 d3.selectAll(".map-gen-disabled").attr("href", "/new-tests/disabled.png");
 
@@ -1950,8 +2176,17 @@ const halo  = group.select('.map-gen-halo');
 if (!halo.empty()) halo.attr('opacity', (isSelected || isHovered) ? 0.9 : 0);
 
 // 🔒 Lock overlay (always shows if locked, but not faded)
-const lockImg = group.select('.map-gen-lock');
-if (!lockImg.empty()) lockImg.style('display', isLocked ? null : 'none');
+// 🔒 Lock overlay (emoji) — always shows if locked, not faded, sized to rect
+const lockTxt = group.select('.map-gen-lock-emoji');
+if (!lockTxt.empty()) {
+  // Read current rect size
+  const w = parseFloat(rect.attr('width'))  || 50;
+  const h = parseFloat(rect.attr('height')) || 50;
+  const fontSize = Math.min(w, h) * 0.85;   // tweak factor for visual fit
+  lockTxt
+    .style('display', isLocked ? null : 'none')
+    .attr('font-size', fontSize);
+}
 
 // 🚫 Disabled overlay (only for disabled)
 const disImg  = group.select('.map-gen-disabled');
@@ -1961,7 +2196,7 @@ if (!disImg.empty()) disImg.style('display', isDisabled ? null : 'none');
     if (g) matched++;
   });
 
-  console.log(`[map gens] updated: matched=${matched}/${total}`);
+  //console.log(`[map gens] updated: matched=${matched}/${total}`);
 }
 
 
@@ -2075,6 +2310,58 @@ document.addEventListener('click', (e) => {
     [adminPanel, filtersPanel, legendPanel].forEach(p => p?.classList.add("collapsed"));
   }
 });*/
+
+window.debugScenarioVsMap = function debugScenarioVsMap(maxTries = 20, delayMs = 100){
+  let tries = 0;
+
+  const normalizeId = v => {
+    const m = String(v).match(/\d+/);
+    return m ? `Gen${m[0]}` : String(v);
+  };
+
+  const run = () => {
+    tries++;
+
+    // 1) Gather map generator rects
+    const mapRects = document.querySelectorAll('rect.map-gen.gen-card');
+    if (!mapRects.length) {
+      if (tries < maxTries) return setTimeout(run, delayMs);  // wait for map
+      console.warn("⚠ debugScenarioVsMap: no map generator rects found after retries.");
+      return;
+    }
+    const mapIds = new Set([...mapRects].map(r => r.id));
+
+    // 2) Scenario refs (locked/disabled)
+    const scen = window.currentScenarioData || {};
+    const locked   = (scen.locked_generators   || scen.locked   || []).map(normalizeId);
+    const disabled = (scen.disabled_generators || scen.disabled || []).map(normalizeId);
+    const referenced = [...new Set([...locked, ...disabled])];
+
+    // 3) API ids (from /api/generators)
+    const apiIds = new Set((window.currentGenerators || []).map(g => `Gen${g.bus}`));
+
+    // 4) Diffs
+    const missingOnMapFromScenario = referenced.filter(id => !mapIds.has(id));
+    const apiOnly = [...apiIds].filter(id => !mapIds.has(id));
+    const mapOnly = [...mapIds].filter(id => !apiIds.has(id));
+
+    console.group("🔎 Generator ID cross-check");
+    console.log("Map IDs (count):", mapIds.size);
+    console.log("Scenario referenced:", referenced);
+    if (missingOnMapFromScenario.length) {
+      console.warn("⚠ Scenario gens NOT found on map:", missingOnMapFromScenario);
+    } else {
+      console.log("✅ All scenario-referenced gens exist on the map.");
+    }
+    if (apiOnly.length) console.warn("⚠ In API only (not on map):", apiOnly);
+    if (mapOnly.length) console.warn("⚠ On map only (not in API):", mapOnly);
+    console.groupEnd();
+  };
+
+  run();
+};
+
+
 </script>
 
 <script>

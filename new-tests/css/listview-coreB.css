@@ -651,8 +651,6 @@ button:hover{ filter: brightness(0.98); }
 #scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .66rem; }
 #scale-lines .line-card:hover  { background: #f7f9fb; }
 
-.gen-card--on { fill: #4caf50; stroke: #1b5e20; stroke-width: 1.6; }
-
 /* === Map generator status styles === */
 .map-gen rect{
   stroke:#111;
@@ -676,14 +674,4 @@ button:hover{ filter: brightness(0.98); }
 /* SELECTED — blue emphasis */
 .map-gen.selected rect{ stroke:#3b82f6; stroke-width:2.2px; filter:url(#glowBlue); }
 
-/* MapView skin for generators (dice mode) */
-.gen-card{
-  fill: #fff;          /* base off */
-  stroke: #cdd5df;
-  stroke-width: 1.2;
-  shape-rendering: geometricPrecision;
-}
-.gen-card--on { stroke: #2e7d32; stroke-width: 1.6; } /* optional */
 
-.gen-card--dice-on  { fill: var(--gen-on, #4caf50) !important;  stroke: #1b5e20 !important; }
-.gen-card--dice-off { fill: #fff !important;                     stroke: #222 !important; }
