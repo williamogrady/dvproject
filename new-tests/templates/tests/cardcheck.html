@@ -14,7 +14,7 @@
       --card-muted: #eef1f5;
       --gen-on: #3bb273;
       --gen-off:#e8eaee;
-      --card-w: 980px;      /* slider sets this */
+      --card-w: 360px;      /* slider sets this */
       --fs-base: 14px;      /* JS scales 12→15 based on width */
     }
     *{ box-sizing: border-box; }
@@ -140,7 +140,7 @@
     const listEl = document.getElementById('list');
 
     // --- width control
-    let cardW = 980;
+    let cardW = 360;
     const wInput = document.getElementById('w');
     const wVal = document.getElementById('wVal');
     function applyWidth(w){
@@ -153,7 +153,7 @@
       if (wVal) wVal.textContent = w + 'px';
     }
     if (wInput){
-      applyWidth(parseInt(wInput.value,10) || 980);
+      applyWidth(parseInt(wInput.value,10) || 360);
       wInput.addEventListener('input', e => { applyWidth(parseInt(e.target.value,10)); render(); });
     }
 
