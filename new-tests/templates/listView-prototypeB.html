@@ -170,7 +170,7 @@
   .gen-action-icon{ color:#fff; font-size:22px; line-height:1; }
   .gen-section.right[data-state="minus"],
   .gen-section.right[data-state="locked"]{ background:#188848; }
-  .gen-section.right[data-state="plus"]{ background:#727272; }
+  .gen-section.right[data-state="plus"]{ background:#949494; }
   .gen-section.right[data-state="disabled"]{ background:#e0e4ea; cursor:not-allowed; }
 
   /* Fuel gradients (by class) */
@@ -185,6 +185,22 @@
 
 </style>
 
+<style id="gen-card-hover-selected">
+  /* Visual feedback on cards themselves */
+  .generator-card { transition: box-shadow .12s ease, border-color .12s ease; }
+  .generator-card.hovered {
+    border-color: #60a5fa; /* light blue */
+    box-shadow: 0 0 0 2px rgba(96,165,250,.35);
+  }
+  .generator-card.selected {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29,78,216,.45);
+  }
+  .generator-card:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 2px;
+  }
+</style>
 
 
 </head>
@@ -613,6 +629,42 @@ function normalizeLines(linesIn){
 function nz(n){ return Number(n || 0); }
 
 
+// --- stable gen id helper (matches map ids)
+function getGenId(gen){
+  // Prefer bus; normalize to "Gen{bus}"
+  if (gen && gen.bus != null) return `Gen${Number(gen.bus)}`;
+  // fallbacks
+  if (gen?.id && /^Gen\d+$/i.test(gen.id)) return String(gen.id);
+  const m = String(gen?.name || gen?.id || '').match(/\d+/);
+  return m ? `Gen${m[0]}` : '';
+}
+
+// keep these globals you already use
+window.hoveredGeneratorId  = window.hoveredGeneratorId  || null;
+window.selectedGeneratorId = window.selectedGeneratorId || null;
+
+// toggle card classes to mirror hover/selection
+function applyCardHoverSelect(){
+  const hid = window.hoveredGeneratorId;
+  const sid = window.selectedGeneratorId;
+  document.querySelectorAll('.generator-card[data-gen-id]').forEach(card=>{
+    const id = card.getAttribute('data-gen-id');
+    card.classList.toggle('hovered',  id === hid);
+    card.classList.toggle('selected', id === sid);
+  });
+}
+
+// centralize updates so map + cards stay in sync
+function setHoveredGen(id){
+  window.hoveredGeneratorId = id;
+  applyCardHoverSelect();
+  updateMapGeneratorsFromScenario(); // you already have this
+}
+function setSelectedGen(id){
+  window.selectedGeneratorId = id;
+  applyCardHoverSelect();
+  updateMapGeneratorsFromScenario();
+}
 
 
 
@@ -904,6 +956,8 @@ function updateLinesCard(linesIn) {
   topRow.innerHTML = nextTop
     .map(x => makeMini(x.line, x.pct, x.prev, /*compact=*/true))
     .join("");
+
+      card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
 }
 
 
@@ -1037,7 +1091,100 @@ function renderLines(lines, solved = true) {
   if (solved) renderMapLineLoads(lines);
 }
 
+// Ping the generator on the map: quick grow + shrink, with anti-spam
+function pingGenerator(genId){
+  if (!genId) return;
 
+  // Try the rect first; if the transform lives on the parent <g>, use that.
+  let target = d3.select(`#${CSS.escape(genId)}`);
+  if (target.empty()) target = d3.select(`rect.map-gen.gen-card#${CSS.escape(genId)}`);
+  if (target.empty()) return;
+  const parent = target.node().parentNode;
+  const elem   = parent && parent.tagName.toLowerCase() === 'g'
+    ? d3.select(parent) : target;
+
+  // Don’t allow spam while animating
+  if (elem.attr('data-animating') === '1') return;
+  elem.attr('data-animating','1');
+
+  // Always return to the base transform (strip any previous scale)
+  const baseT = elem.attr('data-base-transform')
+           || (elem.attr('transform') || '').replace(/\s*scale\([^)]+\)/g, '');
+  elem.attr('data-base-transform', baseT);
+
+  // Get zoom k for ring sizing
+  const svg = d3.select('svg');                   // your main SVG
+  const k   = (d3.zoomTransform(svg.node()).k || 1);
+
+  // Center of the generator (BBox in local coords is fine)
+  const bb  = elem.node().getBBox();
+  const cx  = bb.x + bb.width  / 2;
+  const cy  = bb.y + bb.height / 2;
+
+  // Emit two subtle rings (in their own layer under zoom-group)
+
+  // Quick grow → shrink back, then clear anim flag
+  const MAX_SCALE = 1.8;
+  elem.interrupt()
+      .attr('transform', `${baseT} scale(1)`)
+      .transition().duration(140).ease(d3.easeCubicOut)
+        .attr('transform', `${baseT} scale(${MAX_SCALE})`)
+      .transition().duration(200).ease(d3.easeCubicIn)
+        .attr('transform', `${baseT} scale(1)`)
+        .on('end', () => elem.attr('data-animating', null));
+}
+
+function pingChevron(lineId){
+  const chev = d3.select(`#chev-${CSS.escape(lineId)}`);
+  if (chev.empty()) return;
+
+  // Use a base transform (translate+rotate only) so we never compound scales
+  const baseT = chev.attr("data-base-transform")
+             || (chev.attr("transform") || "").replace(/\s*scale\([^)]+\)/g, "");
+  const accent = chev.attr("fill") || "#42a5f5";
+
+  // Simple buffer: ignore while animating (prevents spam-click grow)
+  if (chev.attr("data-animating") === "1") return;
+  chev.attr("data-animating", "1");
+
+  // Ensure ping layer
+  let pingLayer = d3.select("#chevron-pings");
+  if (pingLayer.empty()) pingLayer = d3.select("#zoom-group").append("g").attr("id","chevron-pings");
+
+  // Ring radii that remain visible at any zoom
+  const k = d3.zoomTransform(svg.node()).k || 1;
+  const midX = +chev.attr("data-x");
+  const midY = +chev.attr("data-y");
+  const rOuter = 70 / k;
+  const rInner = 40 / k;
+
+  // Emit 2 color-matched rings
+  [0, 120].forEach((delay, i) => {
+    const circle = pingLayer.append("circle")
+      .attr("cx", midX).attr("cy", midY)
+      .attr("r", 0)
+      .attr("fill", "none")
+      .attr("stroke", accent)
+      .attr("stroke-width", 2 / k)
+      .attr("opacity", 0.95);
+
+    circle.transition().delay(delay).duration(650)
+      .attr("r", i === 0 ? rOuter : rInner)
+      .attr("opacity", 0)
+      .ease(d3.easeCubicOut)
+      .on("end", () => circle.remove());
+  });
+
+  // Clamp growth to 500% and ALWAYS return to base (no compounding)
+  const MAX_SCALE = 5;
+  chev.interrupt()
+      .attr("transform", `${baseT} scale(1)`)
+      .transition().duration(180).ease(d3.easeCubicOut)
+        .attr("transform", `${baseT} scale(${MAX_SCALE})`)
+      .transition().duration(220).ease(d3.easeCubicIn)
+        .attr("transform", `${baseT} scale(1)`)
+        .on("end", () => { chev.attr("data-animating", null); });
+}
 
 
 function renderMapLineLoads(lines) {
@@ -1357,6 +1504,15 @@ right.addEventListener("click", doToggle);
 right.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doToggle(); }
 });
+// Click ⇒ select (use existing central setter)
+card.addEventListener("click", (e) => {
+  if (e.target.closest('.gen-section.right')) return; // ignore +/- clicks
+  setSelectedGen(genId);       // your existing selection logic
+  pingGenerator(genId);        // ⬅️ add this line
+});
+// Hover ⇒ hovered (use existing central setter)
+card.addEventListener("mouseenter", () => setHoveredGen(genId));
+card.addEventListener("mouseleave", () => setHoveredGen(null));
 
 
 
