@@ -12,482 +12,178 @@
   @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
 </style>
 
-<style id="layout-overrides">
-  /* Full-viewport app, no page scroll */
-  html, body { height: 100%; overflow: hidden; }
-  #main-layout, #listView-container { height: 100vh; display: flex; flex-direction: column; }
+<style id="dv-slim-layout-and-cards">
 
-  /* Row 1: full‑bleed across any container width */
-  #row-1 {
-    width: 100vw;                /* span the whole viewport */
-    margin-left: calc(50% - 50vw); /* escape parent padding/margins */
-    flex: 0 0 auto;
-  }
-
-  /* Work grid consumes the rest of the height, internal panels can scroll */
-  #row-2-work { flex: 1 1 auto; min-height: 0; }
-  #left-lists, #right-map { height: 100%; min-height: 0; }
-  #generators-container, #map-panel { height: 100%; display: flex; flex-direction: column; }
-  .generator-body { overflow: auto; }
-
-  /* Kill the duplicate submit on the controls row */
-  #row-4 .controls-right { display: none !important; }
-
-  /* Hide the old inline map filters/legend (we’ll toggle them) */
-  #map-filters, #map-legend-bar { display: none; }
-
-  /* Floating buttons + panels */
-  .floating-btn {
-    position: fixed;
-    z-index: 2000;
-    border: none;
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-weight: 600;
-    box-shadow: 0 6px 18px rgba(0,0,0,.15);
-    background: #111; color: #fff; cursor: pointer;
-  }
-  /* placements */
-  .top-left   { top: 10px; left: 10px; }
-  .below-left { top: 56px; left: 10px; } /* under admin */
-  .bottom-left{ bottom: 10px; left: 10px; }
-
-  .floating-panel {
-    position: fixed;
-    z-index: 1999;
-    background: rgba(20,20,20,.98);
-    color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 10px 28px rgba(0,0,0,.25);
-    padding: 10px 12px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    max-width: 86vw;
-    transition: transform .18s ease, opacity .18s ease, visibility .18s ease;
-    opacity: 1; visibility: visible;
-    backdrop-filter: blur(6px);
-  }
-  .floating-panel.horizontal { flex-wrap: nowrap; }
-
-  /* collapsed state */
-  .collapsed { opacity: 0; visibility: hidden; transform: translateY(-6px) scale(.98); }
-
-  /* Admin bar location (unfurled horizontally) */
-  #admin-panel { top: 10px; left: 80px; }
-
-  /* Filters panel (top-left under admin) */
-  #filters-panel { top: 56px; left: 80px; }
-
-  /* Legend panel (bottom-left) */
-  #legend-panel { bottom: 10px; left: 80px; }
-
-  /* Make the overview’s value grid breathe on narrow screens too */
-  #overview .overview-card { min-width: 0; }
-
-  /* Optional: keep map wrapper from overflowing */
-  #map-wrapper { min-height: 0; }
-</style>
-<style>
-  /* --- Split the work area 50/50 --- */
-#row-2-work { display: flex; min-height: 0; }
-#left-lists  { width: 50%; min-width: 0; display: flex; flex-direction: column; }
-#right-map   { width: 50%; min-width: 0; display: flex; flex-direction: column; }
-
-/* Lists side-by-side within the left half */
-#generators-container { display: flex; gap: 12px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
-#inactive-container, #active-container { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-#inactive-container .generator-body, #active-container .generator-body { overflow: auto; min-height: 0; }
-
-/* --- Map in-panel icon buttons (styled like Admin) --- */
-#map-panel { position: relative; }
-.map-btn {
-  position: absolute; z-index: 1001;
-  border: none; border-radius: 10px; padding: 8px 10px;
-  font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.15);
-  background: #111; color: #fff; cursor: pointer;
-}
-.map-btn.top-left    { top: 10px; left: 10px; }
-.map-btn.bottom-left { bottom: 10px; left: 10px; }
-
-/* --- Map flyout panels (horizontal, like Admin) --- */
-.map-panel.horizontal {
-  position: absolute; z-index: 1000;
-  background: rgba(20,20,20,.98); color: #fff;
-  border-radius: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.25);
-  padding: 10px 12px; display: flex; gap: 10px; align-items: center;
-  max-width: 86%; backdrop-filter: blur(6px);
-  transition: transform .18s ease, opacity .18s ease, visibility .18s ease;
-}
-
-/* anchor positions for flyouts */
-#map-filters-panel { top: 10px; left: 56px; }
-#map-legend-panel  { bottom: 10px; left: 56px; }
-
-/* collapsed state */
-.collapsed { opacity: 0; visibility: hidden; transform: translateY(-4px) scale(.98); }
-
-/* Minor: tidy sort label */
-.sort-buttons .sort-label { margin-right: 6px; opacity: .8; }
-
-</style>
-<style id="layout-final-overrides">
-  /* 1) Overview: full width, no container clamps */
-  #row-1 {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-  }
-  #overview { width: 100%; max-width: none; }
-
-  /* 2) Work area: hard 50/50 split (lists | map) */
-  #row-2-work {
-    display: flex !important;
-    width: 100vw;                             /* full-bleed row */
-    margin-left: calc(50% - 50vw);            /* escape parent padding */
-    min-height: 0;
-  }
-  #left-lists, #right-map {
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  #left-lists  { flex: 0 0 50% !important; min-width: 0; }
-  #right-map   { flex: 0 0 50% !important; min-width: 0; padding: 0 !important; }
-
-  /* 3) Lists parallel (inactive | active) and scroll internally */
-  #generators-container {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 12px;
-    align-items: stretch;
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-  #inactive-container, #active-container {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  #inactive-container .generator-body,
-  #active-container .generator-body {
-    flex: 1 1 auto;
-    overflow: auto;
-    min-height: 0;
-  }
-
-  /* 4) Map panel must fill its half (no “skinny” map) */
-  #map-panel {
-    position: relative;
-    flex: 1 1 auto !important;
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  #map-wrapper {
-    flex: 1 1 auto !important;
-    min-height: 0;
-  }
-
-  /* Safety: ensure nothing upstream hides filters/legend in-map flyouts */
-  #map-filters-panel, #map-legend-panel { display: flex; }
-</style>
-
-<style id="layout-polish-overrides">
   :root{
-    --gutter: 16px;   /* page edge padding */
-    --gap: 12px;      /* gap between columns */
+    --gutter: 16px;
+    --gap: 12px;
+    --text-faint:#677089;
+    --border:#d9dee8;
+    --card:#fff;
+    --card-muted:#eef1f5;
+    --gen-on:#3bb273;
+    --gen-off:#e8eaee;
+    --fs-base:14px;
   }
 
-  /* --- Overview: full width with gutters --- */
-  #row-1{
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    padding-inline: var(--gutter);   /* add left/right padding */
-    padding-top: 8px;
-    padding-bottom: 8px;
-    box-sizing: border-box;
-  }
-  #overview{ width: 100%; max-width: none; }
+  /* ===== Layout (simple, no overlap) ===== */
+  html, body { height:100%; overflow:hidden; }
+  #main-layout, #listView-container { height:100vh; display:flex; flex-direction:column; }
 
-  /* --- Work area: full-bleed row with gutters & equal split --- */
+
+  .map-load { fill: #5878cf; stroke: #111; stroke-width: .8; } /* from MapView B */ 
+
+  /* Row 1: full-bleed */
+  #row-1{ width:100vw; margin-left:calc(50% - 50vw); padding:8px var(--gutter); box-sizing:border-box; }
+  #overview{ width:100%; max-width:none; }
+
+  /* Row 2: lists | map */
   #row-2-work{
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    padding-inline: var(--gutter);   /* keep lists off the screen edge */
-    padding-bottom: var(--gutter);   /* keep map off the bottom edge */
-    display: flex !important;
-    gap: var(--gap);
-    min-height: 0;
-    box-sizing: border-box;
+    width:100vw; margin-left:calc(50% - 50vw);
+    padding:0 var(--gutter) var(--gutter);
+    display:flex; gap:var(--gap); min-height:0; box-sizing:border-box;
   }
-  /* Equal 50/50 split but respect the gutters above */
   #left-lists, #right-map{
-    flex: 1 1 0 !important;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
+    flex:1 1 0; min-width:0; display:flex; flex-direction:column; min-height:0;
   }
+  #map-panel{ position:relative; flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+  #map-wrapper{ flex:1 1 auto; min-height:0; }
 
-  /* --- Map: add inner padding so it doesn’t touch right/bottom --- */
-  #right-map{
-    padding: var(--gutter);      /* space all around the map column */
-    padding-top: 0;              /* keep icons tight at top if you like */
-    box-sizing: border-box;
-  }
-  #map-panel{
-    flex: 1 1 auto !important;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  #map-wrapper{
-    flex: 1 1 auto !important;
-    min-height: 0;
-    /* optional: soften edges of the visible map area */
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  /* --- Lists: keep inactive/active strictly side-by-side --- */
+  /* Two lists side by side inside the left column */
   #generators-container{
-    display: flex !important;
-    flex-direction: row !important;
-    gap: var(--gap);
-    align-items: stretch;
-    flex: 1 1 auto;
-    min-height: 0;
+    display:flex; gap:var(--gap); align-items:stretch;
+    flex:1 1 auto; min-height:0;
   }
   #inactive-container, #active-container{
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
+    flex:1 1 0; min-width:0; display:flex; flex-direction:column; min-height:0;
   }
+  /* LISTS = flex columns so items use natural height (no grid row math → no overlap) */
   #inactive-container .generator-body,
-  #active-container .generator-body{
-    flex: 1 1 auto;
-    overflow: auto;
-    min-height: 0;
-
-    /* make cards use natural height instead of stretching */
-    display: grid;
-    grid-auto-rows: auto;
-    gap: 10px;
-    align-content: start;
+  #active-container   .generator-body{
+    flex:1 1 auto; min-height:0; overflow:auto;
+    display:flex; flex-direction:column; gap:12px; align-items:stretch;
   }
 
-  /* --- Normalize generator card height (fix “stretched” active cards) --- */
+  #inactive-container .sort-buttons,
+#active-container   .sort-buttons{
+  margin-bottom: 14px;
+}
+
+ .sort-buttons .sort-btn{
+    position: relative;
+    padding-right: 18px;      /* space for arrow */
+  }
+  .sort-buttons .sort-btn.active {
+    font-weight: 700;
+  }
+  .sort-buttons .sort-btn.active.asc::after,
+  .sort-buttons .sort-btn.active.desc::after{
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: .85;
+  }
+  .sort-buttons .sort-btn.active.asc::after  { content: "▲"; }
+  .sort-buttons .sort-btn.active.desc::after { content: "▼"; }
+
+  /* ===== Cards: 30% | 55% | 15% ===== */
   .generator-card{
-    height: auto !important;         /* never fill column height */
-    flex: 0 0 auto !important;       /* don’t grow to fill */
-    align-items: flex-start !important;
-  }
-  .generator-card .gen-section{ align-self: flex-start !important; }
-
-  /* If any earlier rule gives fixed heights to sections, neutralize: */
-  .gen-section.left,
-  .gen-section.center,
-  .gen-section.right{ height: auto !important; }
-
-  /* --- Keep filter/legend flyouts visible when opened --- */
-  #map-filters-panel, #map-legend-panel{ display: flex; }
-</style>
-<style id="locked-disabled-styles">
-  /* ===== Map generator shapes (rounded rectangle) ===== */
-  .map-gen-rect {
-    rx: 8; ry: 8;                 /* rounded corners */
-    stroke: #000;
-    stroke-width: 1.2;
-  }
-
-  /* Selected gen gets thicker blue outline */
-  g.map-gen.selected > .map-gen-rect {
-    stroke: blue !important;
-    stroke-width: 2.5 !important;
-  }
-
-  /* Disabled: use dashed outline and a little fade */
-  g.map-gen.disabled > .map-gen-rect {
-    stroke-dasharray: 4 3;
-    opacity: 0.85;
-  }
-
-  /* Overlay icons (SVG <image>) stacked centered over the rect */
-  .map-gen-lock,
-  .map-gen-disabled {
-    pointer-events: none;
-  }
-
-  /* ===== Generator cards: locked/disabled ===== */
-  .generator-card.locked {
-    opacity: 0.95;
-    filter: saturate(0.9);
-  }
-  .generator-card.disabled {
-    opacity: 0.65;
-    filter: grayscale(0.5);
-  }
-
-  /* Keep the lock on the +/- button (as in the original file), and
-     show the disabled.png on the button when disabled */
-  .gen-section.right .locked-btn {
-    cursor: default !important;
-  }
-  .gen-section.right .disabled-btn {
-    width: 28px; height: 28px;
-    border-radius: 8px;
-    background: #222 center/16px 16px no-repeat url('disabled.png');
-    border: 1px solid rgba(0,0,0,.25);
-    cursor: not-allowed !important;
-  }
-
-  /* Make sure any text on the disabled button is hidden */
-  .gen-section.right .disabled-btn::before {
-    content: "";
-  }
-</style>
-<style id="mapview-skin-patch">
-  /* MapView-like generator “card” look */
-  :root{
-    --ui-bg: #0e1420;         /* control buttons bg */
-    --ui-fg: #c3cbe0;         /* control buttons text */
-    --ui-stroke: #5f6c88;     /* control buttons border */
-    --gen-on: #4caf50;        /* kept from MapView */
-  }
-
-  /* Buttons (Admin / Filters / Legend) */
-  .floating-btn,
-  #map-panel .map-btn {
-    background: var(--ui-bg) !important;
-    color: var(--ui-fg) !important;
-    border: 1px solid var(--ui-stroke) !important;
-    box-shadow: 0 6px 18px rgba(0,0,0,.15);
-  }
-  .floating-btn:hover,
-  #map-panel .map-btn:hover {
-    filter: brightness(1.08);
-  }
-  .floating-panel,
-  .map-panel.horizontal { /* the flyouts */
-    background: rgba(20,20,30,.96) !important;
-    border: 1px solid rgba(95,108,136,.35);
-  }
-
-  /* Loads (match MapView) */
-  .map-load { fill: #5878cf; stroke: #111; stroke-width: .8; } /* from MapView B */
-
-  /* MapView generator card styles */
-  .gen-card{
-    fill: #fff;
-    stroke: #cdd5df;
-    stroke-width: 1.2;
-    shape-rendering: geometricPrecision;
-    filter: url(#softShadow);
-  }
-  .gen-card--on { stroke: #2e7d32; stroke-width: 1.6; }
-  .gen-card--dice-on  { fill: var(--gen-on) !important; stroke: #1b5e20 !important; }
-  .gen-card--dice-off { fill: #fff !important;           stroke: #222 !important; }
-
-  /* Emissions ring (kept for parity) */
-  .gen-emi-ring { fill: none; stroke-width: 10px; stroke: var(--emi, #4caf50); pointer-events:none; }
-
-  /* Overlays */
-  .map-gen-lock, .map-gen-disabled { pointer-events: none; }
-
-  /* List cards (locked/disabled) */
-  .generator-card.locked   { opacity: .95; filter: saturate(.9); }
-  .generator-card.disabled { opacity: .65; filter: grayscale(.5); }
-  .gen-section.right .locked-btn  { cursor: default !important; }
-
-</style>
-
-<style id="cardcheck-v3">
-  :root{
-    --text-faint:#677089; --border:#d9dee8; --card:#fff; --card-muted:#eef1f5;
-    --gen-on:#3bb273; --gen-off:#e8eaee; --fs-base:14px;
-  }
-
-  .cards-v3 #row-2-work .generator-body{ display:grid; gap:12px; }
-
-  /* ===== EXACT CARD LAYOUT: LEFT | CENTER | RIGHT ===== */
-  .cards-v3 #row-2-work .generator-card{
     display:grid;
-    grid-template-columns: clamp(44px,6vw,72px) minmax(0,1fr) clamp(40px,8%,72px);
-    align-items:stretch;
-    gap:12px; padding:0; width:100%; max-width:100%; box-sizing:border-box;
+    grid-template-columns: 30% 55% 15%;
+    gap:12px;
+    width:100%; max-width:100%;
+    min-height:180px;              /* higher floor so all info shows; grows as needed */
+    height:auto; box-sizing:border-box;
     border:1px solid var(--border); border-radius:12px; background:var(--card);
-    box-shadow:0 2px 8px rgba(0,0,0,.05); overflow:hidden; font-size:var(--fs-base);
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+    font-size:var(--fs-base); overflow:hidden;
+    align-items:stretch;
   }
+  .generator-card.locked   { opacity:.95; filter:saturate(.9); }
+  .generator-card.disabled { opacity:.65; filter:grayscale(.5); }
 
-  /* LEFT rail + gradients */
-  .cards-v3 #row-2-work .gen-section.left{
-    padding:0 4px; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.18);
-    display:grid; gap:3px; align-content:center; align-self:stretch; height:100%;
+  /* Left rail — ZERO padding/margins, full height, clamp text */
+  .gen-section.left{
+    padding:0; margin:0; height:100%; align-self:stretch; box-sizing:border-box;
+    display:flex; flex-direction:column; justify-content:center;
+    min-width:0; overflow:hidden; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.18);
     border-radius:12px 0 0 12px;
   }
-  .cards-v3 #row-2-work .gen-section.left .gen-name{
-    font-weight:700; font-size:calc(var(--fs-base)*0.88); line-height:1.1;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  .gen-section.left .gen-name{
+    font-weight:700; font-size:14px; line-height:1.1;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
+    overflow:hidden; text-overflow:ellipsis; word-break:break-word; hyphens:auto;
   }
-  .cards-v3 #row-2-work .gen-section.left .gen-number,
-  .cards-v3 #row-2-work .gen-section.left .gen-type{
-    font-size:calc(var(--fs-base)*0.78); opacity:.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  .gen-section.left .gen-number,
+  .gen-section.left .gen-type{
+    font-size:12px; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .cards-v3 #row-2-work .fuel-CCGT { background: linear-gradient(135deg,#0b5,#0a7); }
-  .cards-v3 #row-2-work .fuel-Coal { background: linear-gradient(135deg,#444,#222); }
-  .cards-v3 #row-2-work .fuel-Hydro{ background: linear-gradient(135deg,#1e88e5,#1565c0); }
-  .cards-v3 #row-2-work .fuel-Wind { background: linear-gradient(135deg,#6a1b9a,#4527a0); }
-  .cards-v3 #row-2-work .fuel-Solar{ background: linear-gradient(135deg,#f6c343,#f4a261); color:#202020; text-shadow:none; }
 
-  /* CENTER (two tight rows + vertical breathing room) */
-  .cards-v3 #row-2-work .gen-section.center{
-    min-width:0; display:grid; grid-template-rows:auto auto; gap:6px; padding:8px 0;
-  }
-  .cards-v3 #row-2-work .gen-power{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
-  .cards-v3 #row-2-work .power-label{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
-  .cards-v3 #row-2-work .power-block-row{ display:flex; gap:4px; row-gap:4px; align-items:center; flex-wrap:wrap; max-width:100%; }
-  .cards-v3 #row-2-work .power-block{
-    width:var(--pb,14px); height:var(--pb,14px); border-radius:3px;
-    background:var(--gen-off); border:1px solid rgba(0,0,0,.15);
-  }
-  .cards-v3 #row-2-work .power-block.on{ background:var(--gen-on); }
-  .cards-v3 #row-2-work .power-block.half{ width: calc(var(--pb,14px)/2); }
-  .cards-v3 #row-2-work .off-pill{
-    height:18px; line-height:16px; padding:0 8px; font-size:calc(var(--fs-base)*0.68);
-    border-radius:999px; border:1px solid rgba(0,0,0,.2); background:#444; color:#fff; cursor:pointer;
-  }
-  .cards-v3 #row-2-work .mw-label{ margin-left:8px; font-size:calc(var(--fs-base)*0.78); color:var(--text-faint); }
+  /* Center — two tight rows; blocks wrap and drive height */
+.gen-section.center{
+  min-width:0; display:grid; grid-template-rows:auto auto;
+  gap:4px;               /* was 6px */
+  padding:6px 0;         /* was 8px 0 */
+}
+  .gen-power{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+  .power-label{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
+  .power-block-row{ 
+  display:flex; flex-wrap:wrap; 
+  gap:3px;               /* was 4px */
+  row-gap:3px;           /* was 4px */
+  max-width:100%; 
+}
+  .power-block{ width:var(--pb,20px); height:var(--pb,20px); border-radius:3px; background:var(--gen-off); border:1px solid rgba(0,0,0,.15); }
+  .power-block.on{ background:var(--gen-on); }
+  .power-block.half{ width:calc(var(--pb,14px)/2); }
+  .off-pill{ height:18px; line-height:16px; padding:0 8px; font-size:12px; border-radius:999px; border:1px solid rgba(0,0,0,.2); background:#444; color:#fff; cursor:pointer; }
+  .mw-label{ 
+  margin-left:6px;       /* was 8px */
+  font-size:12px; 
+  color:var(--text-faint); 
+}
 
   /* Metrics chips */
-  .cards-v3 #row-2-work .gen-metrics{ display:flex; flex-wrap:wrap; gap:8px 12px; min-width:0; }
-  .cards-v3 #row-2-work .metric{ display:flex; align-items:center; gap:8px; min-width:0; flex:0 1 auto; }
-  .cards-v3 #row-2-work .metric-label{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
-  .cards-v3 #row-2-work .metric-chip{
-    background:var(--chip-bg,#888); color:#fff; font-weight:800; font-size:calc(var(--fs-base)*0.86);
-    line-height:1; padding:2px 10px; border-radius:999px; white-space:nowrap;
+  .gen-metrics{ 
+  display:flex; flex-wrap:wrap; 
+  gap:6px 8px;           /* was 8px 12px */
+  min-width:0; 
+}
+  .metric{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .metric-label{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
+  .metric-chip{
+    background:var(--chip-bg,#888); color:#fff; font-weight:800;
+    font-size:calc(var(--fs-base)*0.86); line-height:1;
+    padding:2px 10px; border-radius:999px; white-space:nowrap;
   }
-  .cards-v3 #row-2-work .metric-unit{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
+  .metric-unit{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
 
-  /* RIGHT rail: full-height vertical button, dark backgrounds, white icon */
-  .cards-v3 #row-2-work .gen-section.right{
-    display:grid; place-items:center; align-content:center;
-    align-self:stretch; height:100%; padding:0;
+  /* Right rail — ZERO padding, full height, centered icon, dark states */
+  .gen-section.right{
+    padding:0; margin:0; height:100%; align-self:stretch; box-sizing:border-box;
+    display:grid; place-items:center;
     border-left:1px solid var(--border); border-radius:0 12px 12px 0;
     cursor:pointer; user-select:none;
   }
-  .cards-v3 #row-2-work .gen-section.right:hover{ filter:brightness(0.98); }
-  .cards-v3 #row-2-work .gen-action-icon{ font-size:clamp(18px,2.2vw,24px); line-height:1; color:#fff; font-weight:700; }
-  .cards-v3 #row-2-work .gen-section.right[data-state="minus"],
-  .cards-v3 #row-2-work .gen-section.right[data-state="locked"]{ background:#1f6b3a; }
-  .cards-v3 #row-2-work .gen-section.right[data-state="plus"]{ background:#2f3540; }
-  .cards-v3 #row-2-work .gen-section.right[data-state="disabled"]{ background:#e0e4ea; cursor:not-allowed; opacity:.95; }
+  .gen-action-icon{ color:#fff; font-size:22px; line-height:1; }
+  .gen-section.right[data-state="minus"],
+  .gen-section.right[data-state="locked"]{ background:#188848; }
+  .gen-section.right[data-state="plus"]{ background:#727272; }
+  .gen-section.right[data-state="disabled"]{ background:#e0e4ea; cursor:not-allowed; }
 
-  /* Nuke legacy +/- buttons so nothing overlays */
-  .cards-v3 #row-2-work .plus-button, .cards-v3 #row-2-work .minus-button{ display:none !important; }
+  /* Fuel gradients (by class) */
+  .fuel-Gas      { background:linear-gradient(135deg,#149E66,#0E7C4F); }
+  .fuel-Combined { background:linear-gradient(135deg,#0EA5A5,#0B8C8C); color:#0b1b1f; text-shadow:none; }
+  .fuel-Coal     { background:linear-gradient(135deg,#444,#222); }
+  .fuel-Hydro    { background:linear-gradient(135deg,#1e88e5,#1565c0); }
+  .fuel-Wind     { background:linear-gradient(135deg,#6a1b9a,#4527a0); }
+  .fuel-Solar    { background:linear-gradient(135deg,#f6c343,#f4a261); color:#202020; text-shadow:none; }
+  .fuel-Unknown  { background:linear-gradient(135deg,#8e9eab,#eef2f3); color:#111; text-shadow:none; }
+
+
 </style>
-
 
 
 
@@ -771,14 +467,34 @@ function emissionsColor(gen){
   return `hsl(140, ${sat(e)}%, 45%)`;
 }
 
-// --- ID utilities ---
-function normalizeGenId(x){ const m = String(x).match(/\d+/); return m ? `Gen${m[0]}` : String(x); }
-function getMapGenIds(){
-  return new Set([...document.querySelectorAll('rect.map-gen.gen-card')].map(n => n.id));
+// --- Always exclude these
+const EXCLUDE_BUSES = new Set([1]);          // bus numbers to drop
+const EXCLUDE_IDS   = new Set(["Gen1"]);     // normalized ids to drop
+
+function normalizeGenId(gen){
+  // Prefer bus → consistent with map & API (e.g., "Gen23")
+  if (gen && gen.bus != null) return `Gen${Number(gen.bus)}`;
+  // Fallbacks (rarely used)
+  if (gen?.id)   return String(gen.id);
+  if (gen?.name){
+    const m = String(gen.name).match(/\d+/);
+    if (m) return `Gen${m[0]}`;
+  }
+  if (gen?.index != null) return `Gen${Number(gen.index)}`;
+  // Last resort: try to extract any digits
+  const s = String(gen?.id || gen?.name || "");
+  const m = s.match(/\d+/);
+  return m ? `Gen${m[0]}` : s;
 }
-function getApiGenIds(gens){
-  return new Set((gens || []).map(g => `Gen${g.bus}`));
+
+function sanitizeGenerators(arr){
+  return (arr || []).filter(g => {
+    const bus = Number(g?.bus);
+    const id  = normalizeGenId(g);
+    return !EXCLUDE_BUSES.has(bus) && !EXCLUDE_IDS.has(id);
+  });
 }
+
 
 /** Compute universe + overlap/mismatches between API and Map */
 function computeGenUniverse(){
@@ -1366,7 +1082,7 @@ function getLoadColor(pct) {
 
 
 function renderGenerators(gens){
-  // 1) Make data globally visible for the updater
+gens = sanitizeGenerators(gens);                  // ⬅️ enforce here, too
   window.currentGenerators = Array.isArray(gens) ? gens : (
     Array.isArray(window.activeGenerators) || Array.isArray(window.inactiveGenerators)
       ? [...(window.activeGenerators || []), ...(window.inactiveGenerators || [])]
@@ -1436,8 +1152,6 @@ function createGeneratorCard(gen, maxPmax) {
 
 card.className = `generator-card ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
-
-
   //console.groupCollapsed(`🧪 Generator: ${gen.station_name}`);
   //console.log("→ pg:", gen.pg, "→ user_active:", gen.user_active);
   //console.groupEnd();
@@ -1460,13 +1174,21 @@ function getEmissionColor(emissions) {
 // ========== LEFT SECTION ==========
 const left = document.createElement("div");
 
-// Map common API labels to the 5 gradient classes used in cardcheck
-const fuelMap = {
-  CCGT:'CCGT', Coal:'Coal', Hydro:'Hydro', Wind:'Wind', Solar:'Solar',
-  Gas:'CCGT', 'Natural Gas':'CCGT', 'NG':'CCGT'
-};
-const fuelKey = fuelMap[String(gen.fuel_type || gen.type || gen.fuel || '').trim()] || 'CCGT';
+// Canonicalize many possible data keys into five families
+function canonicalFuel(gen){
+  const s = String(
+    gen.fuel_type ?? gen.fuel ?? gen.type ?? gen.generator_type ?? ""
+  ).toLowerCase();
 
+  if (!s) return "Unknown";
+  if (s.includes("coal"))      return "Coal";
+  if (s.includes("hydro"))     return "Hydro";
+  if (s.includes("combined")   || s.includes("ccgt")) return "Combined";
+  if (s.includes("gas"))       return "Gas";
+  return "Unknown";
+}
+
+const fuelKey = canonicalFuel(gen);
 left.className = `gen-section left fuel-${fuelKey}`;
 left.innerHTML = `
   <div class="gen-name">${gen.station_name || gen.name || gen.id || ''}</div>
@@ -1531,7 +1253,7 @@ if (gen.pg > 0 && gen.user_active && !disabled && !locked){
       body: JSON.stringify({ percent: 0, user_active: true })
     });
     const data = await res.json();
-    currentGenerators = data.generators;
+    currentGenerators = sanitizeGenerators(data.generators);
     renderGenerators(currentGenerators);
     renderLines(data.lines, data.solved !== false);
     renderOverview(currentGenerators, currentScenarioData, window.currentLines);
@@ -1562,7 +1284,7 @@ levels.forEach((level, i) => {
         body: JSON.stringify({ percent, user_active: true })
       });
       const data = await res.json();
-      currentGenerators = data.generators;
+      currentGenerators = sanitizeGenerators(data.generators);
       renderGenerators(currentGenerators);
       renderLines(data.lines, data.solved !== false);
       renderOverview(currentGenerators, currentScenarioData, data.lines);
@@ -1594,31 +1316,38 @@ right.className = "gen-section right";
 right.setAttribute("role","button");
 right.tabIndex = 0;
 
+const isLocked   = !!locked;
+const isDisabled = !!disabled;
+
 let state, icon, title;
-if (locked)        { state='locked';   icon='🔒'; title='Locked'; }
-else if (disabled) { state='disabled'; icon='⛔'; title='Disabled'; }
-else if (gen.user_active){ state='minus'; icon='−'; title='Deactivate'; }
-else { state='plus'; icon='+'; title='Activate'; }
+if (isLocked)           { state='locked';   icon='🔒'; title='Locked'; }
+else if (isDisabled)    { state='disabled'; icon='⛔'; title='Disabled'; }
+else if (gen.user_active){ state='minus';   icon='−';  title='Deactivate'; }
+else                     { state='plus';    icon='+';  title='Activate'; }
 
 right.dataset.state = state;
 right.title = title;
-const ic = document.createElement('div'); ic.className = 'gen-action-icon'; ic.textContent = icon;
+const ic = document.createElement('div');
+ic.className = 'gen-action-icon';
+ic.textContent = icon;
 right.appendChild(ic);
 
-// Click/keyboard: toggle active (no-op if locked/disabled)
+// Click/keyboard toggle
 const doToggle = async () => {
   if (isLocked || isDisabled) return;
-  const activating  = !gen.user_active;
-  const user_active = activating;
-  const percent     = 0;
+
+  const activating = !gen.user_active;
+  const payload = activating
+    ? { percent: 100, user_active: true }   // default to full power on activate
+    : { percent: 0,   user_active: false }; // zero out on deactivate
 
   const res = await fetch(`/api/set_generation/${gen.index}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ percent, user_active })
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(payload)
   });
   const data = await res.json();
-  currentGenerators = data.generators;
+  currentGenerators = sanitizeGenerators(data.generators);
   renderGenerators(currentGenerators);
   renderLines(data.lines, data.solved !== false);
   renderOverview(currentGenerators, currentScenarioData, data.lines);
@@ -1628,6 +1357,7 @@ right.addEventListener("click", doToggle);
 right.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doToggle(); }
 });
+
 
 
 
@@ -2122,7 +1852,10 @@ rect
   .style('pointer-events', isDisabled ? 'none' : null)
   .attr('stroke-dasharray', null)           // ✅ no dashed border for locked
   .classed('gen-card--dice-on',  (isOn && !isDisabled))
-  .classed('gen-card--dice-off', (!isOn || isDisabled));
+  .classed('gen-card--dice-off', (!isOn || isDisabled))
+  .classed('selected', isSelected)    // ⬅️ add this
+    .classed('hovered',  isHovered);    // ⬅️ and this
+  
 
 // overlays/halo
 const group = d3.select(this.parentNode);
