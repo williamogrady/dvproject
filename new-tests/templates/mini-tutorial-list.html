@@ -17,7 +17,7 @@
     html, body { height: 100%; }
     body{
       margin: 0;
-      background: var(--bg);
+      background: #f0f4f3;
       color: var(--text);
       font-family: 'Figtree', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       display: grid;               /* Center EVERYTHING */
@@ -27,9 +27,9 @@
 
 
 .wrap{ width: 100%; max-width: var(--maxw); display: grid; gap: 22px; }
-header{ text-align: left; justify-self: start; }
-h1.page-title{ margin: 0; font-size: 2rem; font-weight: 700;}
-p.lead{ margin: 0; color: var(--text-faint); }
+header{ text-align: left; justify-self: start;  }
+h1.page-title{color: #2e2e2e;  margin: 0; font-size: 2rem; font-weight: 700;}
+p.lead{ color: #2e2e2e; margin: 30px 0 0; color: var(--text-faint); }
 
 .arrowBox{ align-self: center; display: grid; place-items: center; }
 .arrow{
@@ -74,27 +74,31 @@ p.lead{ margin: 0; color: var(--text-faint); }
 
 
 /* Reserve space always; reveal only when “visible” */
+/* Nudge off button right */
 .offbtn{
-  visibility: hidden;         /* default: hidden but occupies space */
-  padding: 8px 10px;
-  border-radius: 8px;
+  visibility: hidden;
+  position: absolute;
+  left: 84px;          /* was 64px, moved 20px right */
+  top: 50%; 
+  transform: translateY(-50%);
+  padding: 4px 6px;
+  border-radius: 6px;
   background: #374151;
   color: #fff;
   border: 1px solid rgba(255,255,255,.15);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 11px;
   text-transform: uppercase;
   cursor: pointer;
 }
 .offbtn.visible{ visibility: visible; }
-
 .offbtn:disabled{ opacity:.5; cursor: default; }
 
     /* Generator card: white rounded rectangle with green corner tag, blocks center, plus on right */
     .gen-card{
       position: relative;
       display: grid;
-      grid-template-columns: 56px 1fr 42px; /* off | blocks | +/–  */
+        grid-template-columns: 56px 1fr auto auto; /* adjust columns for full-height bar + blocks + MW + +/- */
       align-items: center;
       gap: 12px;
       padding: 14px 14px 14px 18px;
@@ -106,20 +110,29 @@ p.lead{ margin: 0; color: var(--text-faint); }
     }
     /* green corner label */
     .gen-card .corner{
-      position: absolute; top: 0; left: 0;
-      background: var(--green); color: #fff; font-weight: 700; font-size: 10px; letter-spacing: .04em;
-      padding: 6px 8px; border-top-left-radius: 14px; border-bottom-right-radius: 10px;
-      content: 'GEN';
+      position: static;       /* no absolute positioning */
+      background: var(--green);
+      color: #fff;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      border-radius: 10px 10px 10px 10px;
     }
     .corner::before{ content:"GEN"; }
 
-    .blocks{
+.blocks{
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  place-self: center;          /* center within its grid cell */
+  place-self: center;
+  margin-left: 20px;   /* ← new */
 }
+
     .block{
     width: 18px; height: 18px; border-radius: 4px;
     background: #e5e7eb;                      /* gray by default */
@@ -130,6 +143,13 @@ p.lead{ margin: 0; color: var(--text-faint); }
     border-color: rgba(34,197,94,.6);
     }
 
+.mw-counter{
+  font-weight: 600;
+  font-size: 14px;
+  color: #0f172a;
+  justify-self: center;
+}
+
     /* plus button on the right inside the card */
     .plus{
       appearance: none; border: 1px solid #cfead8; background: #f6fff9; color: #0f5132;
@@ -139,9 +159,16 @@ p.lead{ margin: 0; color: var(--text-faint); }
 
     /* Footer hint + submit */
     footer{ display: grid; grid-auto-flow: column; gap: 12px; align-items: center; width: 100%; }
-    .hint{ justify-self: start; color: var(--text-faint); }
+    .hint{ font-style: italic; color: #6b7280; justify-self: start; color: var(--text-faint); }
     .submit{ justify-self: end; padding: 10px 14px; font-weight: 700; border: none; border-radius: 10px; background: #a1a1aa; color: #fff; cursor: not-allowed; }
     .submit.active{ background: var(--green); cursor: pointer; box-shadow: 0 6px 18px rgba(34,197,94,.35); }
+
+    .target-mw{
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #4caf50; /* green */
+  margin-top: 12px;
+}
   </style>
 </head>
 <body>
@@ -150,6 +177,8 @@ p.lead{ margin: 0; color: var(--text-faint); }
     <h1 class="page-title">Tutorial</h1>
     <p class="lead">Before starting the user test, learn to use <i>List View</i> by turning on a generator.</p>
     </header>
+
+    <div id="targetMW" class="target-mw">Target: 200 MW</div>
 
     <main class="stage">
       <section class="list-panel">
@@ -163,6 +192,7 @@ p.lead{ margin: 0; color: var(--text-faint); }
   <div class="block" data-i="1"></div>
   <div class="block" data-i="2"></div>
 </div>
+<div class="mw-counter" id="mwCounter">0 MW</div>
 <button id="toggleBtn" class="plus" type="button" title="Turn on" aria-label="Turn on">+</button>
 
           </article>
@@ -179,7 +209,7 @@ p.lead{ margin: 0; color: var(--text-faint); }
     </main>
 
     <footer>
-      <p id="hint" class="hint">Press the plus button on the right hand side to turn on the generator.</p>
+      <p id="hint" class="hint">Press the plus button (+) on the right hand side to turn on the generator.</p>
       <button id="submit" class="submit" disabled>Submit Practice</button>
     </footer>
   </div>
@@ -195,6 +225,9 @@ p.lead{ margin: 0; color: var(--text-faint); }
       const blocks   = Array.from(document.querySelectorAll('#blocks .block'));
             const offBtn    = document.getElementById('offBtn');
 const activeNote = document.getElementById('activeNote'); // bottom note in Active panel
+const targetMW = 200;
+
+
 
 function updateOffVisibility(){
   const isActive = card.dataset.active === 'true';
@@ -229,9 +262,10 @@ toggle.setAttribute('aria-label','Turn off');
         hint.textContent = 'Click the power blocks to adjust output.';
         if (activeNote) activeNote.hidden = false;
 
-        // leave level at current (0) until user clicks blocks
+        setLevel(3); // auto-set to 300 MW (3 blocks)
         renderBlocks();
         updateOffVisibility();
+
         }
 
         function deactivate(){
@@ -258,8 +292,26 @@ toggle.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' || e.key===' '){ e.preventDefault(); (card.dataset.active==='true')?deactivate():activate(); }
 });
 
+const mwCounter = document.getElementById('mwCounter');
+
+function updateMW(){
+  const currentMW = level * 100;
+  if (mwCounter) mwCounter.textContent = currentMW + " MW";
+
+  // Enable submit only when currentMW == target
+  if (currentMW === targetMW && card.dataset.active === 'true') {
+    submit.disabled = false;
+    submit.classList.add('active');
+  } else {
+    submit.disabled = true;
+    submit.classList.remove('active');
+  }
+}
+
+
+
 let level = 0;
-function renderBlocks(){ blocks.forEach((b,i)=> b.classList.toggle('on', i < level)); }
+function renderBlocks(){ blocks.forEach((b,i)=> b.classList.toggle('on', i < level)); updateMW(); }
 function setLevel(n){ level = Math.max(0, Math.min(3, n)); renderBlocks(); updateOffVisibility(); }
 function onBlockClick(idx){
   if (card.dataset.active !== 'true') return; // only in Active
