@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DV Project - Tutorial</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="listview-coreB.css" />
+  <style>
+    :root{
+      --maxw: 920px;
+      --panel-gray: #ebebeb;   /* list container gray */
+      --card-white: #ffffff;   /* generator card */
+      --green: #22c55e;
+      --gap: 16px;
+    }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Figtree', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      display: grid;               /* Center EVERYTHING */
+      place-items: center;         /* horizontal + vertical */
+    }
+
+
+
+.wrap{ width: 100%; max-width: var(--maxw); display: grid; gap: 22px; }
+header{ text-align: left; justify-self: start; }
+h1.page-title{ margin: 0; font-size: 2rem; font-weight: 700;}
+p.lead{ margin: 0; color: var(--text-faint); }
+
+.arrowBox{ align-self: center; display: grid; place-items: center; }
+.arrow{
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #000;           /* ← black */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  user-select: none;
+}
+
+    /* Stage: two gray rounded rectangles with padding */
+    .stage{
+  /* 3 columns: Inactive | Arrow | Active */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;   /* ← 'auto' keeps arrow narrow */
+  column-gap: 36px;
+  align-items: center;
+  justify-items: stretch;
+}
+
+    .list-panel{
+      width: 100%;
+      background: var(--panel-gray);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 18px;
+      min-height: 240px;
+      display: grid; gap: 12px;
+
+  gap: 12px;
+  grid-template-rows: auto 1fr auto; /* header | body grows | note at bottom */
+  align-content: stretch;            /* (optional) */
+    }
+    .list-head{ font-weight: 700; opacity: .9; }
+    .list-body{ display: grid; gap: 12px; align-content: start; }
+
+
+/* Reserve space always; reveal only when “visible” */
+.offbtn{
+  visibility: hidden;         /* default: hidden but occupies space */
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #374151;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.15);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.offbtn.visible{ visibility: visible; }
+
+.offbtn:disabled{ opacity:.5; cursor: default; }
+
+    /* Generator card: white rounded rectangle with green corner tag, blocks center, plus on right */
+    .gen-card{
+      position: relative;
+      display: grid;
+      grid-template-columns: 56px 1fr 42px; /* off | blocks | +/–  */
+      align-items: center;
+      gap: 12px;
+      padding: 14px 14px 14px 18px;
+      background: var(--card-white);
+      color: #0f172a;
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+    /* green corner label */
+    .gen-card .corner{
+      position: absolute; top: 0; left: 0;
+      background: var(--green); color: #fff; font-weight: 700; font-size: 10px; letter-spacing: .04em;
+      padding: 6px 8px; border-top-left-radius: 14px; border-bottom-right-radius: 10px;
+      content: 'GEN';
+    }
+    .corner::before{ content:"GEN"; }
+
+    .blocks{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  place-self: center;          /* center within its grid cell */
+}
+    .block{
+    width: 18px; height: 18px; border-radius: 4px;
+    background: #e5e7eb;                      /* gray by default */
+    border: 1px solid rgba(0,0,0,.08);
+    }
+    .block.on{
+    background: var(--green);                 /* green when ON */
+    border-color: rgba(34,197,94,.6);
+    }
+
+    /* plus button on the right inside the card */
+    .plus{
+      appearance: none; border: 1px solid #cfead8; background: #f6fff9; color: #0f5132;
+      width: 36px; height: 36px; border-radius: 10px; font-size: 20px; font-weight: 700; cursor: pointer;
+    }
+    .plus:focus-visible{ outline: 2px solid #1d4ed8; outline-offset: 2px; }
+
+    /* Footer hint + submit */
+    footer{ display: grid; grid-auto-flow: column; gap: 12px; align-items: center; width: 100%; }
+    .hint{ justify-self: start; color: var(--text-faint); }
+    .submit{ justify-self: end; padding: 10px 14px; font-weight: 700; border: none; border-radius: 10px; background: #a1a1aa; color: #fff; cursor: not-allowed; }
+    .submit.active{ background: var(--green); cursor: pointer; box-shadow: 0 6px 18px rgba(34,197,94,.35); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+    <h1 class="page-title">Tutorial</h1>
+    <p class="lead">Before starting the user test, learn to use <i>List View</i> by turning on a generator.</p>
+    </header>
+
+    <main class="stage">
+      <section class="list-panel">
+        <div class="list-head">Inactive</div>
+        <div class="list-body" id="inactive">
+          <article id="genA" class="gen-card" data-active="false" aria-label="Generator card">
+            <span class="corner" aria-hidden="true"></span>
+            <button id="offBtn" class="offbtn" type="button">off</button>
+<div class="blocks" id="blocks">
+  <div class="block" data-i="0"></div>
+  <div class="block" data-i="1"></div>
+  <div class="block" data-i="2"></div>
+</div>
+<button id="toggleBtn" class="plus" type="button" title="Turn on" aria-label="Turn on">+</button>
+
+          </article>
+        </div>
+      </section>
+
+      <div class="arrowBox" aria-hidden="true"><div class="arrow">→</div></div>
+
+      <section class="list-panel">
+        <div class="list-head">Active</div>
+        <div class="list-body" id="active"></div>
+        <p id="activeNote" class="list-note" hidden><i>(Note: Each green block represents 100 MW.)</i></p>
+      </section>
+    </main>
+
+    <footer>
+      <p id="hint" class="hint">Press the plus button on the right hand side to turn on the generator.</p>
+      <button id="submit" class="submit" disabled>Submit Practice</button>
+    </footer>
+  </div>
+
+  <script>
+    (function(){
+      const inactive = document.getElementById('inactive');
+      const active   = document.getElementById('active');
+      const card     = document.getElementById('genA');
+      const toggle   = document.getElementById('toggleBtn');
+      const hint     = document.getElementById('hint');
+      const submit   = document.getElementById('submit');
+      const blocks   = Array.from(document.querySelectorAll('#blocks .block'));
+            const offBtn    = document.getElementById('offBtn');
+const activeNote = document.getElementById('activeNote'); // bottom note in Active panel
+
+function updateOffVisibility(){
+  const isActive = card.dataset.active === 'true';
+  offBtn.classList.toggle('visible', isActive && level > 0);
+}
+
+      function activate(){
+        if (card.dataset.active === 'true') return;
+        active.appendChild(card);
+        card.dataset.active = 'true';
+
+        offBtn.hidden = false;
+hint.textContent = 'Click the power blocks to adjust output.';
+submit.disabled = false;
+submit.classList.add('active');
+if (activeNote) activeNote.hidden = false;
+toggle.textContent = '–';          // minus
+toggle.dataset.state = 'minus';
+toggle.title = 'Turn off';
+toggle.setAttribute('aria-label','Turn off');
+
+
+        // button becomes minus
+        toggle.textContent = '–';
+        toggle.dataset.state = 'minus';
+        toggle.title = 'Turn off';
+        toggle.setAttribute('aria-label','Turn off');
+
+        // UI: enable submit, change hint, show the Active note
+        submit.disabled = false;
+        submit.classList.add('active');
+        hint.textContent = 'Click the power blocks to adjust output.';
+        if (activeNote) activeNote.hidden = false;
+
+        // leave level at current (0) until user clicks blocks
+        renderBlocks();
+        updateOffVisibility();
+        }
+
+        function deactivate(){
+  if (card.dataset.active !== 'true') return;
+ inactive.appendChild(card);
+card.dataset.active = 'false';              // hide off button
+setLevel(0);                        // gray out all blocks
+submit.disabled = true;
+submit.classList.remove('active');
+hint.textContent = 'Press the plus button on the right hand side to turn on the generator.';
+if (activeNote) activeNote.hidden = true;
+toggle.textContent = '+';
+toggle.dataset.state = 'plus';
+toggle.title = 'Turn on';
+toggle.setAttribute('aria-label','Turn on');
+updateOffVisibility();            // hides “off”
+
+}
+
+toggle.addEventListener('click', () => {
+  (card.dataset.active === 'true') ? deactivate() : activate();
+});
+toggle.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' || e.key===' '){ e.preventDefault(); (card.dataset.active==='true')?deactivate():activate(); }
+});
+
+let level = 0;
+function renderBlocks(){ blocks.forEach((b,i)=> b.classList.toggle('on', i < level)); }
+function setLevel(n){ level = Math.max(0, Math.min(3, n)); renderBlocks(); updateOffVisibility(); }
+function onBlockClick(idx){
+  if (card.dataset.active !== 'true') return; // only in Active
+  const target = idx + 1;
+  setLevel( (target === 1 && level === 1) ? 0 : target ); // ListView-style
+}
+
+// hook up the blocks
+blocks.forEach((b,i)=> b.addEventListener('click', ()=> onBlockClick(i)));
+
+// initial paint: start all gray
+renderBlocks();
+
+ 
+      blocks.forEach(b => b.addEventListener('click', ()=> toggleBlock(b)));
+
+      submit.addEventListener('click', ()=>{
+        if(submit.disabled) return;
+        const evt = { source:'dv-mini-tutorial', type:'SUBMIT_REQUESTED', payload:{ ui:'list-mini' } };
+        if(window.parent && window.parent !== window){ window.parent.postMessage(evt, '*'); }
+        alert('Practice complete.');
+      });
+
+offBtn.addEventListener('click', ()=>{
+  if (card.dataset.active === 'true') setLevel(0);  // clears to gray
+});
+
+    })();
+  </script>
+</body>
+</html>
