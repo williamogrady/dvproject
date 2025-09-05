@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DV Project – MapView Tutorial (All-in-Map)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg: #f0f4f3;
+      --ink: #0f172a;
+      --faint: #6b7280;
+      --green: #22c55e;
+      --accent: #4caf50;
+      --panel-border: rgba(0,0,0,.08);
+      --map-card: #e8eceb;
+      --map-stroke: #cdd5d2;
+      --gen-on: #4caf50;   /* match prototype green */
+  --gen-off: #333;     /* reserved if you need a dark token */
+    }
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Figtree', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      display: grid;
+      place-items: center;
+      padding: 28px 16px;
+    }
+    .wrap{ width: 100%; max-width: 980px; display: grid; gap: 16px; }
+    header{ padding: 0 2px; }
+    h1{ margin: 0; font-size: 1.8rem; font-weight: 700; }
+    p.lead{ margin: 8px 0 0; color: var(--faint); }
+    .target{ margin-top: 8px; font-size: 1.2rem; font-weight: 800; color: var(--accent); }
+
+    /* Stage = map only */
+    .stage{
+      background: var(--bg);
+      border: none;
+      border-radius: 16px;
+      padding: 0;
+      min-height: 460px;
+    }
+    .map-shell{
+      background: var(--bg);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      min-height: 460px;
+    }
+    /* Center + enlarge HUD */
+.overlay-hud{
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  display: grid; gap: 6px;
+  z-index: 2;
+  text-align: center;
+}
+
+    
+.pill{
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 800;
+  font-size: 1.25rem;   /* bigger */
+  color: #111;
+}
+.pill .dot{ width: 10px; height: 10px; border-radius: 999px; background: var(--accent); }
+    .map-hint{
+      position: absolute;
+      bottom: 10px; left: 12px;
+      color: #334155;
+      background: rgba(0,0,0,.08);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      z-index: 2;
+    }
+
+    /* Map visuals */
+    /* Generators: perfect rounded squares with vertical stacked blocks */
+.gen-rect{
+  stroke: #222; stroke-width: 1.4; fill: #ffffff; rx: 10; ry: 10;
+}
+ /* Remove label/halo usage in tutorial */
+.gen-label{ display: none; }
+.focus-ring{ display: none; }
+
+    .block-cell{ stroke: rgba(0,0,0,.12); stroke-width: 1; rx: 3; ry: 3; }
+    .block-off{ fill: #e5e7eb; }
+    .block-on{ fill: var(--green); stroke: rgba(34,197,94,.6); }
+
+    /* Internal generator blocks (top → down) */
+.gblock{ stroke: rgba(0,0,0,.12); stroke-width: 1; rx: 4; ry: 4; cursor: pointer; }
+.gblock.off{ fill: #e5e7eb; }
+.gblock.on { fill: var(--gen-on); stroke: rgba(76,175,80,.6); }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>MapView Tutorial</h1>
+      <p class="lead">All info is contained in the map. Zoom, pan, and adjust generator blocks directly.</p>
+      <div class="target">Goal: Match the target by toggling blocks (each block = 100 MW).</div>
+    </header>
+
+    <section class="stage">
+      <div class="map-shell">
+        <!-- HUD inside the map -->
+        <div class="overlay-hud">
+          <div class="pill"><span class="dot"></span><span id="targetText">Target: 400 MW total</span></div>
+          <div class="pill"><span>Total:</span><span id="totalMW">0 MW</span></div>
+        </div>
+
+        <svg id="map" width="100%" height="100%" viewBox="0 0 900 600" aria-label="Miniature map">
+          <defs>
+            <clipPath id="mapClip"><rect x="40" y="40" width="820" height="520" rx="12" ry="12"/></clipPath>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#000" flood-opacity="0.25"/>
+            </filter>
+          </defs>
+          <g id="zoomRoot">
+            <!-- map card -->
+            <rect x="40" y="40" width="820" height="520" fill="#e8eceb" stroke="#cdd5d2" stroke-width="2" rx="12"/>
+            <g id="islands" opacity=".35" clip-path="url(#mapClip)">
+              <ellipse cx="250" cy="220" rx="110" ry="70" fill="#dfe6e4"/>
+              <ellipse cx="640" cy="360" rx="140" ry="90" fill="#dfe6e4"/>
+              <ellipse cx="420" cy="420" rx="90" ry="60" fill="#dfe6e4"/>
+            </g>
+
+            <!-- generators -->
+            <g id="generators" clip-path="url(#mapClip)"></g>
+          </g>
+        </svg>
+        <div class="map-hint">Scroll to zoom • Drag inside map to pan</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script>
+    (function(){
+
+      const DICE = 54;        // collapsed square side (px)
+      const BLOCK_UNIT       = 100;      // MW per block
+      const HALF_STEP        = BLOCK_UNIT / 2;
+      const BASE_BLOCK_H     = 28;       // px (upper bound; will scale down to fit MAX_GEN_H)
+      const BLOCK_GAP        = 4;        // px vertical gap
+      const PAD_INNER        = 10;       // px inner padding
+      const HALO_PAD         = 8;        // px halo padding
+      const MIN_GEN_W        = 50;       // px minimum width (clickable)
+      const WIDTH_VARIATION  = 80;       // px subtle width variation by cost
+      const MAX_GEN_W        = MIN_GEN_W + WIDTH_VARIATION;
+      const MAX_GEN_H        = 220;      // px tallest generator on screen
+      const BASE_S = 64;  // default dice size when Power scaling is OFF
+      const targetMW = 400;
+      const targetText = document.getElementById('targetText');
+      const totalMWEl  = document.getElementById('totalMW');
+      if (targetText) targetText.textContent = "Target: " + targetMW + " MW total";
+
+      const svg = d3.select('#map');
+      const root = d3.select('#zoomRoot');
+      const gLayer = d3.select('#generators');
+
+      const W = 900, H = 600;
+      const inner = {x:40,y:40,w:820,h:520};
+
+      // dataset
+      const gens = [
+        { id:'GEN-A', x: 220, y: 190, w: 54, h: 42, level: 2, max: 3, name:'GEN-A' },
+        { id:'GEN-B', x: 600, y: 330, w: 54, h: 42, level: 1, max: 3, name:'GEN-B' },
+        { id:'GEN-C', x: 410, y: 420, w: 54, h: 42, level: 0, max: 3, name:'GEN-C' },
+      ];
+
+      // zoom with bounds (can't pan outside inner map card)
+      const zoom = d3.zoom()
+        .extent([[0,0],[W,H]])
+        .translateExtent([[inner.x, inner.y],[inner.x+inner.w, inner.y+inner.h]])
+        .scaleExtent([0.9, 6])
+        .on('zoom', (e)=>{
+          const {x,y,k} = e.transform;
+          root.attr('transform', `translate(${x},${y}) scale(${k})`);
+        });
+      svg.call(zoom);
+
+// generator draw (perfect square + blocks L→R within rows, rows bottom→top; no labels/halos)
+const gSel = gLayer.selectAll('g.gen')
+  .data(gens, d => d.id)
+  .join(enter => {
+    const g = enter.append('g')
+      .attr('class','gen')
+      .attr('data-id', d=>d.id);
+
+    // Perfect square side S
+    g.each(function(d){
+      const baseS = (typeof BASE_S !== 'undefined' ? BASE_S : 64);
+      const minW  = (typeof MIN_GEN_W !== 'undefined' ? MIN_GEN_W : 50);
+      const rawS  = Math.min(d.w || baseS, d.h || baseS);
+      d.S = Math.max(minW, rawS || baseS);
+    });
+
+    // Outer square centered at (d.x, d.y)
+    g.append('rect')
+      .attr('class','gen-rect')
+      .attr('x', d=> d.x - d.S/2)
+      .attr('y', d=> d.y - d.S/2)
+      .attr('width', d=> d.S)
+      .attr('height', d=> d.S);
+
+    // Internal blocks: lay out L→R within a row, and rows stack bottom→top
+    g.each(function(d){
+      const pad      = (typeof PAD_INNER   !== 'undefined' ? PAD_INNER   : 10);
+      const gap      = (typeof BLOCK_GAP   !== 'undefined' ? BLOCK_GAP   : 4);
+      const baseBH   = (typeof BASE_BLOCK_H!== 'undefined' ? BASE_BLOCK_H: 28);
+      const blocks   = d.max;            // total block count (e.g., 3 => 300 MW)
+      const columns  = 3;                // fixed 3-wide grid for tutorial clarity
+      const rows     = Math.ceil(blocks / columns);
+
+      // Inner content box
+      const innerLeft  = d.x - d.S/2 + pad;
+      const innerRight = d.x + d.S/2 - pad;
+      const innerTop   = d.y - d.S/2 + pad;
+      const innerBot   = d.y + d.S/2 - pad;
+      const innerW     = innerRight - innerLeft;
+      const innerH     = innerBot   - innerTop;
+
+      // Cell size (height clamped to base block height, width fills evenly across columns)
+      const cellH = Math.min(baseBH, (innerH - (rows - 1)*gap) / rows);
+      const cellW = (innerW - (columns - 1)*gap) / columns;
+
+      // Append in DOM order that matches fill order: bottom row first, left→right
+      for (let r = 0; r < rows; r++){
+        // bottom row (r=0) sits at innerBot - cellH
+        const y = (innerBot - cellH) - r*(cellH + gap);
+
+        for (let c = 0; c < columns; c++){
+          const ord = r*columns + c;       // 0..blocks-1 ordering
+          if (ord >= blocks) break;
+
+          const x = innerLeft + c*(cellW + gap);
+
+          d3.select(this).append('rect')
+            .attr('class', 'gblock ' + (ord < d.level ? 'on' : 'off'))
+            .attr('x', x).attr('y', y)
+            .attr('width', cellW).attr('height', cellH)
+            .attr('data-ord', ord)
+            .on('click', ()=> {
+              // Clicking sets level to this block (1-based). If first block is on and clicked again → 0.
+              const target = ord + 1;
+              d.level = (target === 1 && d.level === 1) ? 0 : target;
+              render(); // keep your existing render() (it uses DOM order i < level)
+            });
+        }
+      }
+    });
+
+    return g;
+  });
+
+
+function render(){
+  // Update block classes based on d.level (top → down)
+  gSel.each(function(d){
+    let idx = 0;
+    d3.select(this).selectAll('rect.gblock')
+      .attr('class', function(){
+        const cls = 'gblock ' + (idx < d.level ? 'on' : 'off');
+        idx++;
+        return cls;
+      });
+  });
+
+  // Update HUD total
+  const total = gens.reduce((sum,g)=> sum + g.level*100, 0);
+  totalMWEl.textContent = total + " MW";
+}
+
+      // initial states
+      render();
+
+      // initial transform: slight zoom to fit region
+      const init = d3.zoomIdentity.scale(1.1).translate(0,0);
+      svg.transition().duration(500).call(zoom.transform, init);
+    })();
+  </script>
+</body>
+</html>
