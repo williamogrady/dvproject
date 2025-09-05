@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Program Tutorial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg: #f0f4f3;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --border: #d9dee8;
+      --accent: #111827;
+      --radius: 16px;
+      --green: #22c55e;
+      --green-dk: #17a34a;
+    }
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: "Figtree", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+
+    header{
+      position: absolute; top: 2.5vh; left: 50%; transform: translateX(-50%);
+      text-align: center; color: var(--accent);
+      user-select:none;
+    }
+    header h1{ margin: 0; font-size: clamp(18px, 3vmin, 28px); }
+    header p{ margin: 6px 0 0; color: var(--muted); font-size: clamp(12px, 1.8vmin, 15px); }
+
+    /* Centered 70% viewport */
+    .viewport {
+      width: 70vw;
+      height: 70vh;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      grid-template-rows: 1fr auto auto; /* slides | dots | action */
+      gap: 12px;
+      min-width: 700px;
+      min-height: 440px;
+    }
+
+    /* Slides row: arrow | panel | arrow */
+    .slides-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .arrow {
+      appearance: none;
+      background: #fff;
+      border: 1px solid var(--border);
+      width: clamp(44px, 6vmin, 56px);
+      height: clamp(44px, 6vmin, 56px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      user-select: none;
+    }
+    .arrow span{
+      font-size: clamp(22px, 4.5vmin, 36px);
+      line-height: 1;
+      transform: translateY(-1px);
+    }
+    .arrow:disabled{ opacity:.35; cursor: default; }
+    .arrow:focus-visible{ outline: 2px solid #60a5fa; outline-offset: 2px; }
+
+    /* Slide panel */
+    .panel {
+      height: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: min(4vmin, 28px);
+      min-height: 0;
+    }
+
+    /* Each slide fits and never overflows */
+    .slide{ display:none; width:100%; height:100%; overflow: hidden; }
+    .slide[aria-hidden="false"]{ display:block; }
+
+    /* Slide content */
+    .content{
+      max-width: 900px;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: min(3vmin, 18px);
+      text-align: center;
+      padding: min(2vmin, 16px);
+    }
+    .content h2{ margin: 0; font-size: clamp(18px, 3vmin, 24px); }
+    .content p{ margin: 0; color: var(--muted); font-size: clamp(14px, 2vmin, 16px); }
+
+    .frame{
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff;
+      color:#111; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer;
+    }
+    .btn:focus-visible{ outline:2px solid #60a5fa; outline-offset:2px; }
+    .btn.success{ background: var(--green); color:#fff; border-color: var(--green-dk); }
+
+    .formbox{
+      display:grid; gap:10px; justify-items:center;
+      padding: 8px 12px; border:1px dashed var(--border); border-radius:10px;
+      background:#fafafa;
+    }
+
+    /* Dots row */
+    .dots{
+      justify-self: center;
+      display:flex; gap: 14px; align-items:center;
+      user-select:none;
+    }
+    .dot{
+      width: 18px; height: 18px;
+      border-radius: 999px;
+      background: #ffffff;              /* white by default */
+      border: 2px solid #000000;        /* black ring by default */
+      appearance: none; padding: 0; cursor: pointer;
+    }
+    .dot[aria-current="true"]{
+      background: #000000;              /* active = black */
+      border-color: #000000;
+    }
+    .dot.done{
+      background: var(--green);         /* completed = green */
+      border-color: var(--green-dk);
+    }
+    .dot:focus-visible{ outline: 2px solid #60a5fa; outline-offset: 3px; }
+
+    /* Action row */
+    .actions{
+      display:flex; justify-content:center; align-items:center;
+    }
+    .complete{
+      appearance:none; border:1px solid var(--border); background:#fff; color:#111;
+      padding:12px 18px; border-radius:12px; font-weight:800; cursor:pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+    .complete:disabled{ opacity:.45; cursor: default; }
+    .complete.ready{ background: var(--green); color:#fff; border-color: var(--green-dk); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Program Tutorial</h1>
+    <p>Work through each slide, then complete the tutorial.</p>
+  </header>
+
+  <div class="viewport" role="application" aria-label="Tutorial slider">
+    <div class="slides-row">
+      <button id="prev" class="arrow" aria-label="Previous slide" title="Previous"><span>‹</span></button>
+
+      <div class="panel" aria-live="polite">
+        <!-- Slide 1: Goal (auto-completes when opened) -->
+        <section id="slide-0" class="slide" role="group" aria-label="Goal" aria-hidden="false">
+          <div class="content">
+            <h2>Goal</h2>
+            <p>Understand the objective and what you’ll practice. Viewing this slide marks it done.</p>
+          </div>
+        </section>
+
+        <!-- Slide 2: ListView (embedded tutorial) -->
+        <section id="slide-1" class="slide" role="group" aria-label="ListView" aria-hidden="true">
+          <div class="content" style="align-content:stretch;">
+            <iframe id="listFrame" class="frame" src="mini-tutorial-list.html" title="ListView tutorial"></iframe>
+          </div>
+        </section>
+
+        <!-- Slide 3: MapView (embedded tutorial) -->
+        <section id="slide-2" class="slide" role="group" aria-label="MapView" aria-hidden="true">
+          <div class="content" style="align-content:stretch;">
+            <iframe id="mapFrame" class="frame" src="mini-tutorial-map_final.html" title="MapView tutorial"></iframe>
+          </div>
+        </section>
+
+        <!-- Slide 4: Agreement form -->
+        <section id="slide-3" class="slide" role="group" aria-label="Agreement" aria-hidden="true">
+          <div class="content">
+            <h2>Agreement</h2>
+            <p>Confirm you understand the instructions to finish.</p>
+            <div class="formbox">
+              <label><input id="agree" type="checkbox" /> I have read and agree to the instructions.</label>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <button id="next" class="arrow" aria-label="Next slide" title="Next"><span>›</span></button>
+    </div>
+
+    <!-- Dots -->
+    <div class="dots" role="tablist" aria-label="Slide indicators">
+      <button class="dot" aria-label="Go to slide 1" aria-current="true"  data-i="0"></button>
+      <button class="dot" aria-label="Go to slide 2" aria-current="false" data-i="1"></button>
+      <button class="dot" aria-label="Go to slide 3" aria-current="false" data-i="2"></button>
+      <button class="dot" aria-label="Go to slide 4" aria-current="false" data-i="3"></button>
+    </div>
+
+    <!-- Complete -->
+    <div class="actions">
+      <button id="completeBtn" class="complete" type="button" disabled>Complete tutorial</button>
+    </div>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const dots    = Array.from(document.querySelectorAll('.dot'));
+    const completeBtn = document.getElementById('completeBtn');
+
+    const lvDoneBtn = document.getElementById('lvDone');
+    const mvDoneBtn = document.getElementById('mvDone');
+    const agreeChk  = document.getElementById('agree');
+
+    const completed = [false, false, false, false];
+    let i = 0;
+
+    function setIndex(n){
+      const max = slides.length - 1;
+      i = Math.max(0, Math.min(max, n));
+      slides.forEach((s, k) => s.setAttribute('aria-hidden', k === i ? 'false' : 'true'));
+      dots.forEach((d, k) => d.setAttribute('aria-current', k === i ? 'true' : 'false'));
+
+      // Slide 1 auto-completes once seen
+      if (i === 0) completed[0] = true;
+
+      updateDots();
+      prevBtn.disabled = (i === 0);
+      nextBtn.disabled = (i === max);
+    }
+
+    function updateDots(){
+      dots.forEach((d, k) => d.classList.toggle('done', !!completed[k]));
+      const allDone = completed.every(Boolean);
+      completeBtn.disabled = !allDone;
+      completeBtn.classList.toggle('ready', allDone);
+    }
+
+    // Wire controls
+    prevBtn.addEventListener('click', () => setIndex(i - 1));
+    nextBtn.addEventListener('click', () => setIndex(i + 1));
+    dots.forEach(d => d.addEventListener('click', () => setIndex(Number(d.dataset.i))));
+
+    // Keyboard: left/right arrows and number keys
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft')  setIndex(i - 1);
+      if (e.key === 'ArrowRight') setIndex(i + 1);
+      if (['1','2','3','4'].includes(e.key)) setIndex(Number(e.key) - 1);
+    });
+
+    // Completion actions per slide (fallback buttons)
+    lvDoneBtn.addEventListener('click', () => { completed[1] = true; lvDoneBtn.classList.add('success'); updateDots(); });
+    mvDoneBtn.addEventListener('click', () => { completed[2] = true; mvDoneBtn.classList.add('success'); updateDots(); });
+    agreeChk.addEventListener('change', (e) => { completed[3] = e.target.checked; updateDots(); });
+
+    // Finish button
+    completeBtn.addEventListener('click', () => {
+      alert('Tutorial complete! 🎉');
+    });
+
+    // === Messaging bridge (preferred) ===
+    // If your embedded tutorial pages can postMessage when their target is met,
+    // send: window.parent.postMessage({ type: 'tutorial:targetMet', slide: 'list' }, '*')
+    //  or:  window.parent.postMessage({ type: 'tutorial:targetMet', slide: 'map'  }, '*')
+    window.addEventListener('message', (e) => {
+      const msg = e.data || {};
+      if (msg.type === 'tutorial:targetMet') {
+        if (msg.slide === 'list') { completed[1] = true; updateDots(); }
+        if (msg.slide === 'map')  { completed[2] = true; updateDots(); }
+      }
+    });
+
+    // Initialize
+    setIndex(0);
+  </script>
+</body>
+</html>

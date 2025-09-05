@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Program Tutorial — Unified</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root{
+      --bg: #f0f4f3;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --border: #d9dee8;
+      --accent: #111827;
+      --radius: 16px;
+      --green: #22c55e;
+      --green-dk: #17a34a;
+      --map-shell: #dfcfcf;
+    }
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: "Figtree", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+
+    header{
+      position: absolute; top: 2.5vh; left: 50%; transform: translateX(-50%);
+      text-align: center; color: var(--accent);
+      user-select:none;
+    }
+    header h1{ margin: 0; font-size: clamp(18px, 3vmin, 28px); }
+    header p{ margin: 6px 0 0; color: var(--muted); font-size: clamp(12px, 1.8vmin, 15px); }
+
+    /* Centered 70% viewport */
+    .viewport {
+      width: 70vw;
+      height: 70vh;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      grid-template-rows: 1fr auto auto; /* slides | dots | action */
+      gap: 12px;
+      min-width: 720px;
+      min-height: 460px;
+    }
+
+    /* Slides row: arrow | panel | arrow */
+    .slides-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .arrow {
+      appearance: none;
+      background: #fff;
+      border: 1px solid var(--border);
+      width: clamp(44px, 6vmin, 56px);
+      height: clamp(44px, 6vmin, 56px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      user-select: none;
+    }
+    .arrow span{
+      font-size: clamp(22px, 4.5vmin, 36px);
+      line-height: 1;
+      transform: translateY(-1px);
+    }
+    .arrow:disabled{ opacity:.35; cursor: default; }
+    .arrow:focus-visible{ outline: 2px solid #60a5fa; outline-offset: 2px; }
+
+    /* Slide panel */
+    .panel {
+      height: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: min(4vmin, 28px);
+      min-height: 0;
+    }
+
+    /* Slides */
+    .slide{ display:none; width:100%; height:100%; overflow: hidden; }
+    .slide[aria-hidden="false"]{ display:block; }
+
+    /* Shared content layout */
+    .content{
+      max-width: 1000px;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: min(3vmin, 18px);
+      text-align: center;
+      padding: min(2vmin, 16px);
+    }
+    .content h2{ margin: 0; font-size: clamp(18px, 3vmin, 24px); }
+    .content p{ margin: 0; color: var(--muted); font-size: clamp(14px, 2vmin, 16px); }
+
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff;
+      color:#111; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer;
+    }
+    .btn:focus-visible{ outline:2px solid #60a5fa; outline-offset:2px; }
+    .btn.success{ background: var(--green); color:#fff; border-color: var(--green-dk); }
+
+    .formbox{
+      display:grid; gap:10px; justify-items:center;
+      padding: 8px 12px; border:1px dashed var(--border); border-radius:10px;
+      background:#fafafa;
+    }
+
+    /* Dots row */
+    .dots{
+      justify-self: center;
+      display:flex; gap: 14px; align-items:center;
+      user-select:none;
+    }
+    .dot{
+      width: 18px; height: 18px;
+      border-radius: 999px;
+      background: #ffffff;              /* white by default */
+      border: 2px solid #000000;        /* black ring by default */
+      appearance: none; padding: 0; cursor: pointer;
+    }
+    .dot[aria-current="true"]{
+      background: #000000;              /* active = black */
+      border-color: #000000;
+    }
+    .dot.done{
+      background: var(--green);         /* completed = green */
+      border-color: var(--green-dk);
+    }
+    .dot:focus-visible{ outline: 2px solid #60a5fa; outline-offset: 3px; }
+
+    /* Action row */
+    .actions{
+      display:flex; justify-content:center; align-items:center;
+    }
+    .complete{
+      appearance:none; border:1px solid var(--border); background:#fff; color:#111;
+      padding:12px 18px; border-radius:12px; font-weight:800; cursor:pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+    .complete:disabled{ opacity:.45; cursor: default; }
+    .complete.ready{ background: var(--green); color:#fff; border-color: var(--green-dk); }
+
+    /* ---------- LISTVIEW (embedded) ---------- */
+    .lv-shell{
+      width: 100%; height: 100%;
+      display: grid; grid-template-rows: auto 1fr auto; gap: 10px;
+    }
+    .lv-stage{
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;
+    }
+    .lv-panel{
+      width: 100%;
+      background: #ebebeb;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      padding: 14px;
+      min-height: 200px;
+      display: grid; gap: 10px; grid-template-rows: auto 1fr;
+    }
+    .lv-head{ font-weight: 700; opacity: .9; text-align: left; }
+    .lv-body{ display: grid; gap: 10px; align-content: start; }
+
+    .gen-card{
+      position: relative;
+      display: grid;
+      grid-template-columns: 56px 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 12px 12px 16px;
+      background: #ffffff;
+      color: #0f172a;
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+    .corner{ background: var(--green); color: #fff; font-weight: 700; font-size: 12px; letter-spacing: .04em; display:grid; place-items:center; height:100%; border-radius:10px; }
+    .corner::before{ content:"GEN"; }
+
+    .blocks{ display:flex; align-items:center; gap:8px; justify-content:center; margin-left: 8px; }
+    .block{ width: 18px; height: 18px; border-radius: 4px; background: #e5e7eb; border: 1px solid rgba(0,0,0,.08); cursor:pointer; }
+    .block.on{ background: var(--green); border-color: rgba(34,197,94,.6); }
+    .mw-counter{ font-weight: 600; font-size: 14px; color: #0f172a; justify-self:center; }
+    .plus{ appearance: none; border: 1px solid #cfead8; background: #f6fff9; color: #0f5132; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; font-weight: 700; cursor: pointer; }
+    .offbtn{ position:absolute; left: 80px; top: 50%; transform: translateY(-50%); padding: 4px 6px; border-radius: 6px; background: #374151; color: #fff; border: 1px solid rgba(255,255,255,.15); font-weight: 600; font-size: 11px; text-transform: uppercase; cursor: pointer; display:none; }
+    .offbtn.visible{ display:inline-block; }
+
+    .lv-footer{ display:grid; grid-template-columns: 1fr auto; align-items:center; }
+    .lv-hint{ color: var(--muted); text-align: left; font-style: italic; }
+    .lv-submit{ padding: 10px 14px; font-weight: 700; border: none; border-radius: 10px; background: #a1a1aa; color: #fff; cursor: not-allowed; }
+    .lv-submit.active{ background: var(--green); cursor: pointer; box-shadow: 0 6px 18px rgba(34,197,94,.35); }
+
+    /* ---------- MAPVIEW (embedded) ---------- */
+    .mv-shell{ width:100%; height:100%; display:grid; grid-template-rows: auto 1fr; gap:10px; }
+    .map-shell{
+      position: relative;
+      width: 100%;
+      background: var(--map-shell);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 12px;
+      overflow: hidden;
+      touch-action: none;
+      min-height: 320px;
+    }
+    .overlay-hud{
+      position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+      display: grid; gap: 6px; z-index: 2; text-align: center;
+    }
+    .pill{
+      background: var(--bg);
+      display: inline-grid;
+      grid-auto-flow: column;
+      align-items: center; gap: 10px;
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 800; color: #111;
+    }
+    .pill .check{ display:none; font-weight:900; margin-left:6px; }
+    .pill.ok .check{ display:inline; }
+
+    svg#map{ width: 100%; height: 100%; display: block; }
+    .gen-rect{ stroke:#222; stroke-width:1.4; fill:#ffffff; rx:12; ry:12; }
+    .gblock{ stroke: rgba(0,0,0,.12); stroke-width: 1; rx: 4; ry: 4; cursor: pointer; }
+    .gblock.off{ fill: #e5e7eb; }
+    .gblock.on { fill: var(--green); stroke: rgba(76,175,80,.6); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Program Tutorial</h1>
+    <p>Work through the slides, then complete the tutorial.</p>
+  </header>
+
+  <div class="viewport" role="application" aria-label="Tutorial slider">
+    <div class="slides-row">
+      <button id="prev" class="arrow" aria-label="Previous slide" title="Previous"><span>‹</span></button>
+
+      <div class="panel" aria-live="polite">
+        <!-- Slide 1: Goal (auto-completes when opened) -->
+        <section id="slide-0" class="slide" role="group" aria-label="Goal" aria-hidden="false">
+          <div class="content">
+            <h2>Goal</h2>
+            <p>Understand the objective and what you’ll practice in ListView and MapView. Viewing this slide marks it done.</p>
+          </div>
+        </section>
+
+        <!-- Slide 2: ListView (embedded UI) -->
+        <section id="slide-1" class="slide" role="group" aria-label="ListView" aria-hidden="true">
+          <div class="content" style="align-content:stretch;">
+            <div class="lv-shell">
+              <div class="lv-stage">
+                <section class="lv-panel">
+                  <div class="lv-head">Inactive</div>
+                  <div class="lv-body" id="lv-inactive">
+                    <article id="lv-card" class="gen-card" data-active="false" aria-label="Generator card">
+                      <span class="corner" aria-hidden="true"></span>
+                      <button id="lv-offBtn" class="offbtn" type="button">off</button>
+                      <div class="blocks" id="lv-blocks">
+                        <div class="block" data-i="0"></div>
+                        <div class="block" data-i="1"></div>
+                        <div class="block" data-i="2"></div>
+                      </div>
+                      <div class="mw-counter" id="lv-mw">0 MW</div>
+                      <button id="lv-toggle" class="plus" type="button" title="Turn on" aria-label="Turn on">+</button>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="lv-panel">
+                  <div class="lv-head">Active</div>
+                  <div class="lv-body" id="lv-active"></div>
+                </section>
+              </div>
+
+              <div class="lv-footer">
+                <p id="lv-hint" class="lv-hint">Press + to turn on the generator, then click blocks to set output.</p>
+                <button id="lv-submit" class="lv-submit" disabled>Submit Practice</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 3: MapView (embedded UI) -->
+        <section id="slide-2" class="slide" role="group" aria-label="MapView" aria-hidden="true">
+          <div class="content" style="align-content:stretch;">
+            <div class="mv-shell">
+              <div class="overlay-hud">
+                <div class="pill"><span id="mv-targetText">Target: 400 MW total</span></div>
+                <div class="pill" id="mv-totalPill"><span>Total:</span> <span id="mv-total">0 MW</span><span class="check">✓</span></div>
+              </div>
+              <div class="map-shell">
+                <svg id="map" viewBox="0 0 900 600" aria-label="Map">
+                  <g id="zoomRoot">
+                    <g id="generators"></g>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 4: Agreement -->
+        <section id="slide-3" class="slide" role="group" aria-label="Agreement" aria-hidden="true">
+          <div class="content">
+            <h2>Agreement</h2>
+            <p>Confirm you understand the instructions to finish.</p>
+            <div class="formbox">
+              <label><input id="agree" type="checkbox" /> I have read and agree to the instructions.</label>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <button id="next" class="arrow" aria-label="Next slide" title="Next"><span>›</span></button>
+    </div>
+
+    <!-- Dots -->
+    <div class="dots" role="tablist" aria-label="Slide indicators">
+      <button class="dot" aria-label="Go to slide 1" aria-current="true"  data-i="0"></button>
+      <button class="dot" aria-label="Go to slide 2" aria-current="false" data-i="1"></button>
+      <button class="dot" aria-label="Go to slide 3" aria-current="false" data-i="2"></button>
+      <button class="dot" aria-label="Go to slide 4" aria-current="false" data-i="3"></button>
+    </div>
+
+    <!-- Complete -->
+    <div class="actions">
+      <button id="completeBtn" class="complete" type="button" disabled>Complete tutorial</button>
+    </div>
+  </div>
+
+  <script>
+    /* ===== Slide Navigation + Completion ===== */
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const dots    = Array.from(document.querySelectorAll('.dot'));
+    const completeBtn = document.getElementById('completeBtn');
+    const completed = [false, false, false, false];
+    let i = 0;
+
+    function setIndex(n){
+      const max = slides.length - 1;
+      i = Math.max(0, Math.min(max, n));
+      slides.forEach((s, k) => s.setAttribute('aria-hidden', k === i ? 'false' : 'true'));
+      dots.forEach((d, k) => d.setAttribute('aria-current', k === i ? 'true' : 'false'));
+      if (i === 0) completed[0] = true; // slide 1 complete on view
+      updateDots();
+      prevBtn.disabled = (i === 0);
+      nextBtn.disabled = (i === max);
+    }
+
+    function updateDots(){
+      dots.forEach((d, k) => d.classList.toggle('done', !!completed[k]));
+      const allDone = completed.every(Boolean);
+      completeBtn.disabled = !allDone;
+      completeBtn.classList.toggle('ready', allDone);
+    }
+
+    prevBtn.addEventListener('click', () => setIndex(i - 1));
+    nextBtn.addEventListener('click', () => setIndex(i + 1));
+    dots.forEach(d => d.addEventListener('click', () => setIndex(Number(d.dataset.i))));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft')  setIndex(i - 1);
+      if (e.key === 'ArrowRight') setIndex(i + 1);
+      if (['1','2','3','4'].includes(e.key)) setIndex(Number(e.key) - 1);
+    });
+
+    completeBtn.addEventListener('click', () => {
+      alert('Tutorial complete! 🎉');
+    });
+
+    /* ===== ListView (Slide 2) ===== */
+    (function(){
+      const inactive = document.getElementById('lv-inactive');
+      const active   = document.getElementById('lv-active');
+      const card     = document.getElementById('lv-card');
+      const toggle   = document.getElementById('lv-toggle');
+      const offBtn   = document.getElementById('lv-offBtn');
+      const hint     = document.getElementById('lv-hint');
+      const submit   = document.getElementById('lv-submit');
+      const blocks   = Array.from(document.querySelectorAll('#lv-blocks .block'));
+      const mwEl     = document.getElementById('lv-mw');
+
+      const targetMW = 200;
+      let level = 0; // 0..3
+
+      function setLevel(n){
+        level = Math.max(0, Math.min(3, n));
+        renderBlocks();
+        updateMW();
+        updateOffVisibility();
+      }
+      function renderBlocks(){ blocks.forEach((b,i)=> b.classList.toggle('on', i < level)); }
+      function updateMW(){
+        const currentMW = level * 100;
+        mwEl.textContent = currentMW + " MW";
+        const ok = (currentMW === targetMW && card.dataset.active === 'true');
+        submit.disabled = !ok;
+        submit.classList.toggle('active', ok);
+        if (ok) {
+          completed[1] = true; updateDots();
+        }
+      }
+      function updateOffVisibility(){
+        const isActive = card.dataset.active === 'true';
+        offBtn.classList.toggle('visible', isActive && level > 0);
+      }
+      function activate(){
+        if (card.dataset.active === 'true') return;
+        active.appendChild(card);
+        card.dataset.active = 'true';
+        toggle.textContent = '–'; toggle.title = 'Turn off'; toggle.setAttribute('aria-label','Turn off');
+        hint.textContent = 'Click the power blocks to adjust output.';
+        setLevel(3); // start at 300 MW
+      }
+      function deactivate(){
+        if (card.dataset.active !== 'true') return;
+        inactive.appendChild(card);
+        card.dataset.active = 'false';
+        toggle.textContent = '+'; toggle.title = 'Turn on'; toggle.setAttribute('aria-label','Turn on');
+        hint.textContent = 'Press + to turn on the generator, then click blocks to set output.';
+        setLevel(0);
+      }
+      function onBlockClick(idx){
+        if (card.dataset.active !== 'true') return; // only in Active
+        const target = idx + 1;
+        setLevel( (target === 1 && level === 1) ? 0 : target );
+      }
+
+      blocks.forEach((b,i)=> b.addEventListener('click', ()=> onBlockClick(i)));
+      toggle.addEventListener('click', ()=> (card.dataset.active === 'true') ? deactivate() : activate());
+      offBtn.addEventListener('click', ()=> setLevel(0));
+      submit.addEventListener('click', ()=> alert('ListView practice submitted.'));
+
+      // initial paint
+      renderBlocks(); updateMW(); updateOffVisibility();
+    })();
+
+    /* ===== MapView (Slide 3) ===== */
+    ;(function(){
+      const targetMW = 400;
+      const totalEl = document.getElementById('mv-total');
+      const totalPill = document.getElementById('mv-totalPill');
+
+      const svg  = d3.select('#map');
+      const root = d3.select('#zoomRoot');
+      const layer= d3.select('#generators');
+      const viewW= 900, viewH = 600;
+      const inner = { x:40, y:40, w:820, h:520 };
+
+      const GEN_S = 120, PAD=12, GAP=4, COLS=3;
+
+      const gens = [
+        { id:'GEN-A', x: 230, y: 200, max:3, level:1 },
+        { id:'GEN-B', x: 610, y: 330, max:5, level:2 },
+        { id:'GEN-C', x: 420, y: 430, max:8, level:0 },
+      ];
+
+      function draw(){
+        const gSel = layer.selectAll("g.gen")
+          .data(gens, d=>d.id)
+          .join(enter => {
+            const g = enter.append("g").attr("class","gen").attr("id", d=>d.id);
+            g.each(d => d.S = GEN_S);
+
+            g.append("rect")
+              .attr("class","gen-rect")
+              .attr("x", d=> d.x - d.S/2)
+              .attr("y", d=> d.y - d.S/2)
+              .attr("width", d=> d.S)
+              .attr("height", d=> d.S)
+              .attr("rx", 12).attr("ry", 12);
+
+            g.append("g").attr("class","blocks");
+
+            g.on("click", function(e, d){
+              d.level = (d.level + 1) % (d.max + 1);
+              renderBlocks(this, d);
+              updateTotals();
+            });
+
+            renderBlocks(g.node(), g.datum());
+            return g;
+          });
+      }
+
+      function renderBlocks(node, d){
+        const innerW = d.S - PAD*2;
+        const innerH = d.S - PAD*2;
+        const rows   = Math.ceil(d.max / COLS);
+        const cellW  = (innerW - (COLS-1)*GAP) / COLS;
+        const cellH  = (innerH - (rows-1)*GAP) / rows;
+        const bx = d.x - d.S/2 + PAD;
+        const by = d.y - d.S/2 + PAD;
+
+        const data = d3.range(d.max).map(i => {
+          const row = rows - 1 - Math.floor(i / COLS); // bottom→top
+          const col = i % COLS;
+          return {
+            i,
+            on: i < d.level,
+            x: bx + col * (cellW + GAP),
+            y: by + row * (cellH + GAP),
+            w: cellW, h: cellH
+          };
+        });
+
+        const sel = d3.select(node).select("g.blocks")
+          .selectAll("rect.gblock")
+          .data(data, r => r.i);
+
+        sel.join(
+          enter => enter.append("rect")
+            .attr("class", r => "gblock " + (r.on ? "on" : "off"))
+            .attr("x", r=>r.x).attr("y", r=>r.y)
+            .attr("width", r=>r.w).attr("height", r=>r.h)
+            .attr("rx", 4).attr("ry", 4),
+          update => update
+            .attr("class", r => "gblock " + (r.on ? "on" : "off"))
+            .attr("x", r=>r.x).attr("y", r=>r.y)
+            .attr("width", r=>r.w).attr("height", r=>r.h)
+        );
+      }
+
+      function updateTotals(){
+        const total = gens.reduce((s,g)=> s + g.level*100, 0);
+        totalEl.textContent = total + " MW";
+        const ok = (total === targetMW);
+        totalPill.classList.toggle('ok', ok);
+        if (ok) { completed[2] = true; updateDots(); }
+      }
+
+      draw(); updateTotals();
+
+      const zoom = d3.zoom()
+        .scaleExtent([0.9, 6])
+        .translateExtent([[inner.x, inner.y],[inner.x+inner.w, inner.y+inner.h]])
+        .filter((event) => {
+          const [mx, my] = d3.pointer(event, svg.node());
+          return mx >= inner.x && mx <= inner.x + inner.w &&
+                 my >= inner.y && my <= inner.y + inner.h;
+        })
+        .on("zoom", (e) => {
+          const t = e.transform;
+          root.attr("transform", `translate(${t.x},${t.y}) scale(${t.k})`);
+        });
+
+      svg.call(zoom);
+      svg.call(zoom.transform, d3.zoomIdentity.translate(0,0).scale(1.06));
+    })();
+
+    /* ===== Agreement (Slide 4) ===== */
+    (function(){
+      const agree = document.getElementById('agree');
+      agree.addEventListener('change', (e)=> { completed[3] = e.target.checked; updateDots(); });
+    })();
+
+    // Init
+    setIndex(0);
+  </script>
+</body>
+</html>
