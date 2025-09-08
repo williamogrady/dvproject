@@ -216,7 +216,7 @@
       <div id="overview">
         <div id="overview-status-section">
           <div class="overview-card" id="scale-power">
-            <div class="overview-label">Power</div>
+            <div class="overview-label">Total Power</div>
             <div class="overview-value" id="overview-power">
               <div class="blocks"></div>
               <div class="fraction">–</div>
@@ -246,11 +246,11 @@
 
           <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
             <div class="overview-card" id="scale-cost">
-              <div class="overview-label">Cost</div>
+              <div class="overview-label">Total Cost</div>
               <div class="overview-value" id="overview-cost">–</div>
             </div>
             <div class="overview-card" id="scale-emissions">
-              <div class="overview-label">Emissions</div>
+              <div class="overview-label">Total Emissions</div>
               <div class="overview-value" id="overview-emissions">–</div>
             </div>
           </div>
@@ -567,10 +567,13 @@ async function loadScenario(scenarioId){
   const lines         = data.lines || data.powerflow?.lines || [];
   window.currentLines = lines;
 
-  // 1) Build task card first
-  setupTaskSection(currentScenarioData);
+// 1) Build task card first
+setupTaskSection(currentScenarioData);
 
-  // 3) Render UI
+// 2) Ensure scenario sets are valid BEFORE any rendering
+currentScenarioData = sanitizeScenarioSets(currentScenarioData);
+
+// 3) Render UI
 renderGenerators(currentGenerators);
 renderLines(lines, data.solved !== false);
 renderOverview(currentGenerators, currentScenarioData, lines);
@@ -580,11 +583,6 @@ updateMapGeneratorsFromScenario();
 // 🔍 run after the map has had a tick to update
 setTimeout(() => window.debugScenarioVsMap(), 0);
 
-  // 4) Enforce: scenario sets must reference only usable gens
-  currentScenarioData = sanitizeScenarioSets(currentScenarioData);
-
-  // 5) List the generators we CAN work with
-  listWorkingGenerators(false); // set to true to show a floating list
 }
 
 
@@ -775,7 +773,9 @@ function updatePowerBlocks(totalPower, targetPower) {
   targetPower = +targetPower || 0;
 
   // MapView label: current power only
-  if (label) label.textContent = `${Math.round(totalPower)} MW`;
+   if (label && targetPower > 0) {
+  label.textContent = `${Math.round(totalPower)} / ${Math.round(targetPower)} MW`;
+  }
 
   container.innerHTML = "";
   if (!(targetPower > 0)) return;
@@ -905,8 +905,8 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
   const totalEmis = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.emissions_per_mw||0), 0);
   const costEl = document.querySelector('#overview-cost');
   const emiEl  = document.querySelector('#overview-emissions');
-  if (costEl) costEl.textContent = Math.round(totalCost).toLocaleString();
-  if (emiEl)  emiEl.textContent  = Math.round(totalEmis).toLocaleString();
+  if (costEl) costEl.textContent = `$${Math.round(totalCost).toLocaleString()}`;
+  if (emiEl)  emiEl.textContent  = `${Math.round(totalEmis).toLocaleString()} CO₂`;
 
   // LINES
   updateLinesCard(lines);
@@ -1217,34 +1217,60 @@ function getLoadColor(pct) {
 
 
 function renderGenerators(gens){
-gens = sanitizeGenerators(gens);                  // ⬅️ enforce here, too
+  gens = sanitizeGenerators(gens);
   window.currentGenerators = Array.isArray(gens) ? gens : (
     Array.isArray(window.activeGenerators) || Array.isArray(window.inactiveGenerators)
       ? [...(window.activeGenerators || []), ...(window.inactiveGenerators || [])]
       : []
   );
 
-  // 2) Seed user_active from pg so some gens can be ON
+  // Seed user_active from pg on first load
   if (typeof markUserActiveStatus === 'function') {
     markUserActiveStatus(window.currentGenerators);
   }
 
-  const lockedGens = gens.filter(g => g.locked);
-  const disabledGens = gens.filter(g => g.disabled);
-  const activeGens = gens.filter(g => g.user_active && !g.locked && !g.disabled);
-  const inactiveGens = gens.filter(g => !g.user_active || g.disabled);
+  // --- Scenario lookups (ids normalized to "Gen{bus}")
+  const scen = currentScenarioData || {};
+  const toId = g => (g?.bus != null ? `Gen${g.bus}` : (g?.id || ''));
+  const idSet = arr => new Set((arr || []).map(v => {
+    const m = String(v).match(/\d+/);
+    return m ? `Gen${m[0]}` : String(v);
+  }));
 
-  // ✅ Save for future sorting
-  activeGenerators = [...lockedGens, ...activeGens];
-  inactiveGenerators = inactiveGens;
+  const lockedSet   = idSet(scen.locked_generators   || scen.locked   || []);
+  const disabledSet = idSet(scen.disabled_generators || scen.disabled || []);
+
+  // Enforce disabled = off + non-interactive
+  window.currentGenerators.forEach(g => {
+    const id = toId(g);
+    if (disabledSet.has(id)) {
+      g.user_active = false;
+      g.pg = 0;
+    }
+  });
+
+  // Partition strictly by scenario first
+  const locked    = window.currentGenerators.filter(g => lockedSet.has(toId(g)));
+  const disabled  = window.currentGenerators.filter(g => disabledSet.has(toId(g)));
+  const unlocked  = window.currentGenerators.filter(g => !lockedSet.has(toId(g)) && !disabledSet.has(toId(g)));
+
+  const active    = unlocked.filter(g => g.user_active);
+  const inactive  = [...locked, ...disabled, ...unlocked.filter(g => !g.user_active)];
+
+  // Save for sort/redraw
+  activeGenerators = active;
+  inactiveGenerators = inactive;
 
   renderColumn("inactive", inactiveGenerators);
   renderColumn("active", activeGenerators);
-  // 3) Now recolor the map (rects already exist by this point)
+
   if (typeof updateMapGeneratorsFromScenario === 'function') {
     updateMapGeneratorsFromScenario();
   }
 }
+
+
+
 function renderColumn(type, gens) {
   const container = document.querySelector(`#${type}-container .generator-body`);
   container.innerHTML = "";
