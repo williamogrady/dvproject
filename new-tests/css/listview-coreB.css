@@ -306,6 +306,16 @@ button:hover{ filter: brightness(0.98); }
   overflow: hidden;
 }
 
+/* Move blocks+label up a bit */
+#overview-power {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;   /* ⬅️ align both blocks + label left */
+  justify-content: flex-start;
+  transform: translateY(-6px); /* ⬅️ nudge upward (tweak px value) */
+}
+
+
 /* Responsive grid: auto-fill with min cell width; JS sets vars */
 #overview-power .blocks {
   --cell-min: 22px;   /* JS may shrink to 18/14/12 on huge goals */
@@ -346,7 +356,19 @@ button:hover{ filter: brightness(0.98); }
   display: flex; align-items: center; justify-content: center;
 }
 
+/* Ensure label hugs the left edge */
+#overview-power .fraction {
+  font-size: 1.1rem;
+  align-self: flex-start;   /* ⬅️ force label left */
+  margin-top: 2px;          /* ⬅️ small gap under blocks */
+}
 
+#overview-power .fraction-row { 
+  display:flex; align-items:center; 
+  justify-content:space-between; 
+  width:100%; 
+  margin-top:2px; 
+}
 
 /* === Row‑2: generator card proportions & compactness === */
 #row-2-work .generator-card{

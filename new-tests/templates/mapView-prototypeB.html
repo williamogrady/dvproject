@@ -760,7 +760,7 @@
 <div id="overview">
   <div id="overview-status-section">
     <div class="overview-card" id="scale-power">
-  <div class="overview-label">Power</div>
+  <div class="overview-label">Total Power</div>
   <div class="overview-value" id="overview-power">
     <div class="blocks"></div>
     <div class="fraction">–</div>
@@ -785,12 +785,12 @@
 </div>
 <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
     <div class="overview-card" id="scale-cost">
-      <div class="overview-label">Cost</div>
+      <div class="overview-label">Total Cost</div>
       <div class="overview-value" id="overview-cost">–</div>
       <div class="overview-status" id="status-cost">Click to scale</div>
     </div>
     <div class="overview-card" id="scale-emissions">
-      <div class="overview-label">Emissions</div>
+      <div class="overview-label">Total Emissions</div>
       <div class="overview-value" id="overview-emissions">–</div>
       <div class="overview-status" id="status-emissions">Click to scale</div>
     </div>
@@ -2221,7 +2221,9 @@ function updatePowerBlocks(totalPower, targetPower) {
   targetPower = +targetPower || 0;
 
   // MapView label: current power only
-  if (label) label.textContent = `${Math.round(totalPower)} MW`;
+  if (label && targetPower > 0) {
+  label.textContent = `${Math.round(totalPower)} / ${Math.round(targetPower)} MW`;
+  }
 
   container.innerHTML = "";
   if (!(targetPower > 0)) return;
