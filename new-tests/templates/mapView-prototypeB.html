@@ -765,7 +765,7 @@
     <div class="blocks"></div>
     <div class="fraction">–</div>
   </div>
-      <div class="overview-status" id="status-power">Click to scale</div>
+      <div class="overview-status" id="status-power">Click to focus</div>
     </div>
     
 <div class="overview-card" id="scale-lines">
@@ -781,7 +781,7 @@
 
     <div class="row-top" id="row-top"></div>
   </div>
-  <div class="overview-status" id="status-lines">Click to scale</div>
+  <div class="overview-status" id="status-lines">Click to focus</div>
 </div>
 <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
     <div class="overview-card" id="scale-cost">
@@ -1059,10 +1059,11 @@ function renderOverview(gens, scenarioData = {}, lines) {
 
   
   
-  const powerFraction = document.querySelector("#overview-power .fraction");
-if (powerFraction) {
-  powerFraction.textContent = `${Math.round(totalPower)} MW`;
-}
+// in renderOverview(...)
+const powerFraction = document.querySelector("#overview-power .fraction");
+if (powerFraction) powerFraction.textContent = `${Math.round(totalPower)} MW`;
+updatePowerBlocks(totalPower, currentScenarioData.target_mw);
+
   document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
   document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
@@ -1522,7 +1523,10 @@ function wireToggle(key, elId, statusId){
   const setState = (on) => {
     if (on) activeFilters.add(key); else activeFilters.delete(key);
     el.classList.toggle("selected", on);
-    if (status) status.textContent = on ? "Scaling ON" : "Click to scale";
+    if (elId == "scale-power") {
+      if (status) status.textContent = on ? "Generators in focus" : "Click to focus";
+    }
+    else if (status) status.textContent = on ? "Currently scaling" : "Click to scale";
   };
 
   // initial
@@ -2202,80 +2206,78 @@ document.getElementById("toggleBtn").addEventListener("click", () => {
   }
 });
   
+
+// MapView-identical blocks, with inline fills so "goal" always shows.
 function updatePowerBlocks(totalPower, targetPower) {
-  //console.log("🧪 updatePowerBlocks called");
-  //console.log("   ⚡ totalPower:", totalPower);
-  //console.log("   🎯 targetPower:", targetPower);
+  const container =
+    document.querySelector("#overview-power .blocks") ||
+    document.querySelector("#scale-power .blocks");
+  const label =
+    document.querySelector("#overview-power .fraction") ||
+    document.querySelector("#scale-power .fraction");
+  if (!container) return;
 
-  const container = document.querySelector("#overview-power .blocks");
-  const label = document.querySelector("#overview-power .fraction");
+  totalPower  = +totalPower  || 0;
+  targetPower = +targetPower || 0;
 
-  if (!container) {
-    console.warn("⚠️ .blocks container not found in #overview-power");
-    return;
-  } else {
-    //console.log("✅ Found .blocks container");
-  }
-
-  if (!label) {
-    console.warn("⚠️ .fraction label not found in #overview-power");
-  } else {
-    //console.log("✅ Found .fraction label");
-  }
+  // MapView label: current power only
+  if (label) label.textContent = `${Math.round(totalPower)} MW`;
 
   container.innerHTML = "";
+  if (!(targetPower > 0)) return;
 
-  const blockSize = 100; // MW per block
-  const blockCount = Math.ceil(targetPower / blockSize);
-  const scaledTotal = totalPower / blockSize;
-  const overAmount = totalPower - targetPower;
-  const showOver = overAmount > 0;
+  const MW_PER_BLOCK = 100;
+  const count   = Math.ceil(targetPower / MW_PER_BLOCK);
+  const overAmt = totalPower - targetPower;
 
-  // Make the grid denser for huge goals so it stays inside the card
-    let cellMin = 22, blockH = 26, gap = 6;
-    if (blockCount > 120) { cellMin = 12; blockH = 14; gap = 4; }
-    else if (blockCount > 80) { cellMin = 14; blockH = 16; gap = 5; }
-    else if (blockCount > 40) { cellMin = 18; blockH = 20; gap = 6; }
+  // MapView density thresholds
+  let cellMin = 22, blockH = 26, gap = 6;
+  if (count > 120)      { cellMin = 12; blockH = 14; gap = 4; }
+  else if (count > 80)  { cellMin = 14; blockH = 16; gap = 5; }
+  else if (count > 40)  { cellMin = 18; blockH = 20; gap = 6; }
 
-    container.style.setProperty('--cell-min', `${cellMin}px`);
-    container.style.setProperty('--block-h', `${blockH}px`);
-    container.style.setProperty('--gap', `${gap}px`);
+  container.style.setProperty("--cell-min", `${cellMin}px`);
+  container.style.setProperty("--block-h",  `${blockH}px`);
+  container.style.setProperty("--gap",      `${gap}px`);
 
+  for (let i = 0; i < count; i++) {
+    const startMW = i * MW_PER_BLOCK;
+    const endMW   = (i + 1) * MW_PER_BLOCK;
+    const el = document.createElement("div");
+    el.className = "block";           // base class for sizing
 
-  //console.log("🔢 blockCount:", blockCount);
-  //console.log("📈 overAmount:", overAmount);
-  //console.log("📦 showOver:", showOver);
+    if (totalPower >= endMW) {
+      // FULL (solid green)
+      el.classList.add("full");
+      el.style.background = "#4caf50";
+    } else if (totalPower <= startMW) {
+      // GOAL / UNMET (solid gray) — this is what was "missing"
+      el.classList.add("goal");
+      el.style.background = "#e0e0e0";
+    } else {
+      // PARTIAL — true fractional fill green→gray
+      el.classList.add("partial");
+      const pct = Math.max(1, Math.min(99, Math.round(((totalPower - startMW) / MW_PER_BLOCK) * 100)));
+      el.style.background = `linear-gradient(90deg, #4caf50 ${pct}%, #e0e0e0 ${pct}%)`;
+    }
 
-  for (let i = 0; i < blockCount; i++) {
-  const block = document.createElement("div");
-  block.className = "block";
-
-  if (totalPower >= (i + 1) * 100) {
-    block.classList.add("full");
-    //console.log(`🟩 Block ${i + 1}: full`);
-  } else if (totalPower > i * 100) {
-    block.classList.add("partial");
-    //console.log(`🟨 Block ${i + 1}: partial`);
-  } else {
-    block.classList.add("goal");
-    //console.log(`⬜ Block ${i + 1}: goal`);
+    container.appendChild(el);
   }
 
-  container.appendChild(block);
-}
-
-  if (showOver && blockCount > 0) {
-    const lastBlock = container.lastElementChild;
-    if (lastBlock) {
-      lastBlock.className = "block over";
-      lastBlock.textContent = overAmount > 2000 ? "!!!" : `+${Math.ceil(overAmount / 100)}`;
+  // OVERSHOOT — last block becomes red with +n or !!!
+  if (overAmt > 0 && count > 0) {
+    const last = container.lastElementChild;
+    if (last) {
+      last.className = "block over";
+      last.style.background = "#ef5350";
+      last.style.color = "#fff";
+      last.style.display = "flex";
+      last.style.alignItems = "center";
+      last.style.justifyContent = "center";
+      last.style.fontSize = "12px";
+      last.textContent = overAmt > 2000 ? "!!!" : `+${Math.ceil(overAmt / MW_PER_BLOCK)}`;
     }
   }
-
-  if (label) {
-    label.textContent = `${Math.round(totalPower)} / ${targetPower}`;
-  }
-
 }
 
 function setupTaskSection(scenario) {
@@ -2432,7 +2434,7 @@ if (linesCard) {
     linesCard.classList.toggle("selected", !wasOn);
     linesCard.classList.add("scale-lines");
     if (linesStatus) {
-      linesStatus.textContent = !wasOn ? "Active" : "Click to scale";
+      linesStatus.textContent = !wasOn ? "Lines in focus" : "Click to focus";
     }
 
     // Redraw chevrons appropriately

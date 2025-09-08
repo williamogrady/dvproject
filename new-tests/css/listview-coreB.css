@@ -249,43 +249,6 @@ button:hover{ filter: brightness(0.98); }
 
 /* Power blocks — compact & contained */
 #row-1 #scale-power .overview-value{ flex-direction:column; gap:10px; width:100%; overflow:hidden; }
-#row-1 #overview-power .blocks{
-  --cell-min:18px; --gap:6px;
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(var(--cell-min),1fr));
-  gap:var(--gap);
-  width:100%;
-  align-content:start;
-  overflow:hidden;
-}
-#row-1 #overview-power .blocks .block{
-  width:var(--cell-min); height:var(--cell-min);
-  border-radius:3px; border:1px solid #c5c8cf; background:#e0e0e0;
-}
-#row-1 #overview-power .blocks .block.full{ background:#4caf50; border-color:#3a9640; }
-#row-1 #overview-power .blocks .block.partial{ background:#a5d6a7; border-color:#7cbf81; }
-#row-1 #overview-power .blocks .block.over{
-  background:#e53935; border-color:#c62828; color:#fff;
-  display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700;
-}
-#row-1 #overview-power .fraction{ font-size:.95rem; font-weight:600; color:#000; }
-
-/* Lines micro‑UI — clamp row heights so the bar doesn’t grow */
-#row-1 .lines-card{
-  display:grid;
-  grid-template-rows:auto auto auto auto auto; /* label | count | row‑rich | row‑top | status */
-  gap:8px;
-}
-#row-1 .lines-card .row-count{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; }
-#row-1 .lines-card .row-rich,
-#row-1 .lines-card .row-top{
-  display:grid; grid-auto-flow:column; grid-auto-columns:max-content;
-  gap:8px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none;
-}
-#row-1 .lines-card .row-rich{ height:36px; }
-#row-1 .lines-card .row-top { height:28px; }
-#row-1 .lines-card .row-rich::-webkit-scrollbar,
-#row-1 .lines-card .row-top::-webkit-scrollbar{ width:0; height:0; }
 
 /* Scenario Task internals */
 #row-1 #overview-task-section .task-card{
@@ -334,17 +297,56 @@ button:hover{ filter: brightness(0.98); }
 #row-1 .overview-value{ font-size: 1rem; gap: 8px; }
 #row-1 .overview-status{ margin-top: 6px; }
 
-/* Power blocks smaller + clamp height */
-#row-1 #overview-power .blocks{
-  --cell-min: 14px; --gap: 4px;
-  max-height: 112px;   /* clamp grid */
+/* MapView parity — power card */
+#scale-power .overview-value {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;          /* space between blocks and label */
+  width: 100%;
   overflow: hidden;
 }
-#row-1 #overview-power .fraction{ font-size: .9rem; }
 
-/* Lines micro‑UI rows shorter */
-#row-1 .lines-card .row-rich{ height: 28px; }
-#row-1 .lines-card .row-top { height: 22px; }
+/* Responsive grid: auto-fill with min cell width; JS sets vars */
+#overview-power .blocks {
+  --cell-min: 22px;   /* JS may shrink to 18/14/12 on huge goals */
+  --gap: 6px;
+  --block-h: 26px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+  gap: var(--gap);
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  align-content: start;
+  box-sizing: border-box;
+}
+
+/* Each block fills its grid cell */
+#overview-power .block {
+  width: 100%;
+  height: var(--block-h);
+  border-radius: 6px;
+}
+#overview-power .blocks{
+  --cell-min: 22px; --gap: 6px; --block-h: 26px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+  gap: var(--gap);
+}
+#overview-power .block{ height: var(--block-h); border-radius: 6px; }
+/* Same color semantics as MapView */
+#overview-power .block.full    { background-color: #4caf50; }
+#overview-power .block.partial { background-color: #a5d6a7; }
+#overview-power .block.goal    { background-color: #e0e0e0; } /* unmet = gray */
+#overview-power .block.over    {
+  background-color: #ef5350;
+  color: white;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+
 
 /* === Row‑2: generator card proportions & compactness === */
 #row-2-work .generator-card{
@@ -401,49 +403,6 @@ button:hover{ filter: brightness(0.98); }
   font-weight: 600;
 }
 
-/* === FINAL OVERRIDES: Lines mini-cards (force MapView sizing) === */
-
-/* Ensure rows use flex, not the earlier grid */
-#row-1 #scale-lines .row-rich,
-#row-1 #scale-lines .row-top {
-  display: flex !important;
-  grid-auto-flow: initial !important;
-  grid-auto-columns: initial !important;
-}
-
-/* Reset any earlier min-width so width can actually shrink */
-#scale-lines .line-card { min-width: 0 !important; }
-#scale-lines .row-rich .line-card { min-width: 0 !important; }
-
-/* MapView parity: exact compact rectangles */
-#scale-lines .line-card {
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  align-items: center;
-  width: 80px;                 /* base width */
-  height: 24px;                /* base height */
-  padding: 3px 5px;
-  border: 1.5px solid var(--accent, #e5e7eb);
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0,0,0,.06);
-}
-
-#scale-lines .row-rich .line-card {
-  width: 88px;                 /* slightly larger for rich row */
-  height: 26px;
-  border-width: 2px;           /* thicker border in rich row */
-}
-
-/* Inner text sizing */
-#scale-lines .line-card .left  { display:flex; align-items:center; justify-content:center; }
-#scale-lines .line-card .right { display:grid; grid-template-rows: 1fr auto; padding-left: 4px; }
-#scale-lines .line-card .load  { font-weight: 800; color: #111; font-size: 0.78rem; line-height: 1; }
-#scale-lines .row-rich .line-card .load { font-size: 0.82rem; }
-#scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .66rem; }
-#scale-lines .line-card:hover  { background: #f7f9fb; }
-
 /* === Map generator status styles === */
 .map-gen rect{
   stroke:#111;
@@ -475,3 +434,93 @@ button:hover{ filter: brightness(0.98); }
 
 
   }
+
+  /* Row containers: flex scrollers, hidden scrollbar (MapView parity) */
+#row-1 #scale-lines .row-rich,
+#row-1 #scale-lines .row-top {
+  display: flex !important;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#row-1 #scale-lines .row-rich::-webkit-scrollbar,
+#row-1 #scale-lines .row-top::-webkit-scrollbar { width:0; height:0; }
+
+/* Mini cards — base */
+#scale-lines .line-card {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 22px 1fr;   /* MapView base */
+  align-items: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 6px;
+  border: 1.5px solid var(--accent, #e5e7eb);
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  cursor: default;               /* non-interactive by default */
+}
+
+/* Row-3 (rich, overloaded) */
+#scale-lines .row-rich .line-card {
+  width: 88px;
+  height: 26px;
+  padding: 3px 5px;
+  grid-template-columns: 18px 1fr; /* shrink chevron column */
+}
+
+/* Row-4 (top) */
+#scale-lines .row-top .line-card {
+  width: 80px;
+  height: 24px;
+  border-radius: 8px;
+  padding: 3px 5px;
+  grid-template-columns: 18px 1fr;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* Inner layout + type (same as MapView) */
+#scale-lines .line-card .left  { display:flex; align-items:center; justify-content:center; }
+#scale-lines .line-card .right { display:grid; grid-template-rows: 1fr auto; padding-left: 4px; }
+#scale-lines .line-card .load  { font-weight: 800; color: #111; font-size: .82rem; line-height: 1; }
+#scale-lines .row-top  .line-card .load { font-size: .78rem; }
+#scale-lines .row-rich .line-card .load { font-size: .74rem; }
+#scale-lines .line-card .delta { font-weight: 700; line-height: 1; font-size: .68rem; }
+.delta.up { color:#c62828; } .delta.down { color:#2e7d32; } .delta.neutral { color:#64748b; }
+
+/* Only overloaded minis are interactive */
+#scale-lines .line-card.is-overloaded { cursor: pointer; }
+
+#row-1 #scale-lines .row-rich { margin-bottom: 8px; }  /* row 3 */
+#row-1 #scale-lines .row-top  { margin-top: 8px; }     /* row 4 */
+
+#scale-lines .line-card:hover { background: #f7f9fb; }
+
+#scale-lines .row-top-title{
+  font-size: .72rem; color:#64748b; font-weight:700;
+  margin-right: 8px; white-space: nowrap;
+}
+
+/* Overview status row uses a 3-col grid (Power | Lines | Cost/Emis column) */
+#overview-status-section{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* The right column stacks two cards that fill height equally */
+#overview-status-section > .column{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+#overview-status-section > .column > .overview-card{
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+}

@@ -33,10 +33,6 @@
 
   .map-load { fill: #5878cf; stroke: #111; stroke-width: .8; } /* from MapView B */ 
 
-  /* Row 1: full-bleed */
-  #row-1{ width:100vw; margin-left:calc(50% - 50vw); padding:8px var(--gutter); box-sizing:border-box; }
-  #overview{ width:100%; max-width:none; }
-
   /* Row 2: lists | map */
   #row-2-work{
     width:100vw; margin-left:calc(50% - 50vw);
@@ -200,6 +196,7 @@
     outline: 2px solid #1d4ed8;
     outline-offset: 2px;
   }
+
 </style>
 
 
@@ -224,7 +221,6 @@
               <div class="blocks"></div>
               <div class="fraction">–</div>
             </div>
-            <div class="overview-status" id="status-power">Click to scale</div>
           </div>
 
           <div class="overview-card" id="scale-lines">
@@ -245,7 +241,6 @@
               <div class="row-top" id="row-top"></div>
 
               <!-- Row 5: Helper text (click card to scale) -->
-              <div class="overview-status" id="status-lines">Click to scale</div>
             </div>
           </div>
 
@@ -253,12 +248,10 @@
             <div class="overview-card" id="scale-cost">
               <div class="overview-label">Cost</div>
               <div class="overview-value" id="overview-cost">–</div>
-              <div class="overview-status" id="status-cost">Click to scale</div>
             </div>
             <div class="overview-card" id="scale-emissions">
               <div class="overview-label">Emissions</div>
               <div class="overview-value" id="overview-emissions">–</div>
-              <div class="overview-status" id="status-emissions">Click to scale</div>
             </div>
           </div>
         </div>
@@ -563,6 +556,7 @@ function listWorkingGenerators(renderToDom = false){
 
 
 
+
 async function loadScenario(scenarioId){
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
@@ -619,6 +613,42 @@ setTimeout(() => window.debugScenarioVsMap(), 0);
       loadScenario(currentScenarioId); // reload current scenario
     });
 
+/** Helpers */
+function _sum(arr, f){ return (arr||[]).reduce((s,x)=>s+(+f(x)||0),0); }
+function _loadPct(L){ const r = +L.rate_a || 1; return Math.abs(+L.flow || 0) / r * 100; }
+function _lineId(L){
+  if (L?.id) return String(L.id);
+  const from = L.from_bus ?? L.from ?? L.i ?? L.bus1 ?? '?';
+  const to   = L.to_bus   ?? L.to   ?? L.j ?? L.bus2 ?? '?';
+  return `${from}-${to}`;
+}
+
+function _loadColor(pct){
+  if (pct > 120) return '#d32f2f'; // red
+  if (pct > 110) return '#f57c00'; // orange
+  if (pct > 100) return '#fbc02d'; // yellow
+  if (pct >  90) return '#7cb342'; // olive
+  return '#43a047';                // green
+}
+
+/** Mini chevron (MapView-style) */
+function _buildChevron(accent, dir){
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('class','chev');
+  svg.setAttribute('viewBox','-12 -12 24 24');
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('transform','rotate(90)');
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','M-4,-6 L4,0 L-4,6 Z'); // triangle
+  path.setAttribute('fill', accent);
+  path.setAttribute('stroke', '#111');
+  path.setAttribute('stroke-width', '0.4');
+  g.appendChild(path);
+  svg.appendChild(g);
+  if (dir < 0) svg.style.transform = 'scaleX(-1)'; // flip for reverse flow
+  return svg;
+}
+
 // --- NEW: normalize helpers ---
 function normalizeLines(linesIn){
   if (Array.isArray(linesIn)) return linesIn;
@@ -628,6 +658,13 @@ function normalizeLines(linesIn){
 }
 function nz(n){ return Number(n || 0); }
 
+function getMapGenIds(){
+  const nodes = document.querySelectorAll('rect.map-gen.gen-card');
+  return new Set([...nodes].map(n => n.id).filter(Boolean));
+}
+function getApiGenIds(gens){
+  return new Set((gens||[]).map(g => `Gen${Number(g.bus)}`));
+}
 
 // --- stable gen id helper (matches map ids)
 function getGenId(gen){
@@ -723,6 +760,79 @@ function applyScenarioUI(state){
 }
 
 
+// 100 MW per block; tidy, responsive grid; no click states
+// MapView-identical blocks, with inline fills so "goal" always shows.
+function updatePowerBlocks(totalPower, targetPower) {
+  const container =
+    document.querySelector("#overview-power .blocks") ||
+    document.querySelector("#scale-power .blocks");
+  const label =
+    document.querySelector("#overview-power .fraction") ||
+    document.querySelector("#scale-power .fraction");
+  if (!container) return;
+
+  totalPower  = +totalPower  || 0;
+  targetPower = +targetPower || 0;
+
+  // MapView label: current power only
+  if (label) label.textContent = `${Math.round(totalPower)} MW`;
+
+  container.innerHTML = "";
+  if (!(targetPower > 0)) return;
+
+  const MW_PER_BLOCK = 100;
+  const count   = Math.ceil(targetPower / MW_PER_BLOCK);
+  const overAmt = totalPower - targetPower;
+
+  // MapView density thresholds
+  let cellMin = 22, blockH = 26, gap = 6;
+  if (count > 120)      { cellMin = 12; blockH = 14; gap = 4; }
+  else if (count > 80)  { cellMin = 14; blockH = 16; gap = 5; }
+  else if (count > 40)  { cellMin = 18; blockH = 20; gap = 6; }
+
+  container.style.setProperty("--cell-min", `${cellMin}px`);
+  container.style.setProperty("--block-h",  `${blockH}px`);
+  container.style.setProperty("--gap",      `${gap}px`);
+
+  for (let i = 0; i < count; i++) {
+    const startMW = i * MW_PER_BLOCK;
+    const endMW   = (i + 1) * MW_PER_BLOCK;
+    const el = document.createElement("div");
+    el.className = "block";           // base class for sizing
+
+    if (totalPower >= endMW) {
+      // FULL (solid green)
+      el.classList.add("full");
+      el.style.background = "#4caf50";
+    } else if (totalPower <= startMW) {
+      // GOAL / UNMET (solid gray) — this is what was "missing"
+      el.classList.add("goal");
+      el.style.background = "#e0e0e0";
+    } else {
+      // PARTIAL — true fractional fill green→gray
+      el.classList.add("partial");
+      const pct = Math.max(1, Math.min(99, Math.round(((totalPower - startMW) / MW_PER_BLOCK) * 100)));
+      el.style.background = `linear-gradient(90deg, #4caf50 ${pct}%, #e0e0e0 ${pct}%)`;
+    }
+
+    container.appendChild(el);
+  }
+
+  // OVERSHOOT — last block becomes red with +n or !!!
+  if (overAmt > 0 && count > 0) {
+    const last = container.lastElementChild;
+    if (last) {
+      last.className = "block over";
+      last.style.background = "#ef5350";
+      last.style.color = "#fff";
+      last.style.display = "flex";
+      last.style.alignItems = "center";
+      last.style.justifyContent = "center";
+      last.style.fontSize = "12px";
+      last.textContent = overAmt > 2000 ? "!!!" : `+${Math.ceil(overAmt / MW_PER_BLOCK)}`;
+    }
+  }
+}
 
 
 
@@ -781,131 +891,42 @@ function renderTaskSection(scenario = {}, evalStateArg) {
 }
 
 
-// MapView-style overview renderer (robust to any 'lines' shape)
-function renderOverview(gens, scenarioData = {}, linesIn = []) {
-  // --- normalize lines to a plain array ---
-  const lines = Array.isArray(linesIn)
-    ? linesIn
-    : (linesIn == null
-        ? []
-        : (typeof linesIn === "object" && !("length" in linesIn))
-          ? Object.values(linesIn)         // e.g., { "1-2": {...}, "2-3": {...} }
-          : Array.from(linesIn));          // e.g., NodeList / array-like
+/** Render the whole Overview (non-interactive) */
+function renderOverview(gens = [], scenario = {}, lines = []) {
+  // POWER
+  const totalMW  = (gens||[]).reduce((s,g)=> s + (+g.pg||0), 0);
+  const targetMW = +(scenario.target_mw ?? scenario.targetMW ?? 0);
+  const fracEl = document.querySelector('#overview-power .fraction');
+  if (fracEl && targetMW > 0) fracEl.textContent = `${Math.round(totalMW)} / ${Math.round(targetMW)}`;
+  updatePowerBlocks(totalMW, targetMW);
 
-  // --- totals (safe numbers) ---
-  totalPower     = (gens || []).reduce((s, g) => s + Number(g.pg || 0), 0);
-  totalCost      = (gens || []).reduce((s, g) => s + Number(g.pg || 0) * Number(g.cost_per_mw || 0), 0);
-  totalEmissions = (gens || []).reduce((s, g) => s + Number(g.pg || 0) * Number(g.emissions_per_mw || 0), 0);
+  // COST / EMISSIONS
+  const totalCost = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.cost_per_mw||0), 0);
+  const totalEmis = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.emissions_per_mw||0), 0);
+  const costEl = document.querySelector('#overview-cost');
+  const emiEl  = document.querySelector('#overview-emissions');
+  if (costEl) costEl.textContent = Math.round(totalCost).toLocaleString();
+  if (emiEl)  emiEl.textContent  = Math.round(totalEmis).toLocaleString();
 
-  const target = Number(scenarioData?.target_mw || 0);
-
-  // --- overloaded lines count (abs(flow) > rate_a) ---
-  const overloadedCount = lines.filter(l => {
-    const rate = Number(l?.rate_a ?? l?.rateA ?? 0);
-    const flow = Math.abs(Number(l?.flow ?? 0));
-    return rate > 0 && flow > rate;
+  // LINES
+  updateLinesCard(lines);
+  const overCnt = (lines||[]).filter(L => {
+    const rate = +(L.rate_a ?? L.rateA ?? 0);
+    const flow = Math.abs(+L.flow || 0);
+    return rate > 0 && flow > rate;   // strictly > 100%
   }).length;
 
-  // --- DOM hookups (supports both legacy IDs and MapView selectors) ---
-  const powerBlocks = document.querySelector("#overview-power .blocks")
-                    || document.getElementById("overview-power-blocks");
-  const powerLabel  = document.querySelector("#overview-power .fraction")
-                    || document.getElementById("overview-power-label");
-  if (powerLabel) powerLabel.textContent = target
-      ? `${Math.round(totalPower)} / ${target}`
-      : `${Math.round(totalPower)} / –`;
+  const countEl = document.querySelector('#overview-lines');     // ← your DOM
+  if (countEl) countEl.textContent = String(overCnt);
 
-  const costEl = document.getElementById("overview-cost");
-  if (costEl) costEl.textContent = `$${Math.round(totalCost)}`;
-
-  const emiEl = document.getElementById("overview-emissions");
-  if (emiEl) emiEl.textContent = `${Math.round(totalEmissions)} CO₂`;
-
-  const linesEl = document.getElementById("overview-lines");
-  if (linesEl) linesEl.textContent = overloadedCount;
-
-  const okPill = document.getElementById("lines-ok-pill");
-  if (okPill) {
-    const within = target > 0
-  ? (totalPower >= target * 0.95 && totalPower <= target * 1.05)
-  : false;
-
-const solved = overloadedCount === 0 && within;
-okPill.style.display = solved ? "inline-block" : "none";
-  }
-
-  // --- power blocks grid render ---
-  updatePowerBlocks(totalPower, target);
-
-  // optional hooks if present
-  try { if (typeof refreshChevrons === "function") refreshChevrons(lines, window.currentMapMode || "full"); } catch(_) {}
-  try { if (typeof updateLinesCard  === "function") updateLinesCard(lines); } catch(_) {}
-  // Re-evaluate scenario + refresh the task section UI
-try {
-  const state = evaluateScenarioState(gens, lines, currentScenarioData || {});
-renderTaskSection(currentScenarioData || {}, state);   // fills numbers/visibility
-applyScenarioUI(state);      
-} catch (_) {}
-
+  const okPill  = document.getElementById('lines-ok-pill');      // ← your DOM
+  if (okPill) okPill.style.display = overCnt === 0 ? 'inline-flex' : 'none';
 }
 
-// Keeps previous loads for deltas across renders
-const _prevLineFlow = Object.create(null);
 
-function getLineKey(l) {
-  const a = Number(l.from_bus ?? l.from ?? l.a ?? 0);
-  const b = Number(l.to_bus   ?? l.to   ?? l.b ?? 0);
-  const lo = Math.min(a,b), hi = Math.max(a,b);
-  return `${lo}-${hi}`;
-}
 
-function linePct(l) {
-  const rate = Number(l.rate_a ?? l.rateA ?? 0);
-  const flow = Math.abs(Number(l.flow ?? 0));
-  if (!rate) return 0;
-  return (flow / rate) * 100;
-}
 
-function loadClass(pct) {
-  if (pct >= 100) return "load-high";
-  if (pct >= 80)  return "load-warn";
-  return "load-okay";
-}
 
-function deltaInfo(curr, prev) {
-  const d = Math.round(curr - prev);
-  if (d > 0)  return { cls: "up", txt: `+${d}%` };
-  if (d < 0)  return { cls: "down", txt: `${d}%` };
-  return { cls: "neutral", txt: "–" };
-}
-
-// Helper: small inline chevron SVG (uses existing chevronPath())
-function miniChevronSVG(color) {
-  const size = 10; // tuned to fit the card nicely
-  return `
-    <svg width="16" height="16" viewBox="-1 -1 24 24" aria-hidden="true">
-      <path d="${chevronPath(size)}" fill="${color}" stroke="#111" stroke-width="0.6"/>
-    </svg>`;
-}
-
-// MapView-style mini (NO line name; just load + delta)
-function makeMini(line, pct, prevPct, compact=false) {
-  const accent = getLoadColor(pct / 100); // your getLoadColor expects 0..1
-  const delta  = Math.round(pct - (prevPct ?? pct));
-  const dCls   = delta > 0 ? "up" : (delta < 0 ? "down" : "neutral");
-  const dTxt   = delta > 0 ? `+${delta}%` : (delta < 0 ? `${delta}%` : `–`);
-
-  const borderW = compact ? "1.5px" : "3px"; // rich row vs top row
-
-  return `
-    <div class="line-card" style="--accent:${accent}; border-color:${accent}; border-width:${borderW};">
-      <div class="left">${miniChevronSVG(accent)}</div>
-      <div class="right">
-        <div class="load">${Math.round(pct)}%</div>
-        <div class="delta ${dCls}">${dTxt}</div>
-      </div>
-    </div>`;
-}
 
 
 /**
@@ -913,103 +934,70 @@ function makeMini(line, pct, prevPct, compact=false) {
  * - row-rich: top 3 overloaded (>=100%)
  * - row-top : next highest (up to 6), excluding those in row-rich
  */
-function updateLinesCard(linesIn) {
-  // Normalize to array
-  const lines = Array.isArray(linesIn)
-    ? linesIn
-    : (linesIn == null ? [] :
-       (typeof linesIn === "object" && !("length" in linesIn)) ? Object.values(linesIn) : Array.from(linesIn));
+/** Lines card:
+ *  Row 3 = top-3 overloaded (>100%) — bigger warning tiles
+ *  Row 4 = next top-3 remaining lines by load (over or not)
+ *  Only overloaded minis are clickable (pingChevron)
+ */
+function updateLinesCard(linesIn = []){
+  const card = document.querySelector('#scale-lines');
+  if (!card) return;
+  const r3 = card.querySelector('#row-rich'); // overloaded
+  const r4 = card.querySelector('#row-top');  // top 3 remaining
+  if (!r3 || !r4) return;
+  r3.innerHTML = ''; r4.innerHTML = '';
 
-  const richRow = document.getElementById("row-rich");
-  const topRow  = document.getElementById("row-top");
-  if (!richRow || !topRow) return;
+  // Normalize & sort
+  const norm = (linesIn||[]).map(L => {
+    const pct = _loadPct(L);
+    return { id: _lineId(L), pct, dir: (+L.flow||0) >= 0 ? 1 : -1 };
+  }).sort((a,b)=> b.pct - a.pct);
 
-  const countEl = document.getElementById("overview-lines");
-  const flow = (window._prevLineFlow ||= {});
+  // Row 3: top-3 overloaded
+  const overloaded = norm.filter(d => d.pct > 100);
+  const row3 = overloaded.slice(0,3);
 
-  // Compute % loads, remember previous, sort by severity
-  const withPct = lines.map(line => {
-    const pct  = linePct(line);
-    const key  = getLineKey(line);
-    const prev = (flow[key] ?? pct);
-    flow[key]  = pct;
-    return { line, pct, prev, key };
-  }).sort((a,b) => b.pct - a.pct);
+  // Row 4: next top-3 remaining (exclude row3 ids)
+  const used = new Set(row3.map(d=>d.id));
+  const remaining = norm.filter(d => !used.has(d.id));
+  const row4 = remaining.slice(0,3);
 
-  const overloaded = withPct.filter(x => x.pct >= 100);
-  const others     = withPct.filter(x => x.pct < 100);
+  // Builders
+  const buildMini = (d, variant/* 'rich' | 'top' */) => {
+    const el = document.createElement('div');
+    const accent = _loadColor(d.pct);
+    el.className = `line-card ${variant} ${d.pct > 100 ? 'is-overloaded' : ''}`;
+    el.dataset.lineId = d.id;
+    el.style.setProperty('--accent', accent);
+    el.style.borderColor = accent;
 
-  // Sync count (badge/pill elsewhere also reads this)
-  if (countEl) countEl.textContent = String(overloaded.length);
+    const chev = _buildChevron(accent, d.dir);
+    const right = document.createElement('div');
+    right.className = 'right';
+    const load = document.createElement('div');
+    load.className = 'load';
+    load.textContent = `${Math.round(d.pct)}%`;
+    const delta = document.createElement('div');
+    delta.className = 'delta neutral';
+    delta.textContent = '–'; // wire real deltas later if you store history
+    right.appendChild(load); right.appendChild(delta);
 
-  // Top 3 overloaded (rich row, thick border)
-  const topOver = overloaded.slice(0, 3);
+    el.appendChild(chev); el.appendChild(right);
 
-  // Next up to 6 top lines excluding the ones already shown (compact row)
-  const shown   = new Set(topOver.map(x => x.key));
-  const nextTop = others.filter(x => !shown.has(x.key)).slice(0, 6);
-
-  richRow.innerHTML = topOver
-    .map(x => makeMini(x.line, x.pct, x.prev, /*compact=*/false))
-    .join("");
-
-  topRow.innerHTML = nextTop
-    .map(x => makeMini(x.line, x.pct, x.prev, /*compact=*/true))
-    .join("");
-
-      card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
-}
-
-
-
-
-// Power block grid (ported from MapView B with dual-selector support)
-function updatePowerBlocks(totalPower, targetPower) {
-  const container = document.querySelector("#overview-power .blocks")
-                 || document.getElementById("overview-power-blocks");
-  const label     = document.querySelector("#overview-power .fraction")
-                 || document.getElementById("overview-power-label");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  const BLOCK_SIZE   = 100;                       // MW per block
-  const blockCount   = targetPower > 0 ? Math.ceil(targetPower / BLOCK_SIZE) : 0;
-  const scaledTotal  = totalPower / BLOCK_SIZE;
-  const overAmount   = Math.max(0, totalPower - (targetPower || 0));
-  const showOver     = overAmount > 0;
-
-  // Densify grid for large goals (so it fits inside the card)
-  let cellMin = 22, blockH = 26, gap = 6;
-  if (blockCount > 120) { cellMin = 12; blockH = 14; gap = 4; }
-  else if (blockCount > 80) { cellMin = 14; blockH = 16; gap = 5; }
-  else if (blockCount > 40) { cellMin = 18; blockH = 20; gap = 6; }
-
-  container.style.setProperty('--cell-min', `${cellMin}px`);
-  container.style.setProperty('--block-h', `${blockH}px`);
-  container.style.setProperty('--gap', `${gap}px`);
-
-  for (let i = 0; i < blockCount; i++) {
-    const block = document.createElement("div");
-    block.className = "block";
-    if (scaledTotal >= (i + 1))       block.classList.add("full");
-    else if (scaledTotal > i)         block.classList.add("partial");
-    else                              block.classList.add("goal");
-    container.appendChild(block);
-  }
-
-  if (showOver && blockCount > 0) {
-    const last = container.lastElementChild;
-    if (last) {
-      last.className = "block over";
-      last.textContent = overAmount > 2000 ? "!!!" : `+${Math.ceil(overAmount / 100)}`;
+    // Interactivity: ONLY overloaded ping
+    if (d.pct > 100 && typeof pingChevron === 'function'){
+      el.tabIndex = 0;
+      el.addEventListener('click', (e)=>{ e.stopPropagation(); pingChevron(d.id); });
+      el.addEventListener('keydown', (e)=>{
+        if (e.key==='Enter' || e.key===' '){ e.preventDefault(); pingChevron(d.id); }
+      });
     }
-  }
+    return el;
+  };
 
-  if (label) {
-    label.textContent = targetPower ? `${Math.round(totalPower)} / ${targetPower}` : `${Math.round(totalPower)} / –`;
-  }
+  // Render rows
+  row3.forEach(d => r3.appendChild(buildMini(d,'rich')));
+  row4.forEach(d => r4.appendChild(buildMini(d,'top')));
 }
 
 
@@ -1546,17 +1534,7 @@ card.addEventListener("mouseleave", () => {
 }
 
 
-(function wireOverviewSelection(){
-  const cardIds = ["scale-power","scale-lines","scale-cost","scale-emissions"];
-  const all = cardIds.map(id => document.getElementById(id)).filter(Boolean);
-  if (!all.length) return;
-  all.forEach(el => {
-    el.addEventListener("click", () => {
-      all.forEach(c => c.classList.remove("selected"));
-      el.classList.add("selected");
-    });
-  });
-})();
+
 
 // === POWER blocks (identical behavior + look) ===
 const POWER_BLOCK_SIZE_MW = 100;
@@ -1568,68 +1546,7 @@ const _densityPresets = [
   { cell: 12, gap: 4 }   // extra-compact
 ];
 
-function updatePowerBlocks(totalPower, targetPower){
-  const container = document.querySelector("#overview-power .blocks")
-                 || document.getElementById("overview-power-blocks");
-  const label     = document.querySelector("#overview-power .fraction")
-                 || document.getElementById("overview-power-label");
-  if (!container) return;
-
-  const total = Math.max(0, Number(totalPower || 0));
-  const target = Math.max(0, Number(targetPower || 0));
-
-  // Decide how many blocks to draw
-  const blockCount = target > 0 ? Math.ceil(target / POWER_BLOCK_SIZE_MW)
-                                : Math.ceil(total / POWER_BLOCK_SIZE_MW);
-
-  // Density: auto-adjust based on block count, then apply current preset offset
-  let auto = 1; // default index
-  if (blockCount > 120) auto = 3;
-  else if (blockCount > 80) auto = 2;
-  else if (blockCount > 40) auto = 1;
-  const preset = _densityPresets[Math.min(auto, _powerDensityIdx)];
-  container.style.setProperty("--cell-min", `${preset.cell}px`);
-  container.style.setProperty("--gap", `${preset.gap}px`);
-
-  // Build the grid
-  container.innerHTML = "";
-  const fullCount = Math.floor(total / POWER_BLOCK_SIZE_MW);
-  const partialRemainder = total % POWER_BLOCK_SIZE_MW;
-  const hasPartial = partialRemainder > 0 && fullCount < blockCount;
-
-  for (let i = 0; i < blockCount; i++){
-    const div = document.createElement("div");
-    div.className = "block";
-    if (i < fullCount) div.classList.add("full");
-    else if (i === fullCount && hasPartial) div.classList.add("partial");
-    // else remains as goal (unfilled)
-    container.appendChild(div);
-  }
-
-  // Over indicator: if total exceeds target, mark last block red with +X
-  if (target > 0 && total > target && container.lastElementChild){
-    const overBlocks = Math.ceil((total - target) / POWER_BLOCK_SIZE_MW);
-    const last = container.lastElementChild;
-    last.className = "block over";
-    last.textContent = `+${overBlocks}`;
-  }
-
-  if (label){
-    label.textContent = target ? `${Math.round(total)} / ${target}` : `${Math.round(total)} / –`;
-  }
-}
-
-// Optional: “Click to scale” density cycle (MapView affordance)
-(function wirePowerCardScaling(){
-  const card = document.getElementById("scale-power");
-  if (!card) return;
-  card.addEventListener("click", () => {
-    _powerDensityIdx = (_powerDensityIdx + 1) % _densityPresets.length;
-    // Re-render with the new density
-    updatePowerBlocks(window.totalPower || 0, (window.currentScenarioData && currentScenarioData.target_mw) || 0);
-  });
-})();
-
+// function updatePowerBlocks(totalPowerMW, targetPowerMW) was here
 
 
 function bindSortListeners() {
