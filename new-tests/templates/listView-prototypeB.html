@@ -518,19 +518,22 @@ function computeGenUniverse(){
 /** Make scenario sets safe: drop any ids that aren't usable */
 function sanitizeScenarioSets(scen){
   const s = scen || {};
-  const { intersection } = computeGenUniverse();
-  const allowed = new Set(intersection);
-  const normKeep = arr => (arr || [])
-    .map(normalizeGenId)
-    .filter(id => allowed.has(id));
+  const norm = (arr) => (arr || []).map(normalizeGenId);
 
-  // Preserve original keys if you like; here we normalize to locked_/disabled_generators
-  return {
-    ...s,
-    locked_generators:   normKeep(s.locked_generators   || s.locked   || []),
-    disabled_generators: normKeep(s.disabled_generators || s.disabled || []),
-  };
+  // Normalize first (works on first paint)
+  let locked   = norm(s.locked_generators   || s.locked   || []);
+  let disabled = norm(s.disabled_generators || s.disabled || []);
+
+  // If map IDs exist, prune to intersection; else keep all
+  const mapIds = getMapGenIds();
+  if (mapIds && mapIds.size > 0) {
+    locked   = locked.filter(id => mapIds.has(id));
+    disabled = disabled.filter(id => mapIds.has(id));
+  }
+
+  return { ...s, locked_generators: locked, disabled_generators: disabled };
 }
+
 
 /** Print what we can work with (and optionally show on-screen) */
 function listWorkingGenerators(renderToDom = false){
@@ -921,6 +924,11 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
 
   const okPill  = document.getElementById('lines-ok-pill');      // ← your DOM
   if (okPill) okPill.style.display = overCnt === 0 ? 'inline-flex' : 'none';
+
+  if (typeof evaluateScenarioState === "function" && typeof applyScenarioUI === "function") {
+  const state = evaluateScenarioState(gens, lines, scenario);
+  applyScenarioUI(state);
+}
 }
 
 
@@ -1214,6 +1222,24 @@ function getLoadColor(pct) {
   return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
 }
 
+function normalizeGenId(v){
+  const s = String(v);
+  const m = s.match(/\d+/);
+  return m ? `Gen${m[0]}` : s;
+}
+
+function buildScenarioSets(scen = {}){
+  const toSet = (arr) => {
+    const S = new Set();
+    (arr || []).forEach(v => S.add(normalizeGenId(v)));
+    return S;
+  };
+  return {
+    lockedSet:   toSet(scen.locked_generators   || scen.locked   || []),
+    disabledSet: toSet(scen.disabled_generators || scen.disabled || [])
+  };
+}
+
 
 
 function renderGenerators(gens){
@@ -1229,44 +1255,50 @@ function renderGenerators(gens){
     markUserActiveStatus(window.currentGenerators);
   }
 
-  // --- Scenario lookups (ids normalized to "Gen{bus}")
-  const scen = currentScenarioData || {};
-  const toId = g => (g?.bus != null ? `Gen${g.bus}` : (g?.id || ''));
-  const idSet = arr => new Set((arr || []).map(v => {
-    const m = String(v).match(/\d+/);
-    return m ? `Gen${m[0]}` : String(v);
-  }));
+// --- Scenario lookups (ids normalized to "Gen{bus}")
+const scen = currentScenarioData || {};
+const { lockedSet, disabledSet } = buildScenarioSets(scen);
+const toId = g => (g?.bus != null ? `Gen${g.bus}` : (g?.id || ''));
 
-  const lockedSet   = idSet(scen.locked_generators   || scen.locked   || []);
-  const disabledSet = idSet(scen.disabled_generators || scen.disabled || []);
+// Enforce flags + disabled behavior
+window.currentGenerators.forEach(g => {
+  const id = toId(g);
+  g.locked   = lockedSet.has(id);
+  g.disabled = disabledSet.has(id);
+  if (g.disabled) { g.user_active = false; g.pg = 0; }
+});
 
-  // Enforce disabled = off + non-interactive
-  window.currentGenerators.forEach(g => {
-    const id = toId(g);
-    if (disabledSet.has(id)) {
-      g.user_active = false;
-      g.pg = 0;
-    }
-  });
+// 🔑 List-membership rule:
+// - Disabled → always Inactive
+// - Locked   → Active iff it's actually on (pg > 0), else Inactive
+// - Unlocked → Active iff user_active = true
+function isActiveForList(g){
+  if (g.disabled) return false;
+  if (g.locked)   return (Number(g.pg) || 0) > 0;        // locked follow real output
+  return !!g.user_active;                                 // normal user control
+}
 
-  // Partition strictly by scenario first
-  const locked    = window.currentGenerators.filter(g => lockedSet.has(toId(g)));
-  const disabled  = window.currentGenerators.filter(g => disabledSet.has(toId(g)));
-  const unlocked  = window.currentGenerators.filter(g => !lockedSet.has(toId(g)) && !disabledSet.has(toId(g)));
+const activeSafe   = window.currentGenerators.filter(isActiveForList);
+const inactiveSafe = window.currentGenerators.filter(g => !isActiveForList(g));
 
-  const active    = unlocked.filter(g => g.user_active);
-  const inactive  = [...locked, ...disabled, ...unlocked.filter(g => !g.user_active)];
+activeGenerators   = activeSafe;
+inactiveGenerators = inactiveSafe;
 
-  // Save for sort/redraw
-  activeGenerators = active;
-  inactiveGenerators = inactive;
+// (Optional) sanity log
+console.log(`🧮 active=${activeGenerators.length}, inactive=${inactiveGenerators.length}`);
+console.log(`🔒 locked in active?`, activeGenerators.some(g => g.locked),
+            `⛔ disabled in active?`, activeGenerators.some(g => g.disabled));
 
-  renderColumn("inactive", inactiveGenerators);
-  renderColumn("active", activeGenerators);
+// Render
+renderColumn("inactive", inactiveGenerators);
+renderColumn("active",   activeGenerators);
 
-  if (typeof updateMapGeneratorsFromScenario === 'function') {
-    updateMapGeneratorsFromScenario();
-  }
+if (typeof updateMapGeneratorsFromScenario === 'function') {
+  updateMapGeneratorsFromScenario();
+}
+
+
+
 }
 
 
@@ -1308,8 +1340,8 @@ function createGeneratorCard(gen, maxPmax) {
   const genId = `Gen${gen.bus}`;
   const card = document.createElement("div");
   card.dataset.genId = genId; // e.g., "Gen23"
-  const locked = currentScenarioData?.locked_generators?.includes(genId);
-  const disabled = currentScenarioData?.disabled_generators?.includes(genId);
+    const locked   = !!gen.locked;
+  const disabled = !!gen.disabled;
 
 card.className = `generator-card ${locked ? "locked" : ""} ${disabled ? "disabled" : ""}`.trim();
 
@@ -1424,34 +1456,57 @@ if (gen.pg > 0 && gen.user_active && !disabled && !locked){
 }
 
 // levels up to pmax
-const levels = []; let cur = 0;
-while (cur + 100 <= gen.pmax){ cur += 100; levels.push(cur); }
+// --- levels up to pmax (100 MW steps, last block may be half) ---
+const levels = [];
+let cur = 0;
+while (cur + 100 <= gen.pmax) {
+  cur += 100;
+  levels.push(cur);
+}
 if (cur < gen.pmax) levels.push(gen.pmax);
 
-// Add blocks
+// --- Build power blocks (non-interactive for locked/disabled) ---
 levels.forEach((level, i) => {
   const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
   const isHalf = isRemainder && (gen.pmax % 100 <= 50);
+
   const b = document.createElement('div');
   b.className = 'power-block' + (isHalf ? ' half' : '');
+  b.title = `${level} MW`;
+
+  // Visual on/off state (same rule you had)
   if (gen.pg >= level - 50) b.classList.add('on');
-  b.title = level + ' MW';
-  if (gen.user_active && !disabled && !locked){
+
+  // Interactivity: only if NOT locked/disabled
+  if (!locked && !disabled) {
     b.style.cursor = 'pointer';
-    b.addEventListener('mousedown', async () => {
+
+    b.addEventListener('mousedown', async (e) => {
+      e.preventDefault();
+
+      // Clicking any block sets generation to that level and marks active
       const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
-      const res = await fetch(`/api/set_generation/${gen.index}`, {
-        method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ percent, user_active: true })
-      });
-      const data = await res.json();
-      currentGenerators = sanitizeGenerators(data.generators);
-      renderGenerators(currentGenerators);
-      renderLines(data.lines, data.solved !== false);
-      renderOverview(currentGenerators, currentScenarioData, data.lines);
-      updateMapGeneratorsFromScenario();
+
+      try {
+        const res = await fetch(`/api/set_generation/${gen.index}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ percent, user_active: true })
+        });
+        const data = await res.json();
+
+        // Refresh UI from server response
+        currentGenerators = sanitizeGenerators(data.generators);
+        renderGenerators(currentGenerators);
+        renderLines(data.lines, data.solved !== false);
+        renderOverview(currentGenerators, currentScenarioData, data.lines);
+        updateMapGeneratorsFromScenario();
+      } catch (err) {
+        console.error("Block set failed:", err);
+      }
     });
   }
+
   blocks.appendChild(b);
 });
 
@@ -1479,6 +1534,12 @@ right.tabIndex = 0;
 
 const isLocked   = !!locked;
 const isDisabled = !!disabled;
+
+if (locked || disabled) {
+  // prevent accidental activation via keyboard/mouse
+  right.style.pointerEvents = 'none';
+  right.setAttribute('aria-disabled', 'true');
+}
 
 let state, icon, title;
 if (isLocked)           { state='locked';   icon='🔒'; title='Locked'; }
@@ -2312,6 +2373,47 @@ listsRoot.addEventListener("mouseout", (e) => {
       return gid === window.selectedGeneratorId ? 0.9 : 0;
     });
 });
+
+window.debugLocks = function(){
+  const scen = window.currentScenarioData || {};
+  const { lockedSet, disabledSet } = buildScenarioSets(scen);
+  const ids = (g) => (g?.bus != null ? `Gen${g.bus}` : g?.id);
+
+  const locked   = (window.currentGenerators||[]).filter(g => g.locked).map(ids);
+  const disabled = (window.currentGenerators||[]).filter(g => g.disabled).map(ids);
+  const active   = (window.currentGenerators||[]).filter(g => g.user_active && !g.locked && !g.disabled).map(ids);
+  const inactive = (window.currentGenerators||[]).filter(g => !g.user_active || g.locked || g.disabled).map(ids);
+
+  console.group("🔒 Scenario sets vs generators");
+  console.log("lockedSet:",   [...lockedSet]);
+  console.log("disabledSet:", [...disabledSet]);
+  console.log("locked (cards):",   locked);
+  console.log("disabled (cards):", disabled);
+  console.log("active (cards):",   active);
+  console.log("inactive (cards):", inactive);
+  console.groupEnd();
+};
+
+window.debugEval = function(){
+  const s = evaluateScenarioState(window.currentGenerators||[], window.currentLines||[], window.currentScenarioData||{});
+  console.group("✅ Scenario evaluation");
+  console.table({
+    powerMW: Math.round(s.totals.power),
+    targetMW: s.targetMW,
+    meetsPower: s.meetsPower,
+    cost: Math.round(s.totals.cost),
+    maxCost: s.maxCost,
+    withinCost: s.withinCost,
+    emissions: Math.round(s.totals.emissions),
+    maxCO2: s.maxCO2,
+    withinEmissions: s.withinEmissions,
+    overloaded: s.overloadedCount,
+    noOverloads: s.noOverloads,
+    allMet: s.allMet
+  });
+  console.groupEnd();
+};
+
 
 </script>
 
