@@ -904,6 +904,99 @@ let availableScenarios = [];
 
 let currentMapMode = "full";
 
+function clearAllFocusFades(){
+  d3.selectAll(".map-bus, .map-load, .map-line, #chevron-layer .chevron, .line-load-indicator, .map-gen-group")
+    .interrupt()
+    .style("opacity", null)
+    .attr("opacity", null);
+}
+
+
+function applyVisualFocus(){
+  const powerFocused = activeFilters.has('power');
+  const linesFocused = (currentMapMode === "lines");
+
+  // Always clear any lingering inline fades/scales first
+  clearAllFocusFades();
+  smoothScale("#chevron-layer .chevron, .line-load-indicator", 1);
+  smoothScale(".map-gen-group", 1);
+
+  // Selections
+  const selGens   = ".map-gen-group";
+  const selLines  = ".map-line";
+  const selChevs  = "#chevron-layer .chevron, .line-load-indicator"; // cover both classes
+  const selBuses  = ".map-bus";
+  const selLoads  = ".map-load";
+
+  // First: return everything to base (opacity=1, scale=1)
+  smoothFade([selBuses, selLoads, selLines, selChevs, selGens].join(","), 1);
+  smoothScale([selChevs].join(","), 1);
+  smoothScale([selGens].join(","), 1);
+
+  // Then apply the focused mode
+  if (linesFocused && !powerFocused){
+    // Lines focus → keep lines/chevrons full; fade all else; gently scale chevrons
+    smoothFade([selBuses, selLoads, selGens].join(","), 0.2);
+    smoothScale(selChevs, FOCUS_CHV_SCALE);
+  } else if (powerFocused && !linesFocused){
+    // Power focus → keep generators full; fade all else; gently scale generators
+    smoothFade([selBuses, selLoads, selLines, selChevs].join(","), 0.2);
+    smoothScale(selGens, FOCUS_GEN_SCALE);
+  }
+}
+
+
+function setLinesFocus(on){
+  const card   = document.getElementById("scale-lines");
+  const status = document.getElementById("status-lines");
+  currentMapMode = on ? "lines" : "full";
+
+  if (card){
+    card.classList.toggle("selected", on);
+    card.classList.add("scale-lines");
+  }
+  if (status){
+    status.textContent = on ? "Lines in focus" : "Click to focus";
+  }
+
+  // Redraw chevrons for lines mode sizing, then apply visual fades
+  refreshChevrons(currentLines || [], currentMapMode);
+  applyVisualFocus();
+}
+
+// Smooth focus constants
+const FOCUS_FADE_MS   = 320;
+const FOCUS_EASE      = d3.easeCubicInOut;
+const FOCUS_GEN_SCALE = 1.18;  // generators scale when Power focus
+const FOCUS_CHV_SCALE = 1.12;  // chevrons scale when Lines focus
+
+function smoothFade(sel, to, ms = FOCUS_FADE_MS){
+  const S = d3.selectAll(sel).interrupt();
+  // Animate using inline style so it wins during the transition…
+  const t = S.transition().duration(ms).ease(FOCUS_EASE).style("opacity", to);
+  // …but when restoring to base, clear inline opacity so CSS (e.g., .gen-disabled) applies again.
+  if (to === 1) {
+    t.on("end", function(){
+      d3.select(this).style("opacity", null).attr("opacity", null);
+    });
+  }
+  return t;
+}
+
+
+// Scale elements while preserving their original transform (no compounding)
+function smoothScale(sel, toScale, ms = FOCUS_FADE_MS){
+  d3.selectAll(sel).each(function(){
+    const node = d3.select(this);
+    const baseT = node.attr("data-base-transform")
+                || (node.attr("transform") || "").replace(/\s*scale\([^)]+\)/g, "");
+    node.attr("data-base-transform", baseT);
+    node.interrupt()
+        .transition().duration(ms).ease(FOCUS_EASE)
+        .attr("transform", `${baseT} scale(${toScale})`);
+  });
+}
+
 
 const defs = svg.append("defs");
 const softShadow = defs.append("filter")
@@ -1462,13 +1555,22 @@ function wireToggle(key, elId, statusId){
   el.dataset.wired = "1";
 
   const setState = (on) => {
-    if (on) activeFilters.add(key); else activeFilters.delete(key);
-    el.classList.toggle("selected", on);
-    if (elId == "scale-power") {
-      if (status) status.textContent = on ? "Generators in focus" : "Click to focus";
-    }
-    else if (status) status.textContent = on ? "Currently scaling" : "Click to scale";
-  };
+  if (on) activeFilters.add(key); else activeFilters.delete(key);
+  el.classList.toggle("selected", on);
+  if (elId == "scale-power") {
+    if (status) status.textContent = on ? "Generators in focus" : "Click to focus";
+
+    // Make focus modes exclusive: turning Power ON turns Lines OFF
+    if (on && currentMapMode === "lines") setLinesFocus(false);
+
+    // Apply fades for Power focus (or clear when OFF)
+    applyVisualFocus();
+  }
+  else if (status) {
+    status.textContent = on ? "Currently scaling" : "Click to scale";
+  }
+};
+
 
   // initial
   setState(activeFilters.has(key));
@@ -2369,26 +2471,24 @@ const linesCard = document.getElementById("scale-lines");
 const linesStatus = document.getElementById("status-lines");
 if (linesCard) {
   linesCard.addEventListener("click", () => {
-    // Toggle a simple boolean flag
-    const wasOn = (currentMapMode === "lines");
-    currentMapMode = wasOn ? "full" : "lines";
+    const next = (currentMapMode !== "lines");
 
-    // Update appearance
-    linesCard.classList.toggle("selected", !wasOn);
-    linesCard.classList.add("scale-lines");
-    if (linesStatus) {
-      linesStatus.textContent = !wasOn ? "Lines in focus" : "Click to focus";
+    // Lines focus and Power focus are exclusive: turning Lines ON turns Power OFF
+    if (next && activeFilters.has('power')) {
+      activeFilters.delete('power');
+      const powerEl = document.getElementById("scale-power");
+      const powerStatus = document.getElementById("status-power");
+      if (powerEl) powerEl.classList.remove("selected");
+      if (powerStatus) powerStatus.textContent = "Click to focus";
     }
 
-    // Redraw chevrons appropriately
-    refreshChevrons(currentLines || [], currentMapMode);
+    setLinesFocus(next);
 
-    // Dim/undim other elements if you want
-    d3.selectAll(".map-bus, .map-load, .map-gen-group")
-      .transition().duration(300)
-      .attr("opacity", !wasOn ? 0.2 : 1);
-  });
+    // If we changed filters (turned power off), refresh generator rendering
+    safeUpdate();
+  }, { passive:false });
 }
+
 
 
   </script>
