@@ -1457,15 +1457,15 @@ if (gen.pg > 0 && gen.user_active && !disabled && !locked){
 
 // levels up to pmax
 // --- levels up to pmax (100 MW steps, last block may be half) ---
+// --- levels up to pmax (100 MW steps; last may be half) ---
 const levels = [];
 let cur = 0;
-while (cur + 100 <= gen.pmax) {
-  cur += 100;
-  levels.push(cur);
-}
+while (cur + 100 <= gen.pmax) { cur += 100; levels.push(cur); }
 if (cur < gen.pmax) levels.push(gen.pmax);
 
-// --- Build power blocks (non-interactive for locked/disabled) ---
+// === Build power blocks ===
+// Rule: blocks are interactive for any UNLOCKED + not DISABLED gen,
+//       regardless of current user_active status.
 levels.forEach((level, i) => {
   const isRemainder = (i === levels.length - 1 && level !== 100 * levels.length);
   const isHalf = isRemainder && (gen.pmax % 100 <= 50);
@@ -1474,28 +1474,23 @@ levels.forEach((level, i) => {
   b.className = 'power-block' + (isHalf ? ' half' : '');
   b.title = `${level} MW`;
 
-  // Visual on/off state (same rule you had)
+  // Visual state (your rule): treat >= (level - 50) as "on"
   if (gen.pg >= level - 50) b.classList.add('on');
 
-  // Interactivity: only if NOT locked/disabled
+  // 🔓 Interactivity: allow clicks if NOT locked/disabled
   if (!locked && !disabled) {
     b.style.cursor = 'pointer';
-
     b.addEventListener('mousedown', async (e) => {
       e.preventDefault();
-
-      // Clicking any block sets generation to that level and marks active
       const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
-
       try {
         const res = await fetch(`/api/set_generation/${gen.index}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          // ✅ Always mark active when a block is clicked
           body: JSON.stringify({ percent, user_active: true })
         });
         const data = await res.json();
-
-        // Refresh UI from server response
         currentGenerators = sanitizeGenerators(data.generators);
         renderGenerators(currentGenerators);
         renderLines(data.lines, data.solved !== false);
@@ -1509,6 +1504,7 @@ levels.forEach((level, i) => {
 
   blocks.appendChild(b);
 });
+
 
 // small pg/pmax label
 const label = document.createElement('span');
