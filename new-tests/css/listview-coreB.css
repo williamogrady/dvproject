@@ -565,3 +565,137 @@ button:hover{ filter: brightness(0.98); }
   pointer-events: none;
   opacity: 0.9;
 }
+
+#scale-lines .line-card .right .load { font-weight: 700; }
+#scale-lines .line-card .right .delta { font-size: 12px; margin-top: 2px; }
+#scale-lines .line-card .right .delta.up { color: #d32f2f; }     /* up = red */
+#scale-lines .line-card .right .delta.down { color: #2e7d32; }   /* down = green */
+#scale-lines .line-card .right .delta.neutral { color: var(--text-faint); }
+
+/* ===== Lines card sizing & layout ===== */
+:root{
+  --linecard-pad-y: 8px;
+  --linecard-pad-x: 12px;
+  --linecard-min-h: 48px;   /* regular (row-top) */
+  --linecard-min-h-rich: 56px; /* overloaded (row-rich) */
+  --linecard-chev-size: 20px;
+}
+
+#scale-lines .line-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: var(--linecard-pad-y) var(--linecard-pad-x);
+  min-height: var(--linecard-min-h);
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  background: #fff;
+}
+
+#scale-lines #row-rich .line-card{
+  border-width: 3px;                /* thick border for overloaded */
+  min-height: var(--linecard-min-h-rich);
+}
+
+#scale-lines .line-card .left{
+  display:flex; align-items:center;
+}
+
+#scale-lines .line-card .left .chev{
+  width: var(--linecard-chev-size);
+  height: var(--linecard-chev-size);
+  /* if the inline translateY(-5px) feels too high, nudge back a hair: */
+  transform: translateY(-3px);
+}
+
+#scale-lines .line-card .right{
+  display:flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+  white-space: nowrap;  /* keep % and delta on two tight lines */
+}
+
+#scale-lines .line-card .right .load{
+  font-weight: 700;
+  font-size: 16px;
+}
+
+#scale-lines .line-card .right .delta{
+  font-size: 13px;
+  margin-top: 2px;
+}
+#scale-lines .line-card .right .delta.up   { color: #d32f2f; } /* red up */
+#scale-lines .line-card .right .delta.down { color: #2e7d32; } /* green down */
+#scale-lines .line-card .right .delta.neutral { color: var(--text-faint, #6b7280); }
+
+/* Compact fallback on very narrow widths */
+@media (max-width: 480px){
+  :root{
+    --linecard-min-h: 44px;
+    --linecard-min-h-rich: 52px;
+    --linecard-chev-size: 18px;
+  }
+  #scale-lines .line-card .right .load { font-size: 15px; }
+  #scale-lines .line-card .right .delta{ font-size: 12px; }
+}
+
+/* Boost legibility for COST & EMISSIONS headline numbers */
+#scale-cost .value,
+#scale-cost .num,
+#scale-cost .kpi .value,
+#scale-emissions .value,
+#scale-emissions .num,
+#scale-emissions .kpi .value{
+  font-size: 18px;           /* was ~14–16px */
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+#scale-cost .label,
+#scale-cost .kpi .label,
+#scale-emissions .label,
+#scale-emissions .kpi .label{
+  font-size: 12px;
+  opacity: .8;
+}
+
+/* Stable tile size — apply to tiles, not the containers */
+#scale-lines .line-card{
+  min-height: 48px;              /* regular tiles */
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+#scale-lines #row-rich .line-card{
+  min-height: 56px;              /* overloaded tiles (thicker border) */
+  border-width: 3px;
+}
+
+/* Placeholders shouldn't draw borders if any paint slips through */
+#scale-lines .line-card.placeholder{ border-color: transparent; }
+
+/* Boost legibility for COST & EMISSIONS numbers */
+#scale-cost .value,
+#scale-cost .num,
+#scale-cost .kpi .value,
+#scale-emissions .value,
+#scale-emissions .num,
+#scale-emissions .kpi .value{
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+#scale-cost .label,
+#scale-cost .kpi .label,
+#scale-emissions .label,
+#scale-emissions .kpi .label{
+  font-size: 12px;
+  opacity: .8;
+}
+/* Responsive: same wrap behavior as MapView without touching other rows */
+
+/* Invisible placeholders that keep row width/height stable */
+#scale-lines .line-card.placeholder { visibility: hidden; pointer-events: none; border-color: transparent; }

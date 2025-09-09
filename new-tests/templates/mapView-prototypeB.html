@@ -1183,7 +1183,7 @@ function updateLinesCard(/* liveLines not needed anymore */) {
   const status  = document.getElementById("status-lines");
   if (!countEl || !okPill || !rowRich || !rowTop || !status) return;
 
-  // Stabilize heights / spacing
+  // Stabilize heights / spacing (keeps original proportions)
   rowRich.style.height = "36px";
   rowTop.style.height  = "28px";
   status.style.marginTop = "10px";
@@ -1209,41 +1209,35 @@ function updateLinesCard(/* liveLines not needed anymore */) {
   okPill.style.display = showOk ? "inline-block" : "none";
   if (showOk) {
     Object.assign(okPill.style, {
-      background: "#4caf50",   // same green as power bars
+      background: "#4caf50",
       color: "#fff",
       fontWeight: "700",
       borderRadius: "9999px",
       padding: "2px 8px"
-      
     });
   }
-  
 
-function miniChevron(color, sizePx){
-  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-  svg.setAttribute("width", sizePx);
-  svg.setAttribute("height", sizePx);
-  svg.setAttribute("viewBox", "-12 -12 24 24");
-  svg.style.transform = "translateY(-5px)";   // ← move up ~5px
+  // Mini chevron (same as you already have)
+  function miniChevron(color, sizePx){
+    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("width", sizePx);
+    svg.setAttribute("height", sizePx);
+    svg.setAttribute("viewBox", "-12 -12 24 24");
+    svg.style.transform = "translateY(-5px)";
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("transform", "rotate(90)");
+    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d", chevronPath(6));
+    path.setAttribute("fill", color);
+    path.setAttribute("stroke", "#111");
+    path.setAttribute("stroke-width", "0.4");
+    g.appendChild(path);
+    svg.appendChild(g);
+    return svg;
+  }
 
-  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-  g.setAttribute("transform", "rotate(90)");  // keep your 90° rotation
-
-  const path = document.createElementNS("http://www.w3.org/2000/svg","path");
-  path.setAttribute("d", chevronPath(6));     // same geometry as map
-  path.setAttribute("fill", color);
-  path.setAttribute("stroke", "#111");
-  path.setAttribute("stroke-width", "0.4");
-
-  g.appendChild(path);
-  svg.appendChild(g);
-  return svg;
-}
-
-
-  // Row 3: top 3 overloaded (interactive, thick border)
-  rowRich.innerHTML = "";
-  overloaded.slice(0, 3).forEach(line => {
+  // Card builders
+  const buildCard = (line, isRich) => {
     const prevPct = previousLineLoads[line.id] ?? line._pct;
     const delta   = (line._pct - prevPct) * 100;
     const dir     = Math.abs(delta) < 0.5 ? "neutral" : (delta > 0 ? "up" : "down");
@@ -1252,68 +1246,46 @@ function miniChevron(color, sizePx){
     const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
 
     const card = document.createElement("div");
-    card.className = "line-card";
+    card.className = `line-card${isRich ? "" : " top-card"}`;
     card.style.setProperty("--accent", accent);
     card.style.borderColor = accent;
-    card.style.borderWidth = "3px";  // twice as thick
+    card.style.borderWidth = isRich ? "3px" : "1.5px";
     card.style.borderStyle = "solid";
     card.setAttribute("data-line-id", line.id);
-
     card.innerHTML = `
       <div class="left"></div>
       <div class="right">
         <div class="load">${loadTxt}</div>
         <div class="delta ${dir}">${deltaLabel}</div>
-      </div>
-    `;
-    card.querySelector(".left").appendChild(miniChevron(accent, 16));
+      </div>`;
+    card.querySelector(".left").appendChild(miniChevron(accent, isRich ? 16 : 14));
     card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
-    rowRich.appendChild(card);
-  });
+    return card;
+  };
 
-  // Row 4: overflow overloaded + top non-over (now from SAME metrics)
+  const buildPlaceholder = (isRich) => {
+    const ph = document.createElement("div");
+    ph.className = `line-card${isRich ? "" : " top-card"} placeholder`;
+    ph.setAttribute("aria-hidden", "true");
+    ph.style.visibility = "hidden";
+    ph.style.pointerEvents = "none";
+    ph.style.borderColor = "transparent";
+    return ph;
+  };
+
+  // Row 3: top 3 overloaded
+  rowRich.innerHTML = "";
+  const row3 = overloaded.slice(0, 3);
+  row3.forEach(l => rowRich.appendChild(buildCard(l, true)));
+  for (let i = row3.length; i < 3; i++) rowRich.appendChild(buildPlaceholder(true));
+
+  // Row 4: overflow overloaded + top non-over (cap at 3)
   rowTop.innerHTML = "";
-
-  // Row 4: overflow overloaded + top non-over (with deltas like Row 3)
-const overflow = overloaded.slice(3);
-const topNon   = nonOver.slice(0, 3);
-const row4List = [...overflow, ...topNon];
-
-row4List.forEach(line => {
-  // --- SAME DELTA LOGIC AS ROW 3 ---
-  const prevPct = previousLineLoads[line.id] ?? line._pct;
-  const delta   = (line._pct - prevPct) * 100;
-  const dir     = Math.abs(delta) < 0.5 ? "neutral" : (delta > 0 ? "up" : "down");
-  const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
-
-  const accent  = getLoadColor(line._pct);
-  const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
-
-  const card = document.createElement("div");
-  card.className = "line-card top-card";
-  card.style.setProperty("--accent", accent);
-  card.style.borderColor = accent;
-  card.style.borderWidth = "1.5px";
-  card.style.borderStyle = "solid";
-  card.setAttribute("data-line-id", line.id);
-
-  card.innerHTML = `
-    <div class="left"></div>
-    <div class="right">
-      <div class="load">${loadTxt}</div>
-      <div class="delta ${dir}">${deltaLabel}</div>
-    </div>
-  `;
-
-  // same mini chevron icon
-  card.querySelector(".left").appendChild(miniChevron(accent, 14));
-
-  // Row 4 also pings; but don't toggle Lines mode
-  card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
-
-  rowTop.appendChild(card);
-});
-
+  const overflow = overloaded.slice(3);
+  const topNon   = nonOver.slice(0, 3);
+  const row4List = [...overflow, ...topNon].slice(0, 3);
+  row4List.forEach(l => rowTop.appendChild(buildCard(l, false)));
+  for (let i = row4List.length; i < 3; i++) rowTop.appendChild(buildPlaceholder(false));
 
   // Remember for next delta
   lines.forEach(l => { previousLineLoads[l.id] = l._pct; });
@@ -1324,61 +1296,30 @@ row4List.forEach(line => {
 }
 
 
-
-
 function pingChevron(lineId){
   const chev = d3.select(`#chev-${CSS.escape(lineId)}`);
   if (chev.empty()) return;
 
-  // Use a base transform (translate+rotate only) so we never compound scales
+  // Base transform (translate+rotate only; avoid compounding scales)
   const baseT = chev.attr("data-base-transform")
              || (chev.attr("transform") || "").replace(/\s*scale\([^)]+\)/g, "");
-  const accent = chev.attr("fill") || "#42a5f5";
+  chev.attr("data-base-transform", baseT);
 
-  // Simple buffer: ignore while animating (prevents spam-click grow)
+  // Anti-spam
   if (chev.attr("data-animating") === "1") return;
   chev.attr("data-animating", "1");
 
-  // Ensure ping layer
-  let pingLayer = d3.select("#chevron-pings");
-  if (pingLayer.empty()) pingLayer = d3.select("#zoom-group").append("g").attr("id","chevron-pings");
+  // Gentle pop: 300% at a slower pace
+  const MAX_SCALE = 3.0;
 
-  // Ring radii that remain visible at any zoom
-  const k = d3.zoomTransform(svg.node()).k || 1;
-  const midX = +chev.attr("data-x");
-  const midY = +chev.attr("data-y");
-  const rOuter = 70 / k;
-  const rInner = 40 / k;
-
-  // Emit 2 color-matched rings
-  [0, 120].forEach((delay, i) => {
-    const circle = pingLayer.append("circle")
-      .attr("cx", midX).attr("cy", midY)
-      .attr("r", 0)
-      .attr("fill", "none")
-      .attr("stroke", accent)
-      .attr("stroke-width", 2 / k)
-      .attr("opacity", 0.95);
-
-    circle.transition().delay(delay).duration(650)
-      .attr("r", i === 0 ? rOuter : rInner)
-      .attr("opacity", 0)
-      .ease(d3.easeCubicOut)
-      .on("end", () => circle.remove());
-  });
-
-  // Clamp growth to 500% and ALWAYS return to base (no compounding)
-  const MAX_SCALE = 5;
   chev.interrupt()
       .attr("transform", `${baseT} scale(1)`)
-      .transition().duration(180).ease(d3.easeCubicOut)
+      .transition().duration(250).ease(d3.easeCubicOut)
         .attr("transform", `${baseT} scale(${MAX_SCALE})`)
-      .transition().duration(220).ease(d3.easeCubicIn)
+      .transition().duration(350).ease(d3.easeCubicIn)
         .attr("transform", `${baseT} scale(1)`)
-        .on("end", () => { chev.attr("data-animating", null); });
+        .on("end", () => chev.attr("data-animating", null));
 }
-
-
 
 
 function chevronPath(scale) {
