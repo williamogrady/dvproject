@@ -747,6 +747,25 @@
   stroke-width: 2px;
 }
 
+/* Power card: fraction + "All good!" pill inline */
+#overview-power .fraction-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Reuse the same pill styling */
+#power-ok-pill.pill-ok {
+  background: #4caf50;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  display: none; /* toggled by JS */
+  font-size: 0.75rem;
+}
+
+
 
 </style>
 </head>
@@ -2255,19 +2274,59 @@ function updatePowerBlocks(totalPower, targetPower) {
   const container =
     document.querySelector("#overview-power .blocks") ||
     document.querySelector("#scale-power .blocks");
+  const valueWrap = document.getElementById("overview-power");
   const label =
     document.querySelector("#overview-power .fraction") ||
     document.querySelector("#scale-power .fraction");
-  if (!container) return;
+  if (!container || !valueWrap) return;
 
   totalPower  = +totalPower  || 0;
   targetPower = +targetPower || 0;
 
-  // MapView label: current power only
-  if (label && targetPower > 0) {
-  label.textContent = `${Math.round(totalPower)} / ${Math.round(targetPower)} MW`;
+  // --- Ensure fraction-row and the pill exist (once) ---
+  let row = valueWrap.querySelector(".fraction-row");
+  if (!row) {
+    row = document.createElement("div");
+    row.className = "fraction-row";
+
+    // Insert row right after the blocks container
+    const blocksEl = valueWrap.querySelector(".blocks");
+    if (blocksEl && blocksEl.nextSibling) {
+      valueWrap.insertBefore(row, blocksEl.nextSibling);
+    } else {
+      valueWrap.appendChild(row);
+    }
+
+    if (label) row.appendChild(label);
+  } else {
+    if (label && label.parentElement !== row) row.appendChild(label);
   }
 
+  let pill = document.getElementById("power-ok-pill");
+  if (!pill) {
+    pill = document.createElement("div");
+    pill.id = "power-ok-pill";
+    pill.className = "pill-ok";
+    pill.textContent = "All good!";
+    // default style; CSS controls final look
+    pill.style.display = "none";
+    row.appendChild(pill);
+  }
+
+  // --- Update fraction text ---
+  if (label && targetPower > 0) {
+    label.textContent = `${Math.round(totalPower)} / ${Math.round(targetPower)} MW`;
+  } else if (label) {
+    label.textContent = `${Math.round(totalPower)} MW`;
+  }
+
+  // --- Toggle pill visibility when within ±5% of target ---
+  const meets = targetPower > 0 &&
+                totalPower >= targetPower * 0.95 &&
+                totalPower <= targetPower * 1.05;
+  pill.style.display = meets ? "inline-block" : "none";
+
+  // --- Rebuild blocks (unchanged) ---
   container.innerHTML = "";
   if (!(targetPower > 0)) return;
 
@@ -2275,7 +2334,7 @@ function updatePowerBlocks(totalPower, targetPower) {
   const count   = Math.ceil(targetPower / MW_PER_BLOCK);
   const overAmt = totalPower - targetPower;
 
-  // MapView density thresholds
+  // Density thresholds
   let cellMin = 22, blockH = 26, gap = 6;
   if (count > 120)      { cellMin = 12; blockH = 14; gap = 4; }
   else if (count > 80)  { cellMin = 14; blockH = 16; gap = 5; }
@@ -2289,18 +2348,15 @@ function updatePowerBlocks(totalPower, targetPower) {
     const startMW = i * MW_PER_BLOCK;
     const endMW   = (i + 1) * MW_PER_BLOCK;
     const el = document.createElement("div");
-    el.className = "block";           // base class for sizing
+    el.className = "block";
 
     if (totalPower >= endMW) {
-      // FULL (solid green)
       el.classList.add("full");
       el.style.background = "#4caf50";
     } else if (totalPower <= startMW) {
-      // GOAL / UNMET (solid gray) — this is what was "missing"
       el.classList.add("goal");
       el.style.background = "#e0e0e0";
     } else {
-      // PARTIAL — true fractional fill green→gray
       el.classList.add("partial");
       const pct = Math.max(1, Math.min(99, Math.round(((totalPower - startMW) / MW_PER_BLOCK) * 100)));
       el.style.background = `linear-gradient(90deg, #4caf50 ${pct}%, #e0e0e0 ${pct}%)`;
@@ -2309,7 +2365,7 @@ function updatePowerBlocks(totalPower, targetPower) {
     container.appendChild(el);
   }
 
-  // OVERSHOOT — last block becomes red with +n or !!!
+  // Overshoot badge
   if (overAmt > 0 && count > 0) {
     const last = container.lastElementChild;
     if (last) {
@@ -2324,6 +2380,7 @@ function updatePowerBlocks(totalPower, targetPower) {
     }
   }
 }
+
 
 function setupTaskSection(scenario) {
   const container = document.getElementById("overview-task-section");

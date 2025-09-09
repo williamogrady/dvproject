@@ -699,3 +699,14 @@ button:hover{ filter: brightness(0.98); }
 
 /* Invisible placeholders that keep row width/height stable */
 #scale-lines .line-card.placeholder { visibility: hidden; pointer-events: none; border-color: transparent; }
+
+/* Power card: fraction + All good! pill inline */
+#overview-power .fraction-row{
+  display:flex; align-items:center; gap:8px;
+}
+#power-ok-pill.pill-ok{
+  background:#4caf50; color:#fff; font-weight:700;
+  border-radius:9999px; padding:2px 8px;
+  display:none; /* toggled by JS */
+  font-size:.75rem; line-height:1;
+}
