@@ -5,6 +5,7 @@ from flask import Flask, render_template, send_from_directory, jsonify, request,
 from grid import Grid
 import os
 from pathlib import Path
+import json, datetime
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -20,6 +21,8 @@ app = Flask(
     static_url_path="/static"
 )
 grid = Grid()
+
+
 
 @app.route("/")
 def start():
@@ -93,6 +96,34 @@ def api_sequences():
                 "label": p.stem.replace("-", " ").replace("_", " ").title()
             })
     return jsonify({"sequences": items})
+
+@app.route("/api/results", methods=["POST"])
+def api_save_results():
+    try:
+        payload = request.get_json(silent=True, force=True) or {}
+    except Exception:
+        return jsonify({"error": "bad json"}), 400
+
+    if not payload.get("save"):
+        return jsonify({"message": "Save skipped (save=false)."}), 200
+
+    run = payload.get("run")
+    if not isinstance(run, dict):
+        return jsonify({"error": "missing run object"}), 400
+
+    out_dir = BASE_DIR / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    # hint sequence if present
+    seq = (run.get("plan") or {}).get("sequence") or "run"
+    safe_seq = "".join(c for c in str(seq) if c.isalnum() or c in "-_")[:40]
+    out_path = out_dir / f"{ts}_{safe_seq}.json"
+
+    with out_path.open("w", encoding="utf-8") as f:
+        json.dump(run, f, ensure_ascii=False, indent=2)
+
+    return jsonify({"message": f"Saved: {out_path.name}"}), 201
 
 
 @app.route('/api/generators')
