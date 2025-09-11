@@ -335,15 +335,6 @@
           </div>
         </div>
 
-        <!-- Row 4: Controls (no duplicate Submit here) -->
-        <div class="row" id="row-4">
-          <div class="controls-left">
-            <label for="scenario-select">Load Scenario:</label>
-            <select id="scenario-select"></select>
-            <button id="reset-button">🔁 Reset</button>
-          </div>
-          <!-- Removed .controls-right Submit -->
-        </div>
       </div>
 
       <!-- RIGHT: Map -->
@@ -461,7 +452,7 @@ function hideTooltip() {
     currentScenarioId = defaultScenario.scenario_id;
     currentScenarioData = defaultScenario;
 
-        populateScenarioDropdown(data, currentScenarioId);
+        //populateScenarioDropdown(data, currentScenarioId);
         loadScenario(currentScenarioId);
       } else {
         console.error("No scenario with ID 'default' found.");
@@ -610,7 +601,7 @@ setTimeout(() => window.debugScenarioVsMap(), 0);
 
 }
 
-
+/*
     function populateScenarioDropdown(scenarios, defaultId) {
       const select = document.getElementById("scenario-select");
       select.innerHTML = "";
@@ -635,7 +626,7 @@ setTimeout(() => window.debugScenarioVsMap(), 0);
       previousLineFlows = {}; // reset previous flows
       loadScenario(currentScenarioId); // reload current scenario
     });
-
+  */
 /** Helpers */
 function _sum(arr, f){ return (arr||[]).reduce((s,x)=>s+(+f(x)||0),0); }
 function _loadPct(L){ const r = +L.rate_a || 1; return Math.abs(+L.flow || 0) / r * 100; }
