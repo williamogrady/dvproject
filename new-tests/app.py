@@ -1,7 +1,7 @@
 # app.py
 
 import traceback
-from flask import Flask, render_template, send_from_directory, jsonify, request
+from flask import Flask, render_template, send_from_directory, jsonify, request, abort
 from grid import Grid
 import os
 from pathlib import Path
@@ -68,11 +68,31 @@ def serve_new_tests(filename):
     directory = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(directory, filename)
 
+@app.route("/sequences/<path:filename>")
+def serve_sequences(filename):
+    base = Path("sequences").resolve()        # points to new-tests/sequences
+    p = (base / filename).resolve()
+    if not str(p).startswith(str(base)) or not p.exists():
+        abort(404)
+    return send_from_directory(base, filename)
+
 
 # ✅ Optional: direct scenarios if you fetch raw files (otherwise use /api/scenario/<id>)
 @app.route("/scenarios/<path:filename>")
 def serve_scenarios(filename):
     return send_from_directory(BASE_DIR / "scenarios", filename)
+
+@app.route("/api/sequences")
+def api_sequences():
+    base = BASE_DIR / "sequences"
+    items = []
+    if base.exists():
+        for p in sorted(base.glob("*.json")):
+            items.append({
+                "id": p.stem,  # use file stem as the machine id (e.g., "x-y-z")
+                "label": p.stem.replace("-", " ").replace("_", " ").title()
+            })
+    return jsonify({"sequences": items})
 
 
 @app.route('/api/generators')

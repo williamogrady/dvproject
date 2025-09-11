@@ -1,0 +1,9 @@
+{
+  "series": [
+    { "view": "list", "scenarios": ["clean_north_power"], "seconds": 180 },
+    { "break": { "seconds": 10, "note": "Next: Map Y" } },
+    { "view": "map",  "scenarios": ["clean_north_power"], "seconds": 240 },
+    { "break": { "seconds": 10, "note": "Next: Map Z" } },
+    { "view": "map",  "scenarios": ["clean_north_power"], "seconds": 240 }
+  ]
+}
