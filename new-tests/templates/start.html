@@ -149,6 +149,14 @@
       background: linear-gradient(to right, #4468b6, #5f83e6);
     }
 
+      .test-color {
+      background: linear-gradient(to right, #b54fb5, #d16ad1);
+    }
+    .tutorials-color {
+      background: linear-gradient(to right, #2f4858, #43637b);
+    }
+
+
     @media (max-width: 900px) {
       .main-title {
         font-size: 3rem;
@@ -219,11 +227,11 @@
       <div class="top-left">
         <p>School of Electrical Engineering and Computer Science (EECS)</p>
         <p>KTH Royal Institute of Technology</p>
-        <p>Stockholm, Sweden</p>
+        <p>Stockholm, Sweden</p>  
       </div>
 
       <div class="top-right">
-        <img src="/new-tests/kth-logo.png" alt="KTH Logo" />
+        <img src="/new-tests/img/kth-logo.png" alt="KTH Logo" />
       </div>
     </div>
 
@@ -238,18 +246,34 @@
         <div class="subtitle">Explore and solve power grid scenarios through interactive visualisations</div>
       </div>
 
-      <div class="button-row">
-        <a class="button-card" href="/list">
-          <div class="button-bar list-color">List View</div>
-          <div class="button-desc">See all generators and lines in a structured table layout.</div>
+        <div class="button-row">
+        <!-- Quick demo: List view (no wrapper) -->
+        <a class="button-card" href="/listB?scenario=clean_north_power">
+          <div class="button-bar list-color">Try List View</div>
+          <div class="button-desc">Open the List View directly with a scenario loaded.</div>
         </a>
-        <a class="button-card" href="/map">
-          <div class="button-bar map-color">Map View</div>
-          <div class="button-desc">Interact directly with the grid and explore power flow.</div>
+
+        <!-- Quick demo: Map view (no wrapper) -->
+        <a class="button-card" href="/mapB?scenario=clean_north_power">
+          <div class="button-bar map-color">Try Map View</div>
+          <div class="button-desc">Open the Map View directly with a scenario loaded.</div>
+        </a>
+
+        <!-- Start a user test (wrapper-driven) -->
+        <a class="button-card" href="/test?flow=list:clean_north_power|break:10|map:clean_north_power&label=Quick+demo">
+          <div class="button-bar test-color">User Test</div>
+          <div class="button-desc">Configure and start user testing.</div>
+        </a>
+
+        <!-- Tutorials -->
+        <a class="button-card" href="/tutorials">
+          <div class="button-bar tutorials-color">Tutorial</div>
+          <div class="button-desc">Get oriented before trying the tasks.</div>
         </a>
       </div>
     </div>
 
+    
 
         <div class="bottom-center">
   <button class="credits-button">Credits</button>
@@ -265,10 +289,10 @@
 <script>
   document.querySelector('.top-right img').addEventListener('click', () => {
     const listBar = document.querySelector('.button-bar.list-color');
-    if (listBar.textContent === 'List View') {
-      listBar.textContent = 'Liszt View';
+    if (listBar.textContent === 'Try List View') {
+      listBar.textContent = 'Try Liszt View';
     } else {
-      listBar.textContent = 'List View';
+      listBar.textContent = 'Try List View';
     }
   });
 

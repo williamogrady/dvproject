@@ -4,8 +4,21 @@ import traceback
 from flask import Flask, render_template, send_from_directory, jsonify, request
 from grid import Grid
 import os
+from pathlib import Path
 
-app = Flask(__name__, static_folder='css', static_url_path='/css')
+
+BASE_DIR = Path(__file__).resolve().parent
+NEW_TEMPLATES = BASE_DIR / "templates"
+NEW_STATIC    = BASE_DIR / "static"
+LEGACY_CSS    = BASE_DIR / "css"
+
+# ✅ Point Flask to the new locations
+app = Flask(
+    __name__,
+    template_folder=str(NEW_TEMPLATES),
+    static_folder=str(NEW_STATIC),     # serves at /static/*
+    static_url_path="/static"
+)
 grid = Grid()
 
 @app.route("/")
@@ -24,18 +37,42 @@ def list_viewB():
 def map_view():
     return render_template("mapView-prototype.html")
 
-@app.route("/scaling")
-def scaling():
-    return render_template("/tests/chevronScaling.html")
-
 @app.route("/mapB")
 def map_viewB():
     return render_template("mapView-prototypeB.html")
 
+@app.route("/tutorials")
+def tutorials():
+    return render_template("tutorial_slides_final.html")
+
+@app.route("/test")
+def test_runner():
+    """
+    A minimal stub that renders the test runner template.
+    The front-end JS (testRunner.js) will parse ?flow=... and orchestrate.
+    """
+    return render_template("testRunner.html")
+
+@app.route("/results")
+def results_page():
+    return render_template("results.html")
+
+# ✅ Keep legacy /css/* working for older pages
+@app.route("/css/<path:filename>")
+def serve_legacy_css(filename):
+    return send_from_directory(LEGACY_CSS, filename)
+
 @app.route('/new-tests/<path:filename>')
-def serve_json_from_same_folder(filename):
-    directory = os.path.dirname(os.path.abspath(__file__))  # points to /new-tests/
+def serve_new_tests(filename):
+    # app.py is inside ...\new-tests, so this points at the new-tests folder itself
+    directory = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(directory, filename)
+
+
+# ✅ Optional: direct scenarios if you fetch raw files (otherwise use /api/scenario/<id>)
+@app.route("/scenarios/<path:filename>")
+def serve_scenarios(filename):
+    return send_from_directory(BASE_DIR / "scenarios", filename)
 
 
 @app.route('/api/generators')

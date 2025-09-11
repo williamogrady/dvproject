@@ -1,404 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>DV Project - ListView B</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
-  <link rel="stylesheet" href="/css/listview-coreB.css">
-
-<style id="listview-core-bootstrap">
-  @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
-</style>
-
-<style id="dv-slim-layout-and-cards">
-
-  :root{
-    --gutter: 16px;
-    --gap: 12px;
-    --text-faint:#677089;
-    --border:#d9dee8;
-    --card:#fff;
-    --card-muted:#eef1f5;
-    --gen-on:#3bb273;
-    --gen-off:#e8eaee;
-    --fs-base:14px;
-  }
-
-  /* ===== Layout (simple, no overlap) ===== */
-  html, body { height:100%; overflow:hidden; }
-  #main-layout, #listView-container { height:100vh; display:flex; flex-direction:column; }
-
-
-  .map-load { fill: #5878cf; stroke: #111; stroke-width: .8; } /* from MapView B */ 
-
-  /* Row 2: lists | map */
-  #row-2-work{
-    width:100vw; margin-left:calc(50% - 50vw);
-    padding:0 var(--gutter) var(--gutter);
-    display:flex; gap:var(--gap); min-height:0; box-sizing:border-box;
-  }
-  #left-lists, #right-map{
-    flex:1 1 0; min-width:0; display:flex; flex-direction:column; min-height:0;
-  }
-  #map-panel{ position:relative; flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
-  #map-wrapper{ flex:1 1 auto; min-height:0; }
-
-  /* Two lists side by side inside the left column */
-  #generators-container{
-    display:flex; gap:var(--gap); align-items:stretch;
-    flex:1 1 auto; min-height:0;
-  }
-  #inactive-container, #active-container{
-    flex:1 1 0; min-width:0; display:flex; flex-direction:column; min-height:0;
-  }
-  /* LISTS = flex columns so items use natural height (no grid row math → no overlap) */
-  #inactive-container .generator-body,
-  #active-container   .generator-body{
-    flex:1 1 auto; min-height:0; overflow:auto;
-    display:flex; flex-direction:column; gap:12px; align-items:stretch;
-  }
-
-  #inactive-container .sort-buttons,
-#active-container   .sort-buttons{
-  margin-bottom: 14px;
-}
-
- .sort-buttons .sort-btn{
-    position: relative;
-    padding-right: 18px;      /* space for arrow */
-  }
-  .sort-buttons .sort-btn.active {
-    font-weight: 700;
-  }
-  .sort-buttons .sort-btn.active.asc::after,
-  .sort-buttons .sort-btn.active.desc::after{
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    opacity: .85;
-  }
-  .sort-buttons .sort-btn.active.asc::after  { content: "▲"; }
-  .sort-buttons .sort-btn.active.desc::after { content: "▼"; }
-
-  /* ===== Cards: 30% | 55% | 15% ===== */
-  .generator-card{
-    display:grid;
-    grid-template-columns: 30% 55% 15%;
-    gap:12px;
-    width:100%; max-width:100%;
-    min-height:180px;              /* higher floor so all info shows; grows as needed */
-    height:auto; box-sizing:border-box;
-    border:1px solid var(--border); border-radius:12px; background:var(--card);
-    box-shadow:0 2px 8px rgba(0,0,0,.05);
-    font-size:var(--fs-base); overflow:hidden;
-    align-items:stretch;
-  }
-  .generator-card.locked   { opacity:.95; filter:saturate(.9); }
-  .generator-card.disabled { opacity:.65; filter:grayscale(.5); }
-
-  /* Left rail — ZERO padding/margins, full height, clamp text */
-  .gen-section.left{
-    padding:0; margin:0; height:100%; align-self:stretch; box-sizing:border-box;
-    display:flex; flex-direction:column; justify-content:center;
-    min-width:0; overflow:hidden; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.18);
-    border-radius:12px 0 0 12px;
-  }
-  .gen-section.left .gen-name{
-    font-weight:700; font-size:14px; line-height:1.1;
-    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
-    overflow:hidden; text-overflow:ellipsis; word-break:break-word; hyphens:auto;
-  }
-  .gen-section.left .gen-number,
-  .gen-section.left .gen-type{
-    font-size:12px; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-
-  /* Center — two tight rows; blocks wrap and drive height */
-.gen-section.center{
-  min-width:0; display:grid; grid-template-rows:auto auto;
-  gap:4px;               /* was 6px */
-  padding:6px 0;         /* was 8px 0 */
-}
-  .gen-power{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
-  .power-label{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
-  .power-block-row{ 
-  display:flex; flex-wrap:wrap; 
-  gap:3px;               /* was 4px */
-  row-gap:3px;           /* was 4px */
-  max-width:100%; 
-}
-  .power-block{ width:var(--pb,20px); height:var(--pb,20px); border-radius:3px; background:var(--gen-off); border:1px solid rgba(0,0,0,.15); }
-  .power-block.on{ background:var(--gen-on); }
-  .power-block.half{ width:calc(var(--pb,14px)/2); }
-  .off-pill{ height:18px; line-height:16px; padding:0 8px; font-size:12px; border-radius:999px; border:1px solid rgba(0,0,0,.2); background:#444; color:#fff; cursor:pointer; }
-  .mw-label{ 
-  margin-left:6px;       /* was 8px */
-  font-size:12px; 
-  color:var(--text-faint); 
-}
-
-  /* Metrics chips */
-  .gen-metrics{ 
-  display:flex; flex-wrap:wrap; 
-  gap:6px 8px;           /* was 8px 12px */
-  min-width:0; 
-}
-  .metric{ display:flex; align-items:center; gap:8px; min-width:0; }
-  .metric-label{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
-  .metric-chip{
-    background:var(--chip-bg,#888); color:#fff; font-weight:800;
-    font-size:calc(var(--fs-base)*0.86); line-height:1;
-    padding:2px 10px; border-radius:999px; white-space:nowrap;
-  }
-  .metric-unit{ font-size:calc(var(--fs-base)*0.8); color:var(--text-faint); }
-
-  /* Right rail — ZERO padding, full height, centered icon, dark states */
-  .gen-section.right{
-    padding:0; margin:0; height:100%; align-self:stretch; box-sizing:border-box;
-    display:grid; place-items:center;
-    border-left:1px solid var(--border); border-radius:0 12px 12px 0;
-    cursor:pointer; user-select:none;
-  }
-  .gen-action-icon{ color:#fff; font-size:22px; line-height:1; }
-  .gen-section.right[data-state="minus"],
-  .gen-section.right[data-state="locked"]{ background:#188848; }
-  .gen-section.right[data-state="plus"]{ background:#949494; }
-  .gen-section.right[data-state="disabled"]{ background:#e0e4ea; cursor:not-allowed; }
-
-  /* Fuel gradients (by class) */
-  .fuel-Gas      { background:linear-gradient(135deg,#149E66,#0E7C4F); }
-  .fuel-Combined { background:linear-gradient(135deg,#0EA5A5,#0B8C8C); color:#0b1b1f; text-shadow:none; }
-  .fuel-Coal     { background:linear-gradient(135deg,#444,#222); }
-  .fuel-Hydro    { background:linear-gradient(135deg,#1e88e5,#1565c0); }
-  .fuel-Wind     { background:linear-gradient(135deg,#6a1b9a,#4527a0); }
-  .fuel-Solar    { background:linear-gradient(135deg,#f6c343,#f4a261); color:#202020; text-shadow:none; }
-  .fuel-Unknown  { background:linear-gradient(135deg,#8e9eab,#eef2f3); color:#111; text-shadow:none; }
-
-
-</style>
-
-<style id="gen-card-hover-selected">
-  /* Visual feedback on cards themselves */
-  .generator-card { transition: box-shadow .12s ease, border-color .12s ease; }
-  .generator-card.hovered {
-    border-color: #60a5fa; /* light blue */
-    box-shadow: 0 0 0 2px rgba(96,165,250,.35);
-  }
-  .generator-card.selected {
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 3px rgba(29,78,216,.45);
-  }
-  .generator-card:focus-visible {
-    outline: 2px solid #1d4ed8;
-    outline-offset: 2px;
-  }
-
-  /* Lines card "All good!" pill — same look as Power/MapView, no reflow */
-#scale-lines { position: relative; }
-
-#scale-lines #lines-ok-pill.pill-ok{
-  position: absolute;
-  top: 8px;               /* nudge as needed to align with your title */
-  right: 10px;
-  background: #4caf50;
-  color: #fff;
-  font-weight: 700;
-  border-radius: 9999px;
-  padding: 2px 8px;
-  font-size: .75rem;
-  line-height: 1;
-  display: none;          /* toggled via JS */
-  pointer-events: none;   /* purely informational */
-}
-
-
-</style>
-
-
-</head>
-<body>
-<!-- Floating toggles -->
-<!--<button id="admin-toggle" class="floating-btn top-left">Admin</button>-->
-
-<!-- Floating panel (start collapsed) -->
-<!--<div id="admin-panel" class="floating-panel horizontal collapsed"></div>-->
-
-<div id="main-layout">
-  <div id="listView-container">
-
-    <!-- Row 1: Overview -->
-    <div class="row" id="row-1">
-      <div id="overview">
-        <div id="overview-status-section">
-          <div class="overview-card" id="scale-power">
-            <div class="overview-label">Total Power</div>
-            <div class="overview-value" id="overview-power">
-              <div class="blocks"></div>
-              <div class="fraction">–</div>
-            </div>
-          </div>
-
-          <div class="overview-card" id="scale-lines">
-            <div class="lines-card">
-              <!-- Row 1: Title -->
-              <div class="overview-label">Overloaded Lines</div>
-
-              <!-- Row 2: Count (+ “All good!” pill when zero) -->
-              <div class="row-count">
-                <div class="overview-value" id="overview-lines">–</div>
-                <div id="lines-ok-pill" class="pill-ok" style="display:none;">All good!</div>
-              </div>
-
-              <!-- Row 3: Rich overloaded line cards (max 3) -->
-              <div class="row-rich" id="row-rich"></div>
-
-              <!-- Row 4: Compact “Top lines” (overflow overloaded + top-loaded non-overloaded) -->
-              <div class="row-top" id="row-top"></div>
-
-              <!-- Row 5: Helper text (click card to scale) -->
-            </div>
-          </div>
-
-          <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <div class="overview-card" id="scale-cost">
-              <div class="overview-label">Total Cost</div>
-              <div class="overview-value" id="overview-cost">–</div>
-            </div>
-            <div class="overview-card" id="scale-emissions">
-              <div class="overview-label">Total Emissions</div>
-              <div class="overview-value" id="overview-emissions">–</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="overview-task-section">
-          <div class="task-card">
-            <div class="overview-label">Scenario Task</div>
-            <div id="task-placeholder" class="task-placeholder">
-              No Scenario Loaded
-            </div>
-            <!-- Moved inside the task card -->
-            <div class="task-actions">
-              <button id="submit-button" disabled>Submit Solution</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- (Removed the old .task-submit-row block) -->
-
-    <!-- Row 2: (old Lines panel kept but hidden for now) -->
-    <div class="row" id="row-2" style="display:none;">
-      <div class="lines-status-card"> … </div>
-      <div class="lines-scroll-card" id="line-scroll"></div>
-    </div>
-
-    <!-- Row 2: Work Area (Lists + Map) -->
-    <div class="row work-grid" id="row-2-work">
-
-      <!-- LEFT: Generator Lists -->
-      <div id="left-lists">
-        <div id="generators-container" style="display:flex; gap:12px; align-items:stretch;">
-          <div class="generator-column" id="inactive-container" style="flex:1 1 0; min-width:0; display:flex; flex-direction:column;">
-            <div class="generator-header">
-              <div class="column-label-row">
-                <div class="column-label">Inactive Generators</div>
-                <div class="sort-buttons" data-type="inactive">
-                  <button class="sort-btn" data-sort="bus">Bus</button>
-                  <button class="sort-btn" data-sort="pmax">Power</button>
-                  <button class="sort-btn" data-sort="cost">Cost</button>
-                  <button class="sort-btn" data-sort="emissions">Emissions</button>
-                </div>
-              </div>
-            </div>
-            <div class="generator-body"><!-- cards injected --></div>
-          </div>
-
-          <div class="generator-column" id="active-container" style="flex:1 1 0; min-width:0; display:flex; flex-direction:column;">
-            <div class="generator-header">
-              <div class="column-label-row">
-                <div class="column-label">Active Generators</div>
-                <div class="sort-buttons" data-type="active">
-                  <button class="sort-btn" data-sort="bus">Bus</button>
-                  <button class="sort-btn" data-sort="pmax">Power</button>
-                  <button class="sort-btn" data-sort="cost">Cost</button>
-                  <button class="sort-btn" data-sort="emissions">Emissions</button>
-                </div>
-              </div>
-            </div>
-            <div class="generator-body"><!-- cards injected --></div>
-          </div>
-        </div>
-
-        <!-- Row 4: Controls (no duplicate Submit here) -->
-        <div class="row" id="row-4">
-          <div class="controls-left">
-            <label for="scenario-select">Load Scenario:</label>
-            <select id="scenario-select"></select>
-            <button id="reset-button">🔁 Reset</button>
-          </div>
-          <!-- Removed .controls-right Submit -->
-        </div>
-      </div>
-
-      <!-- RIGHT: Map -->
-        <!-- RIGHT: Map (50%) -->
-      <div id="right-map">
-        <div id="map-panel" style="flex:1; display:flex; flex-direction:column; position:relative;">
-
-          <div id="map-wrapper" style="flex:1; position:relative;"></div>
-
-          <!-- ✅ In‑panel icon toggles (like Admin) -->
-           <!--<button id="map-filters-toggle" class="map-btn corner top-left" title="Map Filters">Filters</button>
-          <div id="map-filters-panel" class="map-panel horizontal collapsed"></div>
-
-          <button id="map-legend-toggle" class="map-btn corner bottom-left" title="Legend">Legend</button>
-          <div id="map-legend-panel" class="map-panel horizontal collapsed"></div>-->
-
-          <!-- Keep your existing filter content + legend content in DOM;
-               we'll re-parent their inner content into the panels via JS. 
-          <div id="map-filters" style="display:none;">
-            <div class="map-filters-title">   </div>
-            <div class="map-filters-options">
-              <label><input type="checkbox" class="layer-toggle" data-target="map-gen" checked> Generators</label>
-              <label><input type="checkbox" class="layer-toggle" data-target="map-line" checked> Lines</label>
-              <label><input type="checkbox" class="layer-toggle" data-target="map-load" checked> Loads</label>
-              <label><input type="checkbox" class="layer-toggle" data-target="map-bus" checked> Buses</label>
-              <label><input type="checkbox" class="layer-toggle" data-target="line-load-indicator" checked> Line Loads</label>
-            </div>
-          </div>
-
-         
-
-          <div id="map-legend-bar" style="display:none;">
-            <div class="legend-title"></div>
-            <div class="legend-items">
-              <div class="legend-entry"><span class="legend-symbol legend-gen-on"></span> Generator (On)</div>
-              <div class="legend-entry"><span class="legend-symbol legend-gen-off"></span> Generator (Off)</div>
-              <div class="legend-entry"><span class="legend-triangle"></span> Load</div>
-              <div class="legend-entry"><span class="legend-chevron">➤</span> Line Load</div>
-            </div>
-          </div>-->
-
-        </div><!-- /#map-panel -->
-      </div><!-- /#right-map -->
-
-    </div><!-- /#row-2-work -->
-  </div><!-- /#listView-container -->
-</div><!-- /#main-layout -->
-</body>
-
-<script>
-  document.body.classList.add('cards-v3');
-</script>
-
-  <script> 
-    let activeSort = {
+ let activeSort = {
       inactive: { key: 'bus', order: 'asc' },
       active: { key: 'bus', order: 'asc' }
     };
@@ -425,8 +25,7 @@ const formatCO2 = v => `${Math.round(Number(v||0))} CO₂`;
 
 
 
-
-    let historyStack = [];
+let historyStack = [];
 let redoStack = [];
 
 
@@ -794,6 +393,34 @@ function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
     allMet: meetsPower && withinCost && withinEmissions && noOverloads
   };
 }
+
+async function fetchAllScenarios() {
+  const res = await fetch("/api/scenarios");
+  const data = await res.json();
+  availableScenarios = data;
+
+  // URL override
+  const urlScenario = new URLSearchParams(location.search).get('scenario');
+
+  // choose initial scenario
+  const fromUrl = urlScenario && data.find(s => s.scenario_id === urlScenario)?.scenario_id;
+  const fromDefault = data.find(s => s.scenario_id === "clean_north_power")?.scenario_id;
+  const fallback = data[0]?.scenario_id;
+
+  const initialId = fromUrl || fromDefault || fallback;
+
+  if (!initialId) {
+    console.error("No scenarios available.");
+    return;
+  }
+
+  currentScenarioId = initialId;
+  currentScenarioData = data.find(s => s.scenario_id === initialId) || null;
+
+  populateScenarioDropdown(data, initialId);
+  loadScenario(initialId);
+}
+
 
 // --- NEW: apply the computed state to checkboxes/buttons (DOM only) ---
 function applyScenarioUI(state){
@@ -2072,18 +1699,12 @@ function showResultOverlay() {
       <p><strong>💲 Cost:</strong> $${Math.round(totalCost)}</p>
       <p><strong>🫧 Emissions:</strong> ${Math.round(totalEmissions)} tCO₂</p>
     </div>
-    <button type="button" class="results-close" id="close-overlay">Close</button>
+    <button class="results-close" id="close-overlay">Close</button>
   `;
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
-  // in mapView-prototypeB.html (and/or mapView.js) inside showResultOverlay()
-document.getElementById("close-overlay").addEventListener("click", () => {
-  overlay.remove();
-  // NEW: advance the runner only after the overlay is dismissed
-  try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
-});
-
+  document.getElementById("close-overlay").addEventListener("click", () => overlay.remove());
 }
 
 
@@ -2219,81 +1840,16 @@ function applyGeneratorState(state) {
 
   });
 
-  </script>
-<script>
+
   window.addEventListener("DOMContentLoaded", () => {
-    // 1) Move existing Admin controls (scenario select + reset) into #admin-panel.
-   // const adminBtn   = document.getElementById('admin-toggle');
-// const adminPanel = document.getElementById('admin-panel'); // ← add this
 
-/*
-document.addEventListener('click', (e) => {
-  const inside = el => el && (el === e.target || el.contains(e.target));
-  if (![filtersPanel, legendPanel, adminPanel].some(inside) &&
-      ![filtersBtn,   legendBtn,  adminBtn  ].some(inside)) {
-    filtersPanel?.classList.add('collapsed');
-    legendPanel?.classList.add('collapsed');
-    adminPanel?.classList.add('collapsed'); // safe optional
-  }
-});
-*/
-/*
-    // Source elements
-    const row4 = document.getElementById("row-4");
-    const ctrlLeft = row4?.querySelector(".controls-left");
-
-    if (ctrlLeft && adminPanel) {
-      // Move label + select + reset into the floating admin bar
-      [...ctrlLeft.childNodes].forEach(n => adminPanel.appendChild(n));
-      // Hide the old row-4 entirely
-      if (row4) row4.style.display = "none";
-    }
-
-    // 2) Move Map Filters into the floating filters panel (keep existing IDs/classes)
-    const filtersPanel = document.getElementById("filters-panel");
-    const filtersToggle = document.getElementById("filters-toggle");
-    const mapFilters = document.getElementById("map-filters");
-    if (mapFilters && filtersPanel) {
-      // Unhide the original so we can re-parent its contents, then hide again via CSS
-      mapFilters.style.display = "";
-      filtersPanel.append(...[...mapFilters.childNodes]);
-    }
-
-    // 3) Move Legend into the floating legend panel
-    const legendPanel = document.getElementById("legend-panel");
-    const legendToggle = document.getElementById("legend-toggle");
-    const legendBar = document.getElementById("map-legend-bar");
-    if (legendBar && legendPanel) {
-      legendBar.style.display = "";
-      legendPanel.append(...[...legendBar.childNodes]);
-    }
-
-    // 4) Simple toggling behavior (horizontal unfurl)
-    const togglePanel = (btn, panel) => {
-      if (!btn || !panel) return;
-      btn.addEventListener("click", () => {
-        const isCollapsed = panel.classList.contains("collapsed");
-        // Collapse others if you want only one open at a time:
-        [adminPanel, filtersPanel, legendPanel].forEach(p => {
-          if (p && p !== panel) p.classList.add("collapsed");
-        });
-        panel.classList.toggle("collapsed", !isCollapsed);
-      });
-    };
-
-    togglePanel(adminToggle, adminPanel);
-    togglePanel(filtersToggle, filtersPanel);
-    togglePanel(legendToggle, legendPanel);
-    */
-  });
-/*
     document.addEventListener("click", (e) => {
   const inside = el => el && (el === e.target || el.contains(e.target));
   if (![adminPanel, filtersPanel, legendPanel].some(inside) &&
       ![adminToggle, filtersToggle, legendToggle].some(inside)) {
     [adminPanel, filtersPanel, legendPanel].forEach(p => p?.classList.add("collapsed"));
   }
-});*/
+});
 
 window.debugScenarioVsMap = function debugScenarioVsMap(maxTries = 20, delayMs = 100){
   let tries = 0;
@@ -2346,9 +1902,6 @@ window.debugScenarioVsMap = function debugScenarioVsMap(maxTries = 20, delayMs =
 };
 
 
-</script>
-
-<script>
 window.addEventListener('DOMContentLoaded', () => {
   // --- Move existing map filters/legend content into new flyouts
   const oldFilters = document.getElementById('map-filters');
@@ -2413,78 +1966,11 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-</script>
-<script>
-  function chevronPath(scale){
+
+function chevronPath(scale){
     const length = scale * 2, width = scale;
     return `M 0 0 L ${length} ${-width} L ${length*0.8} 0 L ${length} ${width} Z`;
   }
-</script>
-
-<script>
-window.addEventListener("DOMContentLoaded", () => {
-  // Safely look up optional controls
-  /*
-const adminToggle   = document.getElementById('admin-toggle')   || { addEventListener:()=>{} };
-const adminPanel    = document.getElementById('admin-panel')    || {};
-const filtersBtn    = document.getElementById('map-filters-toggle') || { addEventListener:()=>{} };
-const $ = window.$ || undefined;  // jQuery not used in ListView; guard if referenced
-let ctrlLeft     = $('#ctrl-left');        // whatever your source container is
-let oldFilters   = $('#filters-old');
-let filtersPanel = $('#filters-panel');
-let oldLegend    = $('#legend-old');
-let legendPanel  = $('#legend-panel');
-
-
-// Only wire listeners if the element exists
-on(adminToggle, 'click', () => {
-  adminPanel?.classList.toggle('open');
-});
-
-on(filtersBtn, 'click', () => {
-  filtersPanel?.classList.toggle('open');
-});
-
-*/
-
-/*
-  // Move contents safely (children only)
-  const row4 = document.getElementById("row-4");
-  // If you move nodes around, guard everything
-if (ctrlLeft && adminPanel) {
-  [...ctrlLeft.childNodes].forEach(n => adminPanel.appendChild(n));
-}
-if (oldFilters && filtersPanel) {
-  [...oldFilters.childNodes].forEach(n => filtersPanel.appendChild(n));
-}
-if (oldLegend && legendPanel) {
-  [...oldLegend.childNodes].forEach(n => legendPanel.appendChild(n));
-}
-
-  // Toggle helper
-  const togglePanel = (btn, panel) => {
-    if (!btn || !panel) return;
-    btn.addEventListener("click", () => {
-      const isCollapsed = panel.classList.contains("collapsed");
-      [adminPanel, filtersPanel, legendPanel].forEach(p => { if (p && p !== panel) p.classList.add("collapsed"); });
-      panel.classList.toggle("collapsed", !isCollapsed);
-    });
-  };
-  togglePanel(adminToggle,   adminPanel);
-  togglePanel(filtersToggle, filtersPanel);
-  togglePanel(legendToggle,  legendPanel);
-
-  // Click-away close (same scope, so no undefineds)
-  document.addEventListener("click", (e) => {
-    const inside = el => el && (el === e.target || el.contains(e.target));
-    if (![adminPanel, filtersPanel, legendPanel].some(inside) &&
-        ![adminToggle, filtersToggle, legendToggle].some(inside)) {
-      [adminPanel, filtersPanel, legendPanel].forEach(p => p?.classList.add("collapsed"));
-    }
-  });
-  */
-});
-
 
 
 const listsRoot = document.getElementById("generators-container");
@@ -2549,135 +2035,4 @@ window.debugEval = function(){
     allMet: s.allMet
   });
   console.groupEnd();
-};
-
-
-</script>
-<!-- === Runner bridge (paste into both ListView B and MapView B) === -->
-<style>
-  /* Hide admin chrome while embedded in the runner */
-  .runner-mode #row-4,
-  .runner-mode #scenario-select,
-  .runner-mode #reset-button,
-  .runner-mode #admin-panel,
-  .runner-mode .floating-panel,
-  .runner-mode .map-btn,
-  .runner-mode #map-filters-toggle,
-  .runner-mode #map-legend-toggle { display:none !important; }
-</style>
-<script>
-(() => {
-  const params = new URLSearchParams(location.search);
-  const RUNNER_MODE = params.get('runner') === '1';
-  if (!RUNNER_MODE) return;
-
-  // Shared getters that always return the right shapes
-  function getGens() {
-    const g = window.currentGenerators;
-    return Array.isArray(g) ? g : [];
-  }
-  function getLines() {
-    const L = window.currentLines;
-    if (Array.isArray(L)) return L;
-    if (!L) return [];
-    return (typeof L === 'object' && !('length' in L)) ? Object.values(L) : Array.from(L);
-  }
-  function getScenario() { return window.currentScenarioData || {}; }
-
-  // Minimal fallback computation (works for ListView data model)
-  function computeFallbackState() {
-    const gens = getGens(), lines = getLines(), scen = getScenario();
-    const nz = n => Number(n || 0);
-    const totals = {
-      power:     gens.reduce((s,g)=>s+nz(g.pg), 0),
-      cost:      gens.reduce((s,g)=>s+nz(g.pg)*nz(g.cost_per_mw), 0),
-      emissions: gens.reduce((s,g)=>s+nz(g.pg)*nz(g.emissions_per_mw), 0),
-    };
-    const targetMW = nz(scen.target_mw);
-    const maxCost  = (scen.max_cost != null) ? nz(scen.max_cost) : null;
-    const maxCO2   = (scen.max_emissions != null) ? nz(scen.max_emissions) : null;
-    const overloadedCount = lines.filter(l => {
-      const r = nz(l.rate_a ?? l.rateA), f = Math.abs(nz(l.flow));
-      return r > 0 && f > r;
-    }).length;
-    const meetsPower       = targetMW > 0 ? (totals.power >= targetMW*0.95 && totals.power <= targetMW*1.05) : true;
-    const withinCost       = (maxCost == null) ? true : totals.cost <= maxCost;
-    const withinEmissions  = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
-    const noOverloads      = overloadedCount === 0;
-    return { totals, targetMW, maxCost, maxCO2, overloadedCount,
-             meetsPower, withinCost, withinEmissions, noOverloads,
-             allMet: meetsPower && withinCost && withinEmissions && noOverloads };
-  }
-
-  // Run eval safely regardless of which view we’re in
-  function computeEvalStateSafe(useOriginal=false) {
-    const f = useOriginal ? window.__origEvaluateScenarioState : window.evaluateScenarioState;
-    const gens = getGens(), lines = getLines(), scen = getScenario();
-
-    if (typeof f !== 'function') return computeFallbackState();
-
-    try {
-      // Detect arity (ListView: 3 args; MapView: 2 args)
-      if (f.length >= 3) return f(gens, lines, scen);
-      if (f.length === 2) return f(scen, lines);
-      // If signature is unknown, try both safely
-      try { return f(gens, lines, scen); } catch {}
-      try { return f(scen, lines); } catch {}
-    } catch (e) {
-      console.warn('[RunnerBridge] eval failed, falling back:', e);
-    }
-    return computeFallbackState();
-  }
-
-  // Post state to the runner (parent)
-  function postToRunner(precomputed) {
-    const state = precomputed || computeEvalStateSafe(/*useOriginal=*/true);
-    const payload = {
-      type: 'dv:state',
-      view: (window.renderGenerators ? 'list' : 'map'), // heuristic
-      scenarioId: (getScenario().scenario_id || null),
-      state,
-      meta: {
-        gens: getGens().length,
-        lines: getLines().length,
-        ts: Date.now()
-      }
-    };
-    try { window.parent && window.parent.postMessage(payload, '*'); }
-    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
-  }
-
-  // Monkey-patch evaluateScenarioState ONCE to avoid recursion
-  if (typeof window.evaluateScenarioState === 'function' && !window.__origEvaluateScenarioState) {
-    window.__origEvaluateScenarioState = window.evaluateScenarioState;
-    window.evaluateScenarioState = function patchedEvaluateScenarioState(...args) {
-      const result = window.__origEvaluateScenarioState.apply(this, args);
-      // Use the *original* result to notify (no re-entry)
-      postToRunner(result);
-      return result;
-    };
-  }
-
-  // Also patch applyScenarioUI so runner gets updates when UI is applied with a precomputed state
-  if (typeof window.applyScenarioUI === 'function' && !window.__origApplyScenarioUI) {
-    window.__origApplyScenarioUI = window.applyScenarioUI;
-    window.applyScenarioUI = function patchedApplyScenarioUI(state) {
-      const ret = window.__origApplyScenarioUI.call(this, state);
-      postToRunner(state); // state already computed by the page
-      return ret;
-    };
-  }
-
-  // First beacon once the page has its globals
-  window.addEventListener('load', () => {
-    // If we didn't patch anything (no eval function), still send a snapshot
-    postToRunner(/*precomputed*/ computeEvalStateSafe());
-  });
-
-})();
-</script>
-
-
-
-</body>
-</html>
+}});
