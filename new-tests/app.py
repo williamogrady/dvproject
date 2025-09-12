@@ -25,6 +25,8 @@ grid = Grid()
 
 
 @app.route("/")
+@app.route("/start")
+@app.route("/home")
 def start():
     return render_template("start.html")
 

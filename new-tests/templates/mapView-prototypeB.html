@@ -923,6 +923,10 @@ let availableScenarios = [];
 
 let currentMapMode = "full";
 
+function isPowerFocus(){
+  return activeFilters.has('power') && currentMapMode !== "lines";
+}
+
 function clearAllFocusFades(){
   d3.selectAll(".map-bus, .map-load, .map-line, #chevron-layer .chevron, .line-load-indicator, .map-gen-group")
     .interrupt()
@@ -1238,7 +1242,11 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
 function drawChevrons(lines, nodes, mode) {
   // Remove old layer
   d3.select("#chevron-layer").remove();
-  const chevronGroup = d3.select("#zoom-group").append("g").attr("id", "chevron-layer");
+ const chevronGroup = d3.select("#zoom-group")
+   .insert("g", ".map-gen-group")        // keep chevrons *below* generators
+   .attr("id", "chevron-layer")
+   // apply fade immediately if power focus is active
+   .style("opacity", isPowerFocus() ? 0.2 : 1);
 
   const isLinesMode = mode === "lines";
 
@@ -1275,7 +1283,6 @@ function drawChevrons(lines, nodes, mode) {
   .attr("id", `chev-${line.id}`)
   .attr("d", chevronPath ? chevronPath(size) : defaultChevronPath(size))
   .attr("fill", color)
-  .attr("opacity", 0.95)
   .attr("stroke", "#111")
   .attr("stroke-width", 0.4)
   .attr("data-x", midX)
@@ -2143,7 +2150,8 @@ const lockedArr   = window.currentScenarioData?.locked_generators   || window.cu
       .attr("width", W).attr("height", H)
       .attr("rx", 10).attr("ry", 10)
       .attr("fill", "#fff")
-      .attr("stroke", "#111").attr("stroke-width", 1.2);
+      .attr("stroke", "none")            // ← no outline by default
+      .attr("stroke-width", null);
 
     // ---- COST HALO (only when showCost) ----
     // ---- COST HALO (categorical mapping) ----
@@ -2164,18 +2172,51 @@ if (showCost) {
 }
 
 
-    // ---- EMISSIONS HATCH (clear when OFF) ----
-    const hatch = g.select(".gen-hatch")
-      .attr("x", -W/2).attr("y", -H/2)
-      .attr("width", W).attr("height", H);
+ // ---- EMISSIONS HATCH + OUTLINE ----
+  // ---- EMISSIONS HATCH + OUTLINE ----
+const hatch = g.select(".gen-hatch")
+  .attr("x", -W/2).attr("y", -H/2)
+  .attr("width", W).attr("height", H);
 
-    hatch.attr("fill", "none").attr("opacity", 0).attr("stroke", "none");
-    if (scaleEmi) {
-      const url = ensureHatch(defs, id,
-        emiStroke(gen.emissions_per_mw || 0),
-        emiSpacing(gen.emissions_per_mw || 0));
-      hatch.attr("fill", url).attr("opacity", 0.40);
-    }
+let outline = g.select(".gen-outline");
+if (outline.empty()) {
+  outline = g.append("rect")
+    .attr("class", "gen-outline")
+    .attr("pointer-events", "none");
+}
+
+outline
+  .attr("x", -W/2).attr("y", -H/2)
+  .attr("width", W).attr("height", H)
+  .attr("rx", 10).attr("ry", 10)
+  .attr("fill", "none")
+  .attr("vector-effect", "non-scaling-stroke"); // ✅ stays thin on zoom
+
+if (scaleEmi) {
+  const strokeColor = emiStroke(gen.emissions_per_mw || 0);
+  const url = ensureHatch(
+    defs,
+    id,
+    strokeColor,
+    emiSpacing(gen.emissions_per_mw || 0)
+  );
+
+  hatch.attr("fill", url).attr("opacity", 0.40).attr("stroke", "none");
+
+  outline
+    .attr("stroke", strokeColor)  // same as hatch color
+    .attr("stroke-width", 1.5)    // subtle but visible
+    .attr("opacity", 1)
+    .raise();
+} else {
+  hatch.attr("fill", "none").attr("opacity", 0).attr("stroke", "none");
+  outline
+    .attr("stroke", "none")
+    .attr("stroke-width", null)
+    .attr("opacity", 0);
+}
+
+
 
     // ---- BLOCKS (replace pips) ----
 // ensure a dedicated container for dice blocks
