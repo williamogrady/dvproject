@@ -1181,7 +1181,7 @@ if (powerFraction) powerFraction.textContent = `${Math.round(totalPower)} MW`;
 updatePowerBlocks(totalPower, currentScenarioData.target_mw);
 
   document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
-  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} CO₂`;
+  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} tCO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
   updatePowerBlocks(totalPower, currentScenarioData.target_mw)
   evaluateScenarioState(scenarioData, lines)

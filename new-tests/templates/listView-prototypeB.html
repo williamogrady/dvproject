@@ -421,7 +421,7 @@ let previousLineLoads = {};
 // Small format helpers
 const formatMW  = v => `${Math.round(Number(v||0))} MW`;
 const formatUSD = v => `$${Math.round(Number(v||0))}`;
-const formatCO2 = v => `${Math.round(Number(v||0))} CO₂`;
+const formatCO2 = v => `${Math.round(Number(v||0))} tCO₂`;
 
 
 
@@ -997,7 +997,7 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
   const costEl = document.querySelector('#overview-cost');
   const emiEl  = document.querySelector('#overview-emissions');
   if (costEl) costEl.textContent = `$${Math.round(totalCost).toLocaleString()}`;
-  if (emiEl)  emiEl.textContent  = `${Math.round(totalEmis).toLocaleString()} CO₂`;
+  if (emiEl)  emiEl.textContent  = `${Math.round(totalEmis).toLocaleString()} tCO₂`;
 
   // LINES
   updateLinesCard(lines);
