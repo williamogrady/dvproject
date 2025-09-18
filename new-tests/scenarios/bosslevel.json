@@ -1,0 +1,30 @@
+{
+  "scenario_id": "bosslevel",
+  "title": "Boss Level – Chaos on the Grid",
+  "target_mw": 3100,
+  "line_limit_pct": 0.7,
+  "locked_generators": [
+    "Gen12", "Gen20", "Gen21", "Gen33", "Gen44", "Gen60"
+  ],
+  "disabled_generators": [
+    "Gen6", "Gen15", "Gen25", "Gen37", "Gen74"
+  ],
+  "disabled_lines": [
+    "Line-10-11", "Line-11-12", "Line-12-13", "Line-20-21",
+    "Line-21-22", "Line-22-23", "Line-30-31", "Line-31-32",
+    "Line-40-41", "Line-41-42", "Line-55-56", "Line-56-57",
+    "Line-67-68", "Line-80-81"
+  ],
+  "initial_outputs": {
+    "Gen12": 400,
+    "Gen20": 300,
+    "Gen21": 280,
+    "Gen33": 350,
+    "Gen44": 320,
+    "Gen50": 300,
+    "Gen60": 340,
+    "Gen70": 260,
+    "Gen75": 220
+  },
+  "bonus": null
+}

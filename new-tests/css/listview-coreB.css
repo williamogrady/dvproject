@@ -376,11 +376,38 @@ button:hover{ filter: brightness(0.98); }
   padding: 8px 10px;
 }
 
-/* Left colored strip tighter text */
-#row-2-work .gen-section.left{ padding: 8px; gap: 4px; }
-#row-2-work .gen-section.left .gen-name{ font-size: .9rem; }
-#row-2-work .gen-section.left .gen-number{ font-size: .76rem; }
-#row-2-work .gen-section.left .gen-type{ font-size: .72rem; }
+/* Left colored strip, vertical stack */
+#row-2-work .gen-section.left {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+/* Big bus number */
+#row-2-work .gen-section.left .gen-number {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+/* Smaller name, in parentheses */
+#row-2-work .gen-section.left .gen-name {
+  font-size: 0.75rem;
+  font-style: italic;
+  opacity: 0.8;
+  line-height: 1.2;
+}
+
+/* Fuel type, subtle label */
+#row-2-work .gen-section.left .gen-type {
+  font-size: 1.2rem;
+  text-transform: capitalize;
+  color: #ffffff;
+}
+
 
 /* Center more compact */
 #row-2-work .gen-section.center{ gap: 8px; }

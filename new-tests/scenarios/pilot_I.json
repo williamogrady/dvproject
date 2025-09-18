@@ -1,0 +1,25 @@
+  {
+    "scenario_id": "pilot_I",
+    "title": "Pilot I – Overgeneration Challenge",
+    "target_mw": 2800,
+    "line_limit_pct": 0.85,
+    "locked_generators": [],
+    "disabled_generators": ["Gen12"], 
+    "disabled_lines": ["Line-23-24", "Line-45-46"],
+    "initial_outputs": {
+      "Gen5": 300,
+      "Gen6": 250,
+      "Gen7": 200,
+      "Gen8": 200,
+      "Gen10": 220,
+      "Gen15": 180,
+      "Gen25": 250,
+      "Gen33": 220,
+      "Gen44": 240,
+      "Gen50": 260,
+      "Gen60": 200,
+      "Gen70": 200,
+      "Gen74": 180
+    },
+        "bonus": null
+  }

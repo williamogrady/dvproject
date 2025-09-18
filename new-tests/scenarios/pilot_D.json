@@ -1,0 +1,13 @@
+  {
+    "scenario_id": "pilot_D",
+    "title": "Pilot D – Low Load with Locked & Disabled Mix",
+    "target_mw": 1500,
+    "line_limit_pct": 0.8,
+    "locked_generators": ["Gen33"],
+    "disabled_generators": ["Gen20"],
+    "disabled_lines": ["Line-56-57", "Line-34-35"],
+    "initial_outputs": {
+      "Gen33": 200
+    },
+    "bonus": null
+  }

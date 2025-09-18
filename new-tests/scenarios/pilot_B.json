@@ -1,0 +1,14 @@
+  {
+    "scenario_id": "pilot_B",
+    "title": "Pilot B – High Load with Disabled Corridors",
+    "target_mw": 3500,
+    "line_limit_pct": 0.85,
+    "locked_generators": ["Gen12"],
+    "disabled_generators": [],
+    "disabled_lines": ["Line-45-46", "Line-78-79"],
+    "initial_outputs": {
+      "Gen12": 300,
+      "Gen38": 250
+    },
+    "bonus": null
+  }

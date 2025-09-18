@@ -1170,25 +1170,38 @@ function buildDisabledLineSet(scen = {}){
 
 
 async function fetchAllScenarios() {
-  console.log("fetchAllScenarios")
-      const res = await fetch("/api/scenarios");
-      const data = await res.json();
+  console.log("fetchAllScenarios");
+  const res = await fetch("/api/scenarios");
+  const data = await res.json();
+  availableScenarios = data || [];
 
-      availableScenarios = data;
+  // 1) URL override: ?scenario=<id>
+  const urlId = new URLSearchParams(location.search).get("scenario");
 
-      // Find default scenario
-      const defaultScenario = data.find(s => s.scenario_id === "clean_north_power");
+  // 2) Next best: first pilot_* in list
+  const pilot = availableScenarios.find(s => /^pilot_/i.test(s.scenario_id));
 
-        if (defaultScenario) {
-    currentScenarioId = defaultScenario.scenario_id;
-    currentScenarioData = defaultScenario;
+  // 3) Fallback: the first item in the list
+  const first = availableScenarios[0];
 
-        populateScenarioDropdown(data, currentScenarioId);
-        loadScenario(currentScenarioId);
-      } else {
-        console.error("No scenario with ID 'default' found.");
-      }
-    }
+  const chosen =
+    (urlId && availableScenarios.find(s => s.scenario_id === urlId)) ||
+    pilot || first;
+
+  if (!chosen) {
+    console.error("No scenarios returned from /api/scenarios");
+    return;
+  }
+
+  currentScenarioId = chosen.scenario_id;
+  currentScenarioData = chosen;
+
+  if (typeof populateScenarioDropdown === "function") {
+    populateScenarioDropdown(availableScenarios, currentScenarioId);
+  }
+  loadScenario(currentScenarioId);
+}
+
 
 function renderOverview(gens, scenarioData = {}, lines) {
   totalPower = gens.reduce((sum, g) => sum + g.pg, 0);

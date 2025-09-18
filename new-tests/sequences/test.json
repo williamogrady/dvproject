@@ -1,0 +1,7 @@
+{
+  "series": [
+    { "view": "map", "scenarios": ["bosslevel"], "seconds": 300 },
+    { "break": { "seconds": 10, "note": "Next: same task in ListView" } },
+    { "view": "list",  "scenarios": ["bosslevel"], "seconds": 300 }
+  ]
+}
