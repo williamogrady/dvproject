@@ -20,6 +20,8 @@
   --gen-off: #333;
 }
 
+#constraint-lines { color: #b00; }
+
 
     body {
       margin: 0;
@@ -923,6 +925,8 @@ let availableScenarios = [];
 
 let currentMapMode = "full";
 
+
+
 function isPowerFocus(){
   return activeFilters.has('power') && currentMapMode !== "lines";
 }
@@ -943,11 +947,12 @@ function applyVisualFocus(){
   clearAllFocusFades();
   smoothScale("#chevron-layer .chevron, .line-load-indicator", 1);
   smoothScale(".map-gen-group", 1);
+  
 
   // Selections
   const selGens   = ".map-gen-group";
   const selLines  = ".map-line";
-  const selChevs  = "#chevron-layer .chevron, .line-load-indicator"; // cover both classes
+  const selChevs  = "#chevron-layer .chevron, .line-load-indicator";
   const selBuses  = ".map-bus";
   const selLoads  = ".map-load";
 
@@ -1142,6 +1147,27 @@ function getLoadColor(pct) {
   return d3.interpolateYlOrRd(Math.min(1, Math.max(0, pct)));
 }
 
+function _normalizeLineIdAB(a,b){
+  const lo = Math.min(+a,+b), hi = Math.max(+a,+b);
+  return `Line_Bus${lo}_Bus${hi}`;
+}
+function buildDisabledLineSet(scen = {}){
+  const S = new Set();
+  for (const v of (scen.disabled_lines || [])){
+    if (typeof v === 'string'){
+      const m = v.match(/(\d+).*?(\d+)/);
+      if (m) S.add(_normalizeLineIdAB(m[1], m[2]));
+      else S.add(v);
+    } else if (v && typeof v === 'object'){
+      const a = v.from_bus ?? v.i ?? v.bus1 ?? v.from ?? v.a;
+      const b = v.to_bus   ?? v.j ?? v.bus2 ?? v.to   ?? v.b;
+      if (a!=null && b!=null) S.add(_normalizeLineIdAB(a,b));
+    }
+  }
+  return S;
+}
+
+
 
 async function fetchAllScenarios() {
   console.log("fetchAllScenarios")
@@ -1170,7 +1196,9 @@ function renderOverview(gens, scenarioData = {}, lines) {
   totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
   totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
-  const overloaded = lines.filter(line => line.flow > line.rate_a).length;
+  const S = window.disabledLineSet || new Set();
+  const overloaded = (lines || []).filter(line => !S.has(line.id) && line.flow > line.rate_a).length;
+
   const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
 
   
@@ -1202,6 +1230,7 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   currentScenarioData = data;
   currentGenerators = data.generators;
   currentLines = data.lines;
+  window.disabledLineSet = buildDisabledLineSet(currentScenarioData);
 
 
   console.log("calling renderOverview");
@@ -1315,6 +1344,9 @@ function updateLinesCard(/* liveLines not needed anymore */) {
     const rate = m ? m.rate_a : (s.rate_a ?? 1);
     return { ...s, _pct: pct, flow, rate_a: rate };
   });
+  const S = window.disabledLineSet || new Set();
+  const filtered = lines.filter(l => !S.has(l.id));
+
 
   // Partition/sort
   const byPctDesc = (a,b) => b._pct - a._pct;
@@ -1454,14 +1486,13 @@ function chevronPath(scale) {
   `;
 }
 
-function refreshChevrons(liveLines, currentMapMode) {
-  // Index both directions so lookups don’t miss when sign flips
+function refreshChevrons(liveLines, currentMapMode){
+  // 1) enrich with live flow
   const liveIdx = new Map();
   for (const l of (liveLines || [])) {
     liveIdx.set(`Bus${l.from_bus}|Bus${l.to_bus}`, l);
     liveIdx.set(`Bus${l.to_bus}|Bus${l.from_bus}`, l);
   }
-
   const enriched = staticLines.map(s => {
     const live = liveIdx.get(`${s.source}|${s.target}`);
     const flow = live?.flow ?? 0;
@@ -1470,17 +1501,29 @@ function refreshChevrons(liveLines, currentMapMode) {
     return { ...s, flow, rate_a: rate, _pct: pct };
   });
 
-  // Update the shared metrics map (source of truth for BOTH rows)
+  // 2) update shared metrics (used by the Lines card)
   lineMetrics.clear();
-  for (const L of enriched) {
-    lineMetrics.set(L.id, { pct: L._pct, flow: L.flow, rate_a: L.rate_a });
-  }
+  for (const L of enriched) lineMetrics.set(L.id, { pct: L._pct, flow: L.flow, rate_a: L.rate_a });
 
-  // (Re)draw chevrons using enriched data as you already do
+  // 3) split by disabled
+  const S = window.disabledLineSet || new Set();
+  const enabled  = enriched.filter(L => !S.has(L.id));
+  const disabled = enriched.filter(L =>  S.has(L.id));
+
+  // 4) rebuild layer
   d3.select("#chevron-layer").remove();
-  drawChevrons(enriched, staticNodes, currentMapMode);
+  d3.select("#zoom-group")
+    .insert("g", ".map-gen-group")
+    .attr("id", "chevron-layer")
+    .style("opacity", isPowerFocus() ? 0.2 : 1);
 
-  // Optionally stamp DOM for debug/consistency
+  // 5) draw enabled chevrons (your existing routine)
+  drawChevrons(enabled, staticNodes, currentMapMode);
+
+  // 6) draw ❌ for disabled corridors (now as #chev-<id> groups)
+  drawDisabledMarkersMap(disabled);
+
+  // 7) (optional) stamp pct for debug/consistency
   enriched.forEach(L => {
     d3.select(`#chev-${CSS.escape(L.id)}`).attr("data-pct", L._pct);
   });
@@ -1949,6 +1992,50 @@ function makePowerDiceScale(gens = currentGenerators){
     .range([MIN_S, MAX_S])
     .clamp(true);
 }
+
+function drawDisabledMarkersMap(disabledLines){
+  const layer = d3.select('#chevron-layer');
+  if (layer.empty()) return;
+
+  let k = 1;
+  try { k = d3.zoomTransform(d3.select('svg').node()).k || 1; } catch(e){}
+  const fontSize = 10 / k;
+
+  disabledLines.forEach(d => {
+    // ensure a chevron-like group exists
+    let g = layer.select(`#${CSS.escape(`chev-${d.id}`)}`);
+    if (g.empty()){
+      g = layer.append('g')
+        .attr('id', `chev-${d.id}`)
+        .attr('class', 'chevron chevron-x') // ← participates in focus scaling
+        .style('pointer-events', 'none');
+    }
+
+    const path = document.getElementById(d.id);
+    if (!path || !path.getTotalLength) return;
+
+    const L = path.getTotalLength();
+    const mid = path.getPointAtLength(L/2);
+    const delta = Math.max(1, L/500);
+    const p1 = path.getPointAtLength(Math.max(0, L/2 - delta));
+    const p2 = path.getPointAtLength(Math.min(L, L/2 + delta));
+    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180/Math.PI;
+
+    const baseT = `translate(${mid.x}, ${mid.y}) rotate(${angle})`;
+    g.attr('data-base-transform', baseT)
+     .attr('transform', `${baseT} scale(1)`);
+
+    // text ❌ (swap to SVG path X if you prefer)
+    const t = g.selectAll('text').data([d]);
+    t.enter().append('text')
+      .attr('text-anchor','middle')
+      .attr('dominant-baseline','central')
+      .text('❌')
+      .merge(t)
+      .style('font-size', `${fontSize}px`);
+  });
+}
+
 
 // Draw a 3×3 grid of pips and wire clicks.
 // If the first (lowest) pip is already filled and you click it → set to zero.
@@ -2425,6 +2512,7 @@ function setupTaskSection(scenario) {
   const hasBudget = scenario.max_cost !== undefined && scenario.max_cost !== null;
     const lockedList = scenario.locked_generators || scenario.locked || [];
   const disabList  = scenario.disabled_generators || scenario.disabled || [];
+  const hasDisabledLines = (window.disabledLineSet && window.disabledLineSet.size > 0);
 const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
   const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
 
@@ -2454,6 +2542,7 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
             <div class="task-subtitle" id="task-constraints">
               ${hasLocked ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
               ${hasDisabled ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
+              ${hasDisabledLines ? `<div id="constraint-lines">❌ Some lines are disabled</div>` : ``}
             </div>
           </div>
         </div>

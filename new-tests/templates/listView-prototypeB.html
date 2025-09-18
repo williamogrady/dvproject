@@ -498,6 +498,25 @@ function emissionsColor(gen){
   return `hsl(140, ${sat(e)}%, 45%)`;
 }
 
+function buildDisabledLineSetFromScenario(scen = {}) {
+  const out = new Set();
+  const list = scen.disabled_lines || scen.disabledLines || [];
+  list.forEach(raw => {
+    const s = String(raw);
+    // Accept "Line-13-14", "13-14", "Line_Bus13_Bus14", etc.
+    const m = s.match(/(\d+)[^\d]+(\d+)/);
+    if (m) {
+      const a = Number(m[1]), b = Number(m[2]);
+      const lo = Math.min(a, b), hi = Math.max(a, b);
+      out.add(`Line_Bus${lo}_Bus${hi}`);
+    } else {
+      // If it’s already a normalized id, keep it
+      out.add(s);
+    }
+  });
+  window.disabledLineSet = out;
+}
+
 // --- Always exclude these
 const EXCLUDE_BUSES = new Set([1]);          // bus numbers to drop
 const EXCLUDE_IDS   = new Set(["Gen1"]);     // normalized ids to drop
@@ -597,8 +616,9 @@ setupTaskSection(currentScenarioData);
 
 // 2) Ensure scenario sets are valid BEFORE any rendering
 currentScenarioData = sanitizeScenarioSets(currentScenarioData);
+buildDisabledLineSetFromScenario(currentScenarioData);  // <-- add this
 
-// 3) Render UI
+// then your existing render calls:
 renderGenerators(currentGenerators);
 renderLines(lines, data.solved !== false);
 renderOverview(currentGenerators, currentScenarioData, lines);
@@ -870,6 +890,7 @@ function updatePowerBlocks(totalPower, targetPower) {
                 totalPower >= targetPower * 0.95 &&
                 totalPower <= targetPower * 1.05;
   pill.style.display = meets ? "inline-block" : "none";
+ 
 
   // --- Rebuild blocks (unchanged from your version) ---
   container.innerHTML = "";
@@ -1108,7 +1129,18 @@ function updateLinesCard(linesIn = []){
     // left chevron
     const left = document.createElement('div');
     left.className = 'left';
-    left.appendChild(_buildChevron(accent, d.dirArrow));
+
+    const isDisabled = window.disabledLineSet && window.disabledLineSet.has(d.id);
+    if (isDisabled) {
+      const x = document.createElement('span');
+      x.textContent = '❌';
+      x.style.fontSize = '18px';
+      x.style.lineHeight = '1';
+      left.appendChild(x);
+    } else {
+      left.appendChild(_buildChevron(accent, d.dirArrow));
+    }
+
 
     // right: % + delta
     const right = document.createElement('div');
@@ -1336,17 +1368,32 @@ function renderMapLineLoads(lines) {
 
      const lineId = `Line_Bus${Math.min(line.from_bus, line.to_bus)}_Bus${Math.max(line.from_bus, line.to_bus)}`;
     const baseT = `translate(${midX}, ${midY}) rotate(${angle})`;
-    group.append("path")
-      .attr("class", "line-load-indicator")
-      .attr("id", `chev-${lineId}`)          // ✅ what pingChevron() looks for
-        .attr("d", chevronPath(size))
-        .attr("fill", color)
-        .attr("stroke", "#111")
-        .attr("stroke-width", 0.4)
-        .attr("transform", baseT)
-        .attr("data-base-transform", baseT)     // ✅ stored for clean scaling
-        .attr("data-x", midX)                   // ✅ optional, used by older rings code
-        .attr("data-y", midY);
+    const isDisabled = (window.disabledLineSet && window.disabledLineSet.has(lineId));
+
+if (isDisabled) {
+  // ❌ marker instead of chevron
+  group.append("text")
+    .attr("class", "line-load-indicator line-x")
+    .attr("id", `chev-${lineId}`)
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "central")
+    .attr("transform", baseT)
+    .attr("data-base-transform", baseT)
+    .style("font-size", `${size * 3.0}px`)
+    .style("pointer-events", "none")
+    .text("❌");
+} else {
+  // normal chevron
+  group.append("path")
+    .attr("class", "line-load-indicator")
+    .attr("id", `chev-${lineId}`)
+    .attr("d", chevronPath(size))
+    .attr("fill", color)
+    .attr("stroke", "#111")
+    .attr("stroke-width", 0.4)
+    .attr("transform", baseT)
+    .attr("data-base-transform", baseT);
+}
     });
   }, 0);
 }
@@ -2001,6 +2048,8 @@ function setupTaskSection(scenario){
   const disabList  = scenario.disabled_generators || scenario.disabled || [];
   const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
   const hasDisab   = Array.isArray(disabList)   && disabList.length > 0;
+   const lineList   = scenario.disabled_lines || [];
+  const hasDisabLines = Array.isArray(lineList) && lineList.length > 0;
 
   container.innerHTML = `
     <div class="task-card">
@@ -2024,9 +2073,10 @@ function setupTaskSection(scenario){
           <div class="task-right">
             <div class="task-title">Constraints</div>
             <div class="task-subtitle" id="task-constraints">
-              ${hasLocked ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
-              ${hasDisab  ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
-            </div>
+            ${hasLocked     ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
+            ${hasDisab      ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
+            ${hasDisabLines ? `<div id="constraint-lines">❌ Some lines are disabled</div>` : ``}
+          </div>
           </div>
         </div>
 

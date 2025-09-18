@@ -16,8 +16,7 @@
         "Gen25": 320
     },
     "disabled_lines": [
-        "Line-13-14",
-        "Line-23-24"
+        "Line_Bus48_Bus49"
     ],
     "bonus": null
 }
