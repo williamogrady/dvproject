@@ -793,3 +793,46 @@ button:hover{ filter: brightness(0.98); }
   transition: opacity .18s ease, transform .18s ease;
 }
 .added-toast.on{ opacity:.92; transform:translateY(0); }
+
+/* ----------------------------------------
+   RESULTS (ported from MapView B)
+---------------------------------------- */
+.results-box {
+  background: white;
+  color: #222;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  font-family: "Figtree", sans-serif;
+  text-align: center;
+  width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.results-title {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.results-summary p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.results-close {
+  margin-top: 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: "Figtree", sans-serif;
+}
+
+.results-close:hover {
+  background: #45a049;
+}

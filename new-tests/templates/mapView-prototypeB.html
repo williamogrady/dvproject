@@ -767,6 +767,121 @@
   font-size: 0.75rem;
 }
 
+/* Legend button + box (copied from ListView) */
+.legend-btn{
+  background:#fff; color:#111; border:1px solid #d9dee8; border-radius:999px;
+  padding:6px 12px; font:600 14px/1 'Figtree', system-ui, sans-serif;
+  box-shadow:0 2px 8px rgba(0,0,0,.08); cursor:pointer;
+  transition: filter .15s ease, transform .1s ease;
+  z-index: 30; /* make sure above map and overlays */
+}
+.legend-btn:hover{ filter: brightness(.95); }
+.legend-btn:active{ transform: translateY(1px); }
+
+.legend-box{
+  background:#fff; border:1px solid #d9dee8; border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.16);
+  padding:10px; cursor:pointer; user-select:none; z-index:31;
+  transform: scale(0.6);
+  transform-origin: bottom left;
+}
+.legend-box img{
+  display:block; max-width:min(520px, 70vw); max-height:min(62vh, 640px);
+  width:auto; height:auto; border-radius:8px;
+}
+
+/* MapView placement: same bottom-left corner the admin bar used */
+.mv-corner.legend-btn {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+}
+#mv-legend-panel.legend-box {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+}
+
+/* === Results overlay (light theme) === */
+.results-box {
+  min-width: 480px;
+  max-width: 640px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px 24px;
+  color: #222;
+  font-family: 'Figtree', system-ui, sans-serif;
+  border: 1px solid #e0e0e0;
+}
+
+.results-title {
+  margin: 0 0 12px 0;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #222;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.results-table thead th {
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  background: #f5f5f5;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.results-table tbody td {
+  padding: 12px;
+  background: #fafafa;              /* slightly darker than white */
+  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.results-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.results-table tbody td:last-child {
+  border-right: none;
+}
+
+.results-key {
+  font-weight: 500;
+}
+.results-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #111;
+}
+
+.results-close {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  background: #f5f5f5;
+  color: #222;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.results-close:hover {
+  background: #e8e8e8;
+}
+
 
 
 </style>
@@ -835,34 +950,16 @@
 
 </div>
 
-<div id="map-legend">
-  <div class="legend-title">Legend</div>
-  <div class="legend-item"><span class="legend-symbol generator-on"></span> Generator (On)</div>
-  <div class="legend-item"><span class="legend-symbol generator-off"></span> Generator (Off)</div>
-  <div class="legend-item"><span class="legend-line"></span> Bus</div>
-  <div class="legend-item"><span class="legend-triangle"></span> Load</div>
-  <div class="legend-item"><span class="legend-chevron">➤</span> Line Load</div>
-</div>
-
-
-<div class="admin-panel collapsed" id="adminPanel">
-  <button class="admin-toggle-btn" id="toggleBtn">Show Admin Controls</button>
-  <div class="admin-body" id="adminBody">
-    <label>
-      Scenario:
-      <select id="scenario-select">
-        <!-- Populated by JS -->
-      </select>
-    </label>
-    <button id="reset-button">🔁 Reset</button>
-    <button onclick="window.location.href='/list'">Switch to List View</button>
-    <button id="theme-toggle">🌙 Dark Mode</button>
-  </div>
+<button id="mv-legend-toggle" class="legend-btn mv-corner">Legend</button>
+<div id="mv-legend-panel" class="legend-box" hidden>
+  <!-- Reuse the same asset the ListView uses to keep parity -->
+  <img src="/new-tests/legendmv.png" alt="Legend" />
+  <h3 class="overview-label">Click anywhere to collapse</h3>
 </div>
 
 <script type="module">
 
-
+const UI = { SHOW_ADMIN: false }; // set true if you want local controls
 const FILTER_KEYS = { power: 'power', cost: 'cost', emissions: 'emissions' };
   console.log("[CHECK] window.d3 =", window.d3);
 console.log("[CHECK] typeof window.d3.scaleLinear =", typeof window.d3.scaleLinear);
@@ -920,12 +1017,11 @@ let staticLines = [];
 let staticNodes = [];
 
 let currentScenarioId = "";
+
 let currentScenarioData = null;
 let availableScenarios = [];
 
 let currentMapMode = "full";
-
-
 
 function isPowerFocus(){
   return activeFilters.has('power') && currentMapMode !== "lines";
@@ -1135,6 +1231,17 @@ window.addEventListener("load", () => {
       .translate(-centerX, -centerY)
   );
 
+  // Hide/remove all admin chrome if disabled
+if (!UI.SHOW_ADMIN) {
+  const admin = document.getElementById("adminPanel");
+  if (admin) admin.remove(); // drop panel entirely
+
+  // Defensive: remove any stray buttons by id if they still exist
+  ["scenario-select","reset-button","theme-toggle","toggleBtn"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentElement) el.parentElement.removeChild(el);
+  });
+}
   // ✅ FIX: call fetchAllScenarios here
   fetchAllScenarios();
 });
@@ -1240,6 +1347,7 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
   currentScenarioId = scenarioId;
+  window.lvScenarioStartedAt = performance.now();   // ← start timer for this scenario
   currentScenarioData = data;
   currentGenerators = data.generators;
   currentLines = data.lines;
@@ -1253,30 +1361,33 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
 
 }
 
-    function populateScenarioDropdown(scenarios, selectedId) {
-        const select = document.getElementById("scenario-select");
-        select.innerHTML = "";
+function formatDuration(ms){
+  const s = Math.max(0, Math.floor(ms/1000));
+  const m = Math.floor(s/60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2,'0')}`;
+}
 
-        scenarios.forEach(s => {
-          const option = document.createElement("option");
-          option.value = s.scenario_id;
-          option.textContent = s.title || s.scenario_id;
-          if (s.scenario_id === selectedId) {
-            option.selected = true;
-          }
-          select.appendChild(option);
-        });
-      }
+function getHighestLoadPctAtSubmit(lines = [], scen = window.currentScenarioData){
+  // Build/reuse the disabled line set so we don’t include turned-off lines
+  const S = (window.disabledLineSet instanceof Set)
+    ? window.disabledLineSet
+    : (typeof buildDisabledLineSetFromScenario === 'function'
+        ? buildDisabledLineSetFromScenario(scen || {})
+        : new Set());
 
-    document.getElementById("scenario-select").addEventListener("change", (e) => {
-      previousLineLoads = {};  // was previousLineFlows
-      loadScenario(e.target.value);
-    });
-
-    document.getElementById("reset-button").addEventListener("click", () => {
-      previousLineLoads = {};  // was previousLineFlows
-      loadScenario(currentScenarioId);
-    });
+  let max = 0;
+  for (const L of (lines || [])){
+    if (!L) continue;
+    // normalize id like in listView (_lineId) so it matches S entries
+    const id = (L.id) ? String(L.id) : _lineId(L);
+    if (S.has(id)) continue; // skip disabled
+    const rate = +(L.rate_a ?? L.rateA ?? 0);
+    const pct  = rate > 0 ? Math.abs(+L.flow || 0) / rate * 100 : 0;
+    if (Number.isFinite(pct) && pct > max) max = pct;
+  }
+  return max;
+}
 
     // ===== Chevrons =====
 
@@ -2391,20 +2502,6 @@ drawPowerBlocks(
 
 
 
-document.getElementById("toggleBtn").addEventListener("click", () => {
-  const panel = document.getElementById("adminPanel");
-  const isCollapsed = panel.classList.contains("collapsed");
-
-  if (isCollapsed) {
-    panel.classList.remove("collapsed");
-    panel.classList.add("expanded");
-    toggleBtn.textContent = "Hide Admin Controls";
-  } else {
-    panel.classList.add("collapsed");
-    panel.classList.remove("expanded");
-    toggleBtn.textContent = "Show Admin Controls";
-  }
-});
   
 
 // MapView-identical blocks, with inline fills so "goal" always shows.
@@ -2629,40 +2726,61 @@ function evaluateScenarioState(scenario, lines) {
 
 
 function showResultOverlay() {
+  // Snapshot at submit
+  const end   = performance.now();
+  const start = window.lvScenarioStartedAt || end;
+  const durMS = Math.max(0, end - start);
+
+  const lines  = Array.isArray(window.currentLines) ? window.currentLines : [];
+  const scen   = window.currentScenarioData || {};
+  const hiLoad = getHighestLoadPctAtSubmit(lines, scen);       // % (0..120+)
+  const cost   = Number.isFinite(window.totalCost) ? window.totalCost : 0;
+  const emis   = Number.isFinite(window.totalEmissions) ? window.totalEmissions : 0;
+
+  // Overlay shell
   const overlay = document.createElement("div");
   overlay.id = "result-overlay";
-  overlay.style.position = "fixed";
-  overlay.style.top = "0";
-  overlay.style.left = "0";
-  overlay.style.width = "100vw";
-  overlay.style.height = "100vh";
-  overlay.style.background = "rgba(0, 0, 0, 0.6)";
-  overlay.style.display = "flex";
-  overlay.style.alignItems = "center";
-  overlay.style.justifyContent = "center";
-  overlay.style.zIndex = "999";
+  Object.assign(overlay.style, {
+    position:"fixed", top:"0", left:"0", width:"100vw", height:"100vh",
+    background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center",
+    justifyContent:"center", zIndex:"999"
+  });
 
+  // Panel with table
   const box = document.createElement("div");
   box.className = "results-box";
   box.innerHTML = `
-    <h2 class="results-title">✅ Scenario Complete</h2>
-    <div class="results-summary">
-      <p><strong>⚡ Power:</strong> ${Math.round(totalPower)} MW</p>
-      <p><strong>💲 Cost:</strong> $${Math.round(totalCost)}</p>
-      <p><strong>🫧 Emissions:</strong> ${Math.round(totalEmissions)} tCO₂</p>
-    </div>
+    <h2 class="results-title">Summary</h2>
+    <table class="results-table">
+      <thead>
+        <tr><th class="results-key">Metric</th><th class="results-val">Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="results-key">Time to complete</td><td class="results-val">${formatDuration(durMS)}</td></tr>
+        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${Math.round(hiLoad)}%</td></tr>
+        <tr><td class="results-key">Total cost</td><td class="results-val">$${Math.round(cost).toLocaleString()}</td></tr>
+        <tr><td class="results-key">Total emissions</td><td class="results-val">${Math.round(emis).toLocaleString()} tCO₂</td></tr>
+      </tbody>
+    </table>
     <button type="button" class="results-close" id="close-overlay">Close</button>
   `;
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.getElementById("close-overlay").addEventListener("click", close);
+  const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
+  document.addEventListener("keydown", onKey);
+
+  // (Runner) advance only after dismissal
   document.getElementById("close-overlay").addEventListener("click", () => {
-  overlay.remove();
-  // NEW: advance the runner only after the overlay is dismissed
-  try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
-});
+    try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
+  });
 }
+
+
 
   // Lines card stays a mode toggle, not a compound filter
 // === Lines card handler ===
@@ -2813,6 +2931,165 @@ if (linesCard) {
     postToRunner(/*precomputed*/ computeEvalStateSafe());
   });
 
+})();
+</script>
+
+<script>
+(() => {
+  const btn = document.getElementById('mv-legend-toggle');
+  const panel = document.getElementById('mv-legend-panel');
+  if(!btn || !panel) return;
+
+  const open = () => { panel.hidden = false; btn.hidden = true; };
+  const close = () => { panel.hidden = true; btn.hidden = false; };
+
+  btn.addEventListener('click', open);
+  panel.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && !panel.hidden) close();
+  });
+})();
+</script>
+
+<script>
+// === Live Submit-Stats Instrumentation (MapView + ListView) ===
+// Logs a clean snapshot to the console whenever state changes.
+
+// ---- small utils ----
+const _nz = v => Number(v || 0);
+const _now = () => performance.now();
+function _formatDuration(ms){
+  const s = Math.max(0, Math.floor(ms/1000));
+  const m = Math.floor(s/60), r = s % 60;
+  return `${m}:${String(r).padStart(2,'0')}`;
+}
+
+// Use available builder(s) for disabled lines; fall back to empty set.
+function _disabledLineSet(scen){
+  if (window.disabledLineSet instanceof Set) return window.disabledLineSet;
+  if (typeof window.buildDisabledLineSet === 'function') return window.buildDisabledLineSet(scen || {});
+  if (typeof window.buildDisabledLineSetFromScenario === 'function') return window.buildDisabledLineSetFromScenario(scen || {});
+  return new Set();
+}
+
+// Normalize a line id robustly (works in both views)
+function _lineId(L){
+  if (L && L.id != null) return String(L.id);
+  const a = _nz(L?.from_bus ?? L?.from ?? L?.i ?? L?.bus1);
+  const b = _nz(L?.to_bus   ?? L?.to   ?? L?.j ?? L?.bus2);
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    const lo = Math.min(a,b), hi = Math.max(a,b);
+    return `Line_Bus${lo}_Bus${hi}`;
+  }
+  return String(L?.id ?? "");
+}
+
+// Core metrics as used by the overlay/overview
+function computeSubmitStats(){
+  const gens  = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
+  const lines = Array.isArray(window.currentLines)      ? window.currentLines      : [];
+  const scen  = window.currentScenarioData || {};
+
+  // cost/emissions from current generator state (avoids stale globals)
+  let totalCost = 0, totalEmissions = 0;
+  for (const g of gens){
+    const pg = _nz(g?.pg);
+    totalCost      += pg * _nz(g?.cost_per_mw);
+    totalEmissions += pg * _nz(g?.emissions_per_mw);
+  }
+
+  // highest |flow| / rate_a * 100 across ENABLED lines
+  const disabled = _disabledLineSet(scen);
+  let highestLoadPct = 0;
+  for (const L of lines){
+    if (!L) continue;
+    if (disabled.has(_lineId(L))) continue;
+    const rate = _nz(L.rate_a ?? L.rateA);
+    const flow = Math.abs(_nz(L.flow));
+    const pct  = rate > 0 ? (flow / rate) * 100 : 0;
+    if (Number.isFinite(pct) && pct > highestLoadPct) highestLoadPct = pct;
+  }
+
+  // elapsed time since scenario (or view) started
+  const startedAt = window.lvScenarioStartedAt || window.mvScenarioStartedAt || window.scenarioStartedAt || _now();
+  const elapsedMs = Math.max(0, _now() - startedAt);
+
+  return {
+    timeFormatted: _formatDuration(elapsedMs),
+    elapsedMs,
+    highestLoadPct,            // e.g. expect ~98 if overview shows 98%
+    totalCost,
+    totalEmissions
+  };
+}
+
+// debounced console logger to avoid spam during rapid UI updates
+(function(){
+  let lastT = 0;
+  const MIN_INTERVAL = 250; // ms
+  window.logSubmitStats = function logSubmitStats(reason = "state-change"){
+    const t = _now();
+    if (t - lastT < MIN_INTERVAL) return; // debounce
+    lastT = t;
+    const s = computeSubmitStats();
+    // Single, readable line + an object for details
+    console.log(
+      `[submit-stats] ${reason} | time=${s.timeFormatted} | hiLoad=${Math.round(s.highestLoadPct)}% | cost=$${Math.round(s.totalCost).toLocaleString()} | CO₂=${Math.round(s.totalEmissions).toLocaleString()} t`,
+      s
+    );
+  };
+})();
+
+// ---- hook common state-change sites safely ----
+(function tap(){
+  // 1) Timer start on scenario load (covers both views)
+  const _startTimer = () => { window.lvScenarioStartedAt = window.mvScenarioStartedAt = window.scenarioStartedAt = _now(); };
+  // try to intercept loadScenario if present
+  if (typeof window.loadScenario === 'function'){
+    const orig = window.loadScenario;
+    window.loadScenario = async function(...args){
+      _startTimer();
+      const r = await orig.apply(this, args);
+      window.logSubmitStats('after loadScenario');
+      return r;
+    };
+  } else {
+    // If we can’t wrap it (different file order), at least start once on load
+    window.addEventListener('load', _startTimer, { once: true });
+  }
+
+  // 2) Recompute after your main renders/evaluations (whichever exist)
+  const candidates = [
+    'renderOverview','evaluateAndPatch','evaluateSystem','recomputeFlows',
+    'updateLinesCard','updatePowerBlocks','drawGenerators','applyVisualFocus',
+    'applyMapMode','applyListMode','setGenOutput','toggleGenerator'
+  ];
+  for (const name of candidates){
+    if (typeof window[name] !== 'function') continue;
+    const orig = window[name];
+    window[name] = function(...args){
+      const r = orig.apply(this, args);
+      try { window.logSubmitStats(`after ${name}`); } catch {}
+      return r;
+    };
+  }
+
+  // 3) Also watch common UI interactions to be safe
+  window.addEventListener('click', (e) => {
+    const el = e.target;
+    if (!el) return;
+    if (el.closest?.('.power-block') || el.closest?.('.gen-card') || el.closest?.('#filters') ) {
+      window.logSubmitStats('after UI click');
+    }
+  }, true);
+
+  // 4) Fire once on load so you see an initial snapshot
+  window.addEventListener('load', () => window.logSubmitStats('initial'), { once: true });
+
+  // 5) If your code posts dv:state messages (runner), mirror them in console
+  window.addEventListener('message', (ev) => {
+    if (ev?.data?.type === 'dv:state') window.logSubmitStats('after dv:state');
+  });
 })();
 </script>
 
