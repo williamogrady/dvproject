@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Program Tutorial — Unified</title>
+  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -300,6 +301,15 @@
 }
 
 .slide--image .slide-img{
+  width: 80%;
+  height: auto;
+  object-fit: contain;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+.slide--image .slide-img-legend{
   width: 60%;
   height: auto;
   object-fit: contain;
@@ -351,7 +361,7 @@
     <div class="content" style="text-align:left; align-items:start; max-width:720px; line-height:1.6;">
       <h2 style="margin-bottom:1em;">Introduction</h2>
 
-      <p>The <i>power grid</i>  is a network of stations, lines, and loads.  
+      <p>The power grid is a network of stations, lines, and loads.  
       It must stay balanced at all times to keep electricity reliable.</p>
 
       <p>Operators use data and visual interfaces to monitor and control the grid.</p>
@@ -362,8 +372,8 @@
         <li><strong>Map View</strong></li>
       </ul>
 
-      <p>Your objective is to solve tasks in both interfaces.  </p>
-      <p>When solving the tasks, keep these priorities (in order):</p>
+      <p>Your objective is to solve tasks in both.  
+      When deciding, keep these priorities (in order):</p>
       <ol style="margin:0 0 1em 1.6em; padding:0; font-weight:600;">
         <li>Safest</li>
         <li>Cheapest</li>
@@ -374,88 +384,39 @@
     </div>
   </section>
 
-    <!-- Slide 2: List View — Image -->
-<!-- Slide 2: List View — Image -->
-<section id="slide-1" class="slide slide--image" aria-hidden="true" data-done="view">
+  <!-- Slide 2: List View — Image -->
+  <section id="slide-1" class="slide slide--image" role="group" aria-label="List View Overview" aria-hidden="true" data-done="view">
+    <div class="content">
+      <img class="slide-img" src="/new-tests/listviewt.png" alt="List View Overview">
+    </div>
+  </section>
+
+  <!-- Slide 3: Map View — Image -->
+  <section id="slide-2" class="slide slide--image" role="group" aria-label="Map View Overview" aria-hidden="true" data-done="view">
+    <div class="content">
+      <img class="slide-img-legend" src="/new-tests/mapviewt.png" alt="Map View Overview">
+    </div>
+  </section>
+
+  <!-- Slide 3: Legend -->
+<section id="slide-3" class="slide slide--image" role="group" aria-label="Legend" aria-hidden="true" data-done="view">
   <div class="content">
-    <img class="slide-img" src="/new-tests/list-view-tutorial.png" alt="List View Overview">
+    <img class="slide-img-legend" src="/new-tests/legend.png" alt="Legend">
   </div>
 </section>
 
 
-        <!-- Slide 2: ListView (embedded UI) -->
-  <section id="slide-2" class="slide slide--practice" aria-hidden="true">
-    <div class="content" style="align-content:stretch;">
+  <!-- Slide 5: Finished -->
+  <section id="slide-4" class="slide" role="group" aria-label="Finished" aria-hidden="true" data-done="view">
+    <div class="content" style="text-align:center; justify-items:center; align-content:center;">
+      <h2 style="font-size:clamp(24px,4vmin,36px); margin:0 0 1em 0;">Tutorial finished!</h2>
+      <p style="font-size:clamp(16px,2.4vmin,20px); font-weight:500; margin:0;">
+        Press <strong>Complete tutorial</strong> to return home.
+      </p>
+    </div>
+  </section>
 
-            <div class="lv-shell">
-              <div class="lv-stage">
-                <section class="lv-panel">
-                  <div class="lv-head">Inactive</div>
-                  <div class="lv-body" id="lv-inactive">
-                    <article id="lv-card" class="gen-card" data-active="false" aria-label="Generator card">
-                      <span class="corner" aria-hidden="true"></span>
-                      <button id="lv-offBtn" class="offbtn" type="button">off</button>
-                      <div class="blocks" id="lv-blocks">
-                        <div class="block" data-i="0"></div>
-                        <div class="block" data-i="1"></div>
-                        <div class="block" data-i="2"></div>
-                      </div>
-                      <div class="mw-counter" id="lv-mw">0 MW</div>
-                      <button id="lv-toggle" class="plus" type="button" title="Turn on" aria-label="Turn on">+</button>
-                    </article>
-                  </div>
-                </section>
 
-                <section class="lv-panel">
-                  <div class="lv-head">Active</div>
-                  <div class="lv-body" id="lv-active"></div>
-                </section>
-              </div>
-
-              <div class="lv-footer">
-                <p id="lv-hint" class="lv-hint">Press + to turn on the generator, then click blocks to set output.</p>
-                <button id="lv-submit" class="lv-submit" disabled>Submit Practice</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-<!-- Slide 4: Map View — Image -->
-<section id="slide-3" class="slide slide--image" aria-hidden="true" data-done="view">
-  <div class="content">
-    <img class="slide-img" src="/new-tests/Map-View-Tutorial.png" alt="Map View Overview">
-  </div>
-</section>
-
-        <!-- Slide 3: MapView (embedded UI) -->
-  <section id="slide-2" class="slide slide--practice" aria-hidden="true">
-    <div class="content" style="align-content:stretch;">
-            <div class="mv-shell">
-              <div class="overlay-hud">
-                <div class="pill"><span id="mv-targetText">Target: 400 MW total</span></div>
-                <div class="pill" id="mv-totalPill"><span>Total:</span> <span id="mv-total">0 MW</span><span class="check">✓</span></div>
-              </div>
-              <div class="map-shell">
-                <svg id="map" viewBox="0 0 900 600" aria-label="Map">
-                  <g id="zoomRoot">
-                    <g id="generators"></g>
-                  </g>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </section>
-
-      
-  <!-- Slide 6: Finished -->
-<section id="slide-5" class="slide" role="group" aria-label="Finished" aria-hidden="true" data-done="view">
-  <div class="content" style="text-align:center; justify-items:center; align-content:center;">
-    <h2 style="font-size:clamp(24px,4vmin,36px); margin:0 0 1em 0;">Tutorial finished!</h2>
-    <p style="font-size:clamp(16px,2.4vmin,20px); font-weight:500; margin:0;">
-      Press <strong>Complete tutorial</strong> to return home.
-    </p>
-  </div>
-</section>
 
 </div>
 
@@ -468,7 +429,6 @@
   <button class="dot" aria-label="Go to slide 3" aria-current="false" data-i="2"></button>
   <button class="dot" aria-label="Go to slide 4" aria-current="false" data-i="3"></button>
   <button class="dot" aria-label="Go to slide 5" aria-current="false" data-i="4"></button>
-  <button class="dot" aria-label="Go to slide 6" aria-current="false" data-i="5"></button>
 </div>
 
 <!-- Complete -->

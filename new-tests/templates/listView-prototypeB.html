@@ -170,7 +170,7 @@
   .gen-section.right[data-state="disabled"]{ background:#e0e4ea; cursor:not-allowed; }
 
   /* Fuel gradients (by class) */
-  .fuel-Gas      { background:linear-gradient(135deg,#149E66,#0E7C4F); }
+  .fuel-Gas      { background:linear-gradient(135deg,#924858,#5e283a); }
   .fuel-Combined { background:linear-gradient(135deg,#0EA5A5,#0B8C8C); color:#0b1b1f; text-shadow:none; }
   .fuel-Coal     { background:linear-gradient(135deg,#444,#222); }
   .fuel-Hydro    { background:linear-gradient(135deg,#1e88e5,#1565c0); }
@@ -215,7 +215,76 @@
   pointer-events: none;   /* purely informational */
 }
 
+/* Reuse the same look from MapView, but position relative to #map-panel area */
+#map-panel { position: relative; } /* already present; ensures absolute children pin to panel */
 
+/* Override placement for ListView’s in-panel legend */
+.lv-corner.legend-btn{
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+}
+#lv-legend-panel.legend-box{
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+}
+
+/* (the rest reuse the same .legend-btn / .legend-box / img rules) */
+.legend-btn{
+  background:#fff; color:#111; border:1px solid #d9dee8; border-radius:999px;
+  padding:6px 12px; font:600 14px/1 'Figtree', system-ui, sans-serif;
+  box-shadow:0 2px 8px rgba(0,0,0,.08); cursor:pointer;
+  transition: filter .15s ease, transform .1s ease;
+  z-index: 5;
+}
+.legend-btn:hover{ filter: brightness(.95); }
+.legend-btn:active{ transform: translateY(1px); }
+
+.legend-box{
+  background:#fff; border:1px solid #d9dee8; border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.16);
+  padding:10px; cursor:pointer; user-select:none; z-index:6;
+  transform: scale(0.6);          /* shrink to 60% */
+  transform-origin: bottom left;  /* keep anchored where it appears */
+}
+.legend-box:hover{ filter: brightness(.98); }
+.legend-box img{
+  display:block; max-width:min(520px, 70vw); max-height:min(62vh, 640px);
+  width:auto; height:auto; border-radius:8px;
+}
+
+
+</style>
+<style id="gen-added-feedback">
+/* Card flash when a gen is added */
+.generator-card.flash-in {
+  animation: flashIn 900ms ease-out;
+}
+@keyframes flashIn {
+  0%   { box-shadow: 0 0 0 0 rgba(66,165,245,0.0); background:#fff; }
+  20%  { background:#fffbe6; }
+  45%  { box-shadow: 0 0 0 4px rgba(66,165,245,0.25), 0 0 0 8px rgba(66,165,245,0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(66,165,245,0.0); background:#fff; }
+}
+
+/* Little toast bar at the top of the active list */
+.added-toast{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 0 6px 0;
+  padding: 8px 10px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: #111;
+  color:#fff;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity .25s ease, transform .25s ease;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+}
+.added-toast.on{ opacity: 1; transform: translateY(0); }
 </style>
 
 
@@ -352,6 +421,12 @@
         <div id="map-panel" style="flex:1; display:flex; flex-direction:column; position:relative;">
 
           <div id="map-wrapper" style="flex:1; position:relative;"></div>
+
+          <!-- Legend toggle (ListView) -->
+<button id="lv-legend-toggle" class="legend-btn lv-corner">Legend</button>
+<div id="lv-legend-panel" class="legend-box" hidden>
+  <img src="/new-tests/legendlv.png" alt="Legend" />
+</div>
 
           <!-- ✅ In‑panel icon toggles (like Admin) -->
            <!--<button id="map-filters-toggle" class="map-btn corner top-left" title="Map Filters">Filters</button>
@@ -611,6 +686,77 @@ function listWorkingGenerators(renderToDom = false){
 }
 
 
+// --- New-generator feedback helpers ---
+function findScrollableAncestor(el){
+  let p = el?.parentElement;
+  while (p) {
+    const s = getComputedStyle(p);
+    if (/(auto|scroll)/.test(s.overflowY)) return p;
+    p = p.parentElement;
+  }
+  return null;
+}
+
+// Robust selector for a generator card element by id
+function getGenCardEl(genId){
+  return document.querySelector(
+    `.generator-card[data-id="${genId}"]` // preferred
+    + `, .generator-card[data-gen-id="${genId}"]`
+    + `, #gen-card-${CSS.escape(genId)}`
+    + `, #gen-${CSS.escape(genId)}`
+  );
+}
+
+// Best guess for the Active list column (2nd child fallback)
+function getActiveListContainer(){
+  return document.querySelector('#active-container .generator-body');
+}
+
+// Optional: brief toast inside the active list
+function showAddedToast(genLabel){
+  const host = findScrollableAncestor(getActiveListContainer()) || getActiveListContainer();
+  if (!host) return;
+  const t = document.createElement('div');
+  t.className = 'added-toast';
+  t.textContent = `Added ${genLabel || 'generator'}`;
+  host.prepend(t);
+  requestAnimationFrame(() => t.classList.add('on'));
+  setTimeout(() => {
+    t.classList.remove('on');
+    t.addEventListener('transitionend', () => t.remove(), { once:true });
+  }, 1400);
+}
+
+// Call this AFTER the DOM re-render that moves the gen to Active
+function afterGeneratorAdded(gen){
+  // gen can be an object or an id; normalize:
+  const genId = typeof gen === 'object' ? (gen.id ?? gen.gen_id ?? gen.name) : gen;
+  // Wait one frame so the card exists in the DOM:
+  requestAnimationFrame(() => {
+    const el = getGenCardEl(genId);
+    if (!el) return;
+    // Scroll the nearest scroller so the new card is centered
+    const scroller = findScrollableAncestor(el) || getActiveListContainer();
+    if (scroller) {
+      const er = el.getBoundingClientRect();
+      const sr = scroller.getBoundingClientRect();
+      const delta = (er.top - sr.top) - (sr.height/2 - er.height/2);
+      scroller.scrollBy({ top: delta, behavior: 'smooth' });
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // Replay the flash animation
+    el.classList.remove('flash-in'); void el.offsetWidth; // reflow to restart
+    el.classList.add('flash-in');
+
+    // Optional toast using bus number/name from the card if present
+    const label =
+      el.querySelector('.gen-number')?.textContent?.trim()
+      || el.querySelector('.gen-name')?.textContent?.trim()
+      || (typeof gen === 'object' && (gen.name || gen.bus || gen.id));
+    showAddedToast(label);
+  });
+}
 
 
 
@@ -1692,6 +1838,7 @@ levels.forEach((level, i) => {
     b.addEventListener('mousedown', async (e) => {
       e.preventDefault();
       const percent = Math.min(100, Math.round((level / gen.pmax) * 100));
+      const activating = !gen.user_active;
       try {
         const res = await fetch(`/api/set_generation/${gen.index}`, {
           method: "POST",
@@ -1705,6 +1852,13 @@ levels.forEach((level, i) => {
         renderLines(data.lines, data.solved !== false);
         renderOverview(currentGenerators, currentScenarioData, data.lines);
         updateMapGeneratorsFromScenario();
+        if (activating) {
+  const genId2   = `Gen${gen.bus}`;
+  // Scroll to the new card + flash it
+  afterGeneratorAdded(genId2);
+  // Ping on the map for spatial context
+  if (typeof pingGenerator === 'function') pingGenerator(genId2);
+}
       } catch (err) {
         console.error("Block set failed:", err);
       }
@@ -1779,6 +1933,13 @@ const doToggle = async () => {
   renderLines(data.lines, data.solved !== false);
   renderOverview(currentGenerators, currentScenarioData, data.lines);
   updateMapGeneratorsFromScenario();
+  if (activating) {
+  const genId2   = `Gen${gen.bus}`;
+  // Scroll to the new card + flash it
+  afterGeneratorAdded(genId2);
+  // Ping on the map for spatial context
+  if (typeof pingGenerator === 'function') pingGenerator(genId2);
+}
 };
 right.addEventListener("click", doToggle);
 right.addEventListener("keydown", (e) => {
@@ -2788,6 +2949,21 @@ window.debugEval = function(){
   });
 
 })();
+
+  (function(){
+    const btn = document.getElementById('lv-legend-toggle');
+    const panel = document.getElementById('lv-legend-panel');
+    if(!btn || !panel) return;
+
+    const open = () => { panel.hidden = false; btn.hidden = true; };
+    const close = () => { panel.hidden = true; btn.hidden = false; };
+
+    btn.addEventListener('click', open);
+    panel.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape' && !panel.hidden) close();
+    });
+  })();
 </script>
 
 

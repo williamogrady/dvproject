@@ -236,9 +236,16 @@ button:hover{ filter: brightness(0.98); }
   justify-content:space-between;
   padding:.6rem .75rem;
   box-sizing:border-box;
-  transition:background .2s, transform .2s;
 }
-#row-1 .overview-card:hover{ background:#f5f5f5; transform:translateY(-1px); }
+/* Overview cards: no hover effect */
+#row-1 .overview-card {
+  transition: none;
+  cursor: default;
+}
+#row-1 .overview-card:hover {
+  background:#fff;
+  transform:none;
+}
 #row-1 .overview-label{ font-weight:600; font-size:1rem; margin-bottom:6px; color:#333; }
 #row-1 .overview-value{ font-size:1.1rem; font-weight:700; color:#000; display:flex; align-items:center; gap:10px; }
 #row-1 .overview-status{ font-size:.7rem; color:#666; text-align:center; margin-top:10px; }
@@ -297,6 +304,7 @@ button:hover{ filter: brightness(0.98); }
 #row-1 .overview-value{ font-size: 1rem; gap: 8px; }
 #row-1 .overview-status{ margin-top: 6px; }
 
+
 /* MapView parity — power card */
 #scale-power .overview-value {
   display: flex;
@@ -312,7 +320,7 @@ button:hover{ filter: brightness(0.98); }
   flex-direction: column;
   align-items: flex-start;   /* ⬅️ align both blocks + label left */
   justify-content: flex-start;
-  transform: translateY(-6px); /* ⬅️ nudge upward (tweak px value) */
+  /* transform: translateY(-6px); /* /* ⬅️ nudge upward (tweak px value) */
 }
 
 
@@ -737,3 +745,51 @@ button:hover{ filter: brightness(0.98); }
   display:none; /* toggled by JS */
   font-size:.75rem; line-height:1;
 }
+
+#scale-lines .line-card.is-overloaded:hover {
+  background:#f5f5f5;
+  transform:translateY(-1px);
+  box-shadow:0 3px 6px rgba(0,0,0,.12);
+  cursor:pointer;
+  transition:background .2s, transform .2s, box-shadow .2s;
+}
+
+#scale-lines .line-card:not(.is-overloaded):hover {
+  background:#fff;
+  transform:none;
+  box-shadow:none;
+}
+
+/* --- New-generator visual feedback --- */
+.generator-card{ position: relative; }
+
+@keyframes genFlash {
+  0%   { background:#f0fff4; transform:scale(.98); }
+  40%  { background:#e8f5e9; transform:scale(1.01); }
+  100% { background:#fff;    transform:scale(1); }
+}
+@keyframes genRing {
+  0%   { opacity: .9; box-shadow:0 0 0 4px rgba(76,175,80,.35); }
+  100% { opacity: 0;  box-shadow:0 0 0 14px rgba(76,175,80,0); }
+}
+
+.generator-card.flash-in {
+  animation: genFlash 900ms ease-out;
+}
+.generator-card.flash-in::after{
+  content:"";
+  position:absolute; inset:-4px; border-radius: inherit;
+  animation: genRing 900ms ease-out;
+  pointer-events:none;
+}
+
+/* Optional mini toast pinned inside the active list scroller */
+.added-toast{
+  position: sticky; top: 8px; z-index: 3;
+  align-self: flex-start;
+  background:#111; color:#fff; border-radius:999px;
+  font-weight:700; font-size:.75rem; line-height:1;
+  padding:4px 10px; margin-left:6px; opacity:0; transform:translateY(-6px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.added-toast.on{ opacity:.92; transform:translateY(0); }
