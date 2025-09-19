@@ -34,8 +34,8 @@
 
     /* Centered 70% viewport */
     .viewport {
-      width: 70vw;
-      height: 70vh;
+      width: 85vw;
+      height: 75vh;
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
@@ -240,11 +240,103 @@
     .gblock{ stroke: rgba(0,0,0,.12); stroke-width: 1; rx: 4; ry: 4; cursor: pointer; }
     .gblock.off{ fill: #e5e7eb; }
     .gblock.on { fill: var(--green); stroke: rgba(76,175,80,.6); }
+
+    /* responsive images used in the overview slides */
+.slide-img{
+  max-width: 96%;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+  </style>
+  <style>
+    /* === Tutorial sizing + readability overrides === */
+
+.viewport{
+  width: 92vw;           /* more horizontal room */
+  height: 88vh;          /* more vertical room */
+  min-width: 960px;      /* room for big images */
+  min-height: 560px;
+}
+
+.panel{
+  /* give the slide more usable area */
+  padding: clamp(12px, 2vh, 24px);
+  /* remove hard centering; let content control layout */
+  display: block;
+}
+
+.content{
+  /* make everything left-aligned and readable by default */
+  max-width: 1200px;
+  margin: 0 auto;               /* centers block itself; content is left */
+  text-align: left;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  justify-items: start;
+  gap: clamp(10px, 1.8vmin, 18px);
+  padding: clamp(8px, 1.6vmin, 16px);
+}
+
+.content h2{
+  margin: 0 0 .6em 0;
+  font-size: clamp(18px, 2.4vmin, 22px); /* slightly smaller to fit */
+}
+
+.content p, .content li{
+  font-size: clamp(14px, 1.9vmin, 16px);
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+/* Image slides: title on top, image fills remaining space with contain */
+/* Overview image slides (MapView / ListView) */
+.slide--image .content{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.slide--image .slide-img{
+  width: 60%;
+  height: auto;
+  object-fit: contain;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+/* Tutorial shells: give more vertical room inside the panel */
+.slide--practice .content{
+  grid-template-rows: 1fr;      /* let the practice shell expand */
+}
+.slide--practice .lv-shell,
+.slide--practice .mv-shell{
+  min-height: 100%;
+}
+
+/* Optional: make map canvas a touch taller for comfort */
+.map-shell{ min-height: 460px; }
+
+/* Make the anchor act like a disabled button until all slides are done */
+.complete[aria-disabled="true"]{
+  opacity: .45;
+  pointer-events: none;   /* prevents click */
+  cursor: default;
+}
+.complete.ready{
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green-dk);
+}
+
   </style>
 </head>
 <body>
   <header>
-    <h1>Program Tutorial</h1>
+    <h1>System Tutorial</h1>
     <p>Work through the slides, then complete the tutorial.</p>
   </header>
 
@@ -253,17 +345,48 @@
       <button id="prev" class="arrow" aria-label="Previous slide" title="Previous"><span>‹</span></button>
 
       <div class="panel" aria-live="polite">
-        <!-- Slide 1: Goal (auto-completes when opened) -->
-        <section id="slide-0" class="slide" role="group" aria-label="Goal" aria-hidden="false">
-          <div class="content">
-            <h2>Goal</h2>
-            <p>Understand the objective and what you’ll practice in ListView and MapView. Viewing this slide marks it done.</p>
-          </div>
-        </section>
+
+  <!-- Slide 1: Introduction -->
+  <section id="slide-0" class="slide" role="group" aria-label="Introduction" aria-hidden="false" data-done="view">
+    <div class="content" style="text-align:left; align-items:start; max-width:720px; line-height:1.6;">
+      <h2 style="margin-bottom:1em;">Introduction</h2>
+
+      <p>The <i>power grid</i>  is a network of stations, lines, and loads.  
+      It must stay balanced at all times to keep electricity reliable.</p>
+
+      <p>Operators use data and visual interfaces to monitor and control the grid.</p>
+
+      <p>In this study you will use two interfaces:</p>
+      <ul style="margin:0 0 1em 1.4em; padding:0;">
+        <li><strong>List View</strong></li>
+        <li><strong>Map View</strong></li>
+      </ul>
+
+      <p>Your objective is to solve tasks in both interfaces.  </p>
+      <p>When solving the tasks, keep these priorities (in order):</p>
+      <ol style="margin:0 0 1em 1.6em; padding:0; font-weight:600;">
+        <li>Safest</li>
+        <li>Cheapest</li>
+        <li>Cleanest</li>
+      </ol>
+
+      <p>The next slides introduce each interface and how they work.</p>
+    </div>
+  </section>
+
+    <!-- Slide 2: List View — Image -->
+<!-- Slide 2: List View — Image -->
+<section id="slide-1" class="slide slide--image" aria-hidden="true" data-done="view">
+  <div class="content">
+    <img class="slide-img" src="/new-tests/list-view-tutorial.png" alt="List View Overview">
+  </div>
+</section>
+
 
         <!-- Slide 2: ListView (embedded UI) -->
-        <section id="slide-1" class="slide" role="group" aria-label="ListView" aria-hidden="true">
-          <div class="content" style="align-content:stretch;">
+  <section id="slide-2" class="slide slide--practice" aria-hidden="true">
+    <div class="content" style="align-content:stretch;">
+
             <div class="lv-shell">
               <div class="lv-stage">
                 <section class="lv-panel">
@@ -297,9 +420,16 @@
           </div>
         </section>
 
+<!-- Slide 4: Map View — Image -->
+<section id="slide-3" class="slide slide--image" aria-hidden="true" data-done="view">
+  <div class="content">
+    <img class="slide-img" src="/new-tests/Map-View-Tutorial.png" alt="Map View Overview">
+  </div>
+</section>
+
         <!-- Slide 3: MapView (embedded UI) -->
-        <section id="slide-2" class="slide" role="group" aria-label="MapView" aria-hidden="true">
-          <div class="content" style="align-content:stretch;">
+  <section id="slide-2" class="slide slide--practice" aria-hidden="true">
+    <div class="content" style="align-content:stretch;">
             <div class="mv-shell">
               <div class="overlay-hud">
                 <div class="pill"><span id="mv-targetText">Target: 400 MW total</span></div>
@@ -316,34 +446,36 @@
           </div>
         </section>
 
-        <!-- Slide 4: Agreement -->
-        <section id="slide-3" class="slide" role="group" aria-label="Agreement" aria-hidden="true">
-          <div class="content">
-            <h2>Agreement</h2>
-            <p>Confirm you understand the instructions to finish.</p>
-            <div class="formbox">
-              <label><input id="agree" type="checkbox" /> I have read and agree to the instructions.</label>
-            </div>
-          </div>
-        </section>
-      </div>
+      
+  <!-- Slide 6: Finished -->
+<section id="slide-5" class="slide" role="group" aria-label="Finished" aria-hidden="true" data-done="view">
+  <div class="content" style="text-align:center; justify-items:center; align-content:center;">
+    <h2 style="font-size:clamp(24px,4vmin,36px); margin:0 0 1em 0;">Tutorial finished!</h2>
+    <p style="font-size:clamp(16px,2.4vmin,20px); font-weight:500; margin:0;">
+      Press <strong>Complete tutorial</strong> to return home.
+    </p>
+  </div>
+</section>
+
+</div>
 
       <button id="next" class="arrow" aria-label="Next slide" title="Next"><span>›</span></button>
     </div>
 
-    <!-- Dots -->
-    <div class="dots" role="tablist" aria-label="Slide indicators">
-      <button class="dot" aria-label="Go to slide 1" aria-current="true"  data-i="0"></button>
-      <button class="dot" aria-label="Go to slide 2" aria-current="false" data-i="1"></button>
-      <button class="dot" aria-label="Go to slide 3" aria-current="false" data-i="2"></button>
-      <button class="dot" aria-label="Go to slide 4" aria-current="false" data-i="3"></button>
-    </div>
+<div class="dots" role="tablist" aria-label="Slide indicators">
+  <button class="dot" aria-label="Go to slide 1" aria-current="true"  data-i="0"></button>
+  <button class="dot" aria-label="Go to slide 2" aria-current="false" data-i="1"></button>
+  <button class="dot" aria-label="Go to slide 3" aria-current="false" data-i="2"></button>
+  <button class="dot" aria-label="Go to slide 4" aria-current="false" data-i="3"></button>
+  <button class="dot" aria-label="Go to slide 5" aria-current="false" data-i="4"></button>
+  <button class="dot" aria-label="Go to slide 6" aria-current="false" data-i="5"></button>
+</div>
 
-    <!-- Complete -->
-    <div class="actions">
-      <button id="completeBtn" class="complete" type="button" disabled>Complete tutorial</button>
-    </div>
-  </div>
+<!-- Complete -->
+<div class="actions">
+  <!-- Adjust the href if start.html is not in the same folder -->
+  <a id="completeBtn" class="complete" href="start" aria-disabled="true">Complete tutorial</a>
+</div>
 
   <script>
     /* ===== Slide Navigation + Completion ===== */
@@ -352,39 +484,44 @@
     const nextBtn = document.getElementById('next');
     const dots    = Array.from(document.querySelectorAll('.dot'));
     const completeBtn = document.getElementById('completeBtn');
-    const completed = [false, false, false, false];
+    const completed = new Array(slides.length).fill(false);
+    completed[0] = true; // ✅ mark intro as done at start
     let i = 0;
 
-    function setIndex(n){
-      const max = slides.length - 1;
-      i = Math.max(0, Math.min(max, n));
-      slides.forEach((s, k) => s.setAttribute('aria-hidden', k === i ? 'false' : 'true'));
-      dots.forEach((d, k) => d.setAttribute('aria-current', k === i ? 'true' : 'false'));
-      if (i === 0) completed[0] = true; // slide 1 complete on view
-      updateDots();
-      prevBtn.disabled = (i === 0);
-      nextBtn.disabled = (i === max);
-    }
+function setIndex(n){
+  const max = slides.length - 1;
+  i = Math.max(0, Math.min(max, n));
+  slides.forEach((s, k) => s.setAttribute('aria-hidden', k === i ? 'false' : 'true'));
+  dots.forEach((d, k) => d.setAttribute('aria-current', k === i ? 'true' : 'false'));
 
-    function updateDots(){
-      dots.forEach((d, k) => d.classList.toggle('done', !!completed[k]));
-      const allDone = completed.every(Boolean);
-      completeBtn.disabled = !allDone;
-      completeBtn.classList.toggle('ready', allDone);
-    }
+  // Mark slide complete on view
+  completed[i] = true;
+
+  updateDots();
+  prevBtn.disabled = (i === 0);
+  nextBtn.disabled = (i === max);
+}
+
+function updateDots(){
+  dots.forEach((d, k) => d.classList.toggle('done', !!completed[k]));
+  const allDone = completed.every(Boolean);
+  completeBtn.setAttribute('aria-disabled', allDone ? 'false' : 'true');
+  completeBtn.classList.toggle('ready', allDone);
+}
 
     prevBtn.addEventListener('click', () => setIndex(i - 1));
     nextBtn.addEventListener('click', () => setIndex(i + 1));
     dots.forEach(d => d.addEventListener('click', () => setIndex(Number(d.dataset.i))));
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft')  setIndex(i - 1);
-      if (e.key === 'ArrowRight') setIndex(i + 1);
-      if (['1','2','3','4'].includes(e.key)) setIndex(Number(e.key) - 1);
-    });
+   window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  setIndex(i - 1);
+  if (e.key === 'ArrowRight') setIndex(i + 1);
+  if (['1','2','3','4','5','6'].includes(e.key)) setIndex(Number(e.key) - 1);
+});
 
     completeBtn.addEventListener('click', () => {
-      alert('Tutorial complete! 🎉');
-    });
+    // redirect to your home page
+    window.location.href = "./start"; 
+  });
 
     /* ===== ListView (Slide 2) ===== */
     (function(){

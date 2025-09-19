@@ -48,7 +48,7 @@ def map_viewB():
 
 @app.route("/tutorials")
 def tutorials():
-    return render_template("tutorial_slides_final.html")
+    return render_template("tutorial_slides_unified.html")
 
 @app.route("/test")
 def test_runner():
