@@ -1339,7 +1339,20 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
     updateLinesCard(lines || []);
 
   }
-  
+// Persist the live state so any other code (overlay/logger) reads the SAME arrays
+window.currentGenerators   = Array.isArray(gens)  ? gens  : [];
+window.currentLines        = Array.isArray(lines) ? lines : [];
+window.currentScenarioData = scenarioData || {};
+
+// Update derived totals + emit a snapshot each time overview re-renders
+__persistTotalsFromState && __persistTotalsFromState();
+window.logSubmitStats && window.logSubmitStats('after renderOverview');
+
+    document.getElementById("submit-button").addEventListener("click", () => {
+  if (document.getElementById("submit-button").disabled) return;
+
+  showResultOverlay(totalPower, totalCost, totalEmissions);
+});
 }
 
  async function loadScenario(scenarioId) {
@@ -2665,11 +2678,7 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
     </div>
   `;
 
-  document.getElementById("submit-button").addEventListener("click", () => {
-  if (document.getElementById("submit-button").disabled) return;
 
-  showResultOverlay(totalPower, totalCost, totalEmissions);
-});
 }
 
 
@@ -2723,19 +2732,135 @@ function evaluateScenarioState(scenario, lines) {
   }
 }
 
+// --- Canonical stats (reads the persisted arrays above) --------------------
+window.computeSubmitStats = function computeSubmitStats(){
+  const nz = v => Number(v || 0);
+
+  // Prefer the arrays we persist from renderOverview; fall back if needed.
+  const gens  = (window.currentGenerators && Array.isArray(window.currentGenerators))
+                  ? window.currentGenerators
+                  : (window.state?.currentGenerators || []);
+  const lines = (window.currentLines && Array.isArray(window.currentLines))
+                  ? window.currentLines
+                  : (window.state?.currentLines || []);
+
+  // Totals from current generator state
+  let totalPower = 0, totalCost = 0, totalEmissions = 0;
+  for (const g of gens){
+    if (!g) continue;
+    const pg = nz(g.pg);
+    totalPower     += pg;
+    totalCost      += pg * nz(g.cost_per_mw);
+    totalEmissions += pg * nz(g.emissions_per_mw);
+  }
+
+  // Highest line load — tolerate several schema variants
+  let highestLoadPct = 0;
+  for (const L of lines){
+    if (!L) continue;
+
+    // Accept various fields: loadingPct (0–100), loading (0–1 or 0–100), or flow/rate_a
+    let pct;
+    if (L.loadingPct != null) {
+      pct = nz(L.loadingPct);
+    } else if (L.loading != null) {
+      const val = nz(L.loading);
+      pct = val <= 1.5 ? val * 100 : val; // if 0–1 scale, convert to %
+    } else {
+      const rate = nz(L.rate_a ?? L.rateA ?? L.rating);
+      const flow = Math.abs(nz(L.flow ?? L.loading_mw));
+      pct = rate > 0 ? (flow / rate) * 100 : 0;
+    }
+
+    if (Number.isFinite(pct) && pct > highestLoadPct) highestLoadPct = pct;
+  }
+
+  const startedAt = window.scenarioStartTs || window.mvScenarioStartedAt || window.lvScenarioStartedAt || performance.timeOrigin || Date.now();
+  const elapsedMs = Math.max(0, Date.now() - startedAt);
+  const mm = Math.floor(elapsedMs/60000), ss = Math.floor((elapsedMs%60000)/1000);
+  return {
+    timeFormatted: `${mm}:${String(ss).padStart(2,'0')}`,
+    elapsedMs,
+    highestLoadPct,
+    totalCost,
+    totalEmissions,
+    totalPower
+  };
+};
+
+window.logSubmitStats = window.logSubmitStats || function logSubmitStats(reason='snapshot'){
+  const s = __persistTotalsFromState();
+  console.log(`[submit-stats] ${reason} | time=${s.timeFormatted} | hiLoad=${Math.round(s.highestLoadPct)}% | cost=$${Math.round(s.totalCost).toLocaleString()} | CO₂=${Math.round(s.totalEmissions).toLocaleString()} t`, s);
+};
+
+
+// Persist last-known totals so anything (including old code) can read them
+function __persistTotalsFromState() {
+  const s = window.computeSubmitStats();
+  window.totalPower     = s.totalPower;
+  window.totalCost      = s.totalCost;
+  window.totalEmissions = s.totalEmissions;
+  window.highestLoadPct = s.highestLoadPct;
+  return s;
+}
+
+// --- SNAPSHOT LOGGER (idempotent) ------------------------------------------
+window.logSubmitStats = window.logSubmitStats || function logSubmitStats(reason = 'snapshot') {
+  const s = __persistTotalsFromState();
+  console.log(
+    `[submit-stats] ${reason} | time=${s.timeFormatted} | hiLoad=${Math.round(s.highestLoadPct)}% | ` +
+    `cost=$${Math.round(s.totalCost).toLocaleString()} | CO₂=${Math.round(s.totalEmissions).toLocaleString()} t`
+  );
+};
+
+// --- RESULTS OVERLAY (canonical, idempotent) --------------------------------
+window.showResultOverlay = function showResultOverlay(){
+  const s = __persistTotalsFromState();
+  window.lastSubmitStats = s;
+
+  let overlay = document.getElementById('result-overlay');
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'result-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999';
+  overlay.innerHTML = `
+    <div style="background:#fff;color:#333;padding:20px 24px;border-radius:14px;min-width:340px">
+      <h3 style="margin:0 0 12px;font-weight:700">Summary</h3>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+        <div>Time to complete</div><div>${s.timeFormatted}</div>
+        <div>Highest load at submit</div><div>${Math.round(s.highestLoadPct)}%</div>
+        <div>Total cost</div><div>$${Math.round(s.totalCost).toLocaleString()}</div>
+        <div>Total emissions</div><div>${Math.round(s.totalEmissions).toLocaleString()} tCO₂</div>
+      </div>
+      <div style="text-align:right;margin-top:14px">
+        <button id="close-overlay" style="background:#111827;color:#fff;border:0;border-radius:10px;padding:8px 12px;cursor:pointer">Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  overlay.querySelector('#close-overlay').addEventListener('click', close);
+};
+
+
+const submitBtn = document.getElementById("submit-button");
+if (submitBtn && !submitBtn.__wired) {
+  submitBtn.__wired = true;
+  submitBtn.addEventListener("click", () => {
+    if (submitBtn.disabled) return;
+    window.showResultOverlay();
+  });
+}
+
+
+
+
 
 
 function showResultOverlay() {
-  // Snapshot at submit
-  const end   = performance.now();
-  const start = window.lvScenarioStartedAt || end;
-  const durMS = Math.max(0, end - start);
-
-  const lines  = Array.isArray(window.currentLines) ? window.currentLines : [];
-  const scen   = window.currentScenarioData || {};
-  const hiLoad = getHighestLoadPctAtSubmit(lines, scen);       // % (0..120+)
-  const cost   = Number.isFinite(window.totalCost) ? window.totalCost : 0;
-  const emis   = Number.isFinite(window.totalEmissions) ? window.totalEmissions : 0;
+  // Always compute fresh stats from current state
+  const s = computeSubmitStats();
 
   // Overlay shell
   const overlay = document.createElement("div");
@@ -2756,10 +2881,10 @@ function showResultOverlay() {
         <tr><th class="results-key">Metric</th><th class="results-val">Value</th></tr>
       </thead>
       <tbody>
-        <tr><td class="results-key">Time to complete</td><td class="results-val">${formatDuration(durMS)}</td></tr>
-        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${Math.round(hiLoad)}%</td></tr>
-        <tr><td class="results-key">Total cost</td><td class="results-val">$${Math.round(cost).toLocaleString()}</td></tr>
-        <tr><td class="results-key">Total emissions</td><td class="results-val">${Math.round(emis).toLocaleString()} tCO₂</td></tr>
+        <tr><td class="results-key">Time to complete</td><td class="results-val">${s.timeFormatted}</td></tr>
+        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${Math.round(s.highestLoadPct)}%</td></tr>
+        <tr><td class="results-key">Total cost</td><td class="results-val">$${Math.round(s.totalCost).toLocaleString()}</td></tr>
+        <tr><td class="results-key">Total emissions</td><td class="results-val">${Math.round(s.totalEmissions).toLocaleString()} tCO₂</td></tr>
       </tbody>
     </table>
     <button type="button" class="results-close" id="close-overlay">Close</button>
@@ -2774,7 +2899,7 @@ function showResultOverlay() {
   const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
   document.addEventListener("keydown", onKey);
 
-  // (Runner) advance only after dismissal
+  // Runner handshake after dismissal (kept)
   document.getElementById("close-overlay").addEventListener("click", () => {
     try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
   });
