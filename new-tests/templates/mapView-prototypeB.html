@@ -1003,6 +1003,7 @@ const roundToHalf = v => Math.round((v || 0) / HALF_STEP) * HALF_STEP;
 let totalPower = 0;
 let totalCost = 0;
 let totalEmissions = 0;
+let highestLoadPct = 0;
 
 // === Overloaded lines state ===
 let previousLineLoads = {}; // line.id -> previous load pct (0..1)
@@ -2724,18 +2725,45 @@ function evaluateScenarioState(scenario, lines) {
 }
 
 
-
+// Paste-in replacement
 function showResultOverlay() {
   // Snapshot at submit
   const end   = performance.now();
   const start = window.lvScenarioStartedAt || end;
   const durMS = Math.max(0, end - start);
 
-  const lines  = Array.isArray(window.currentLines) ? window.currentLines : [];
-  const scen   = window.currentScenarioData || {};
-  const hiLoad = getHighestLoadPctAtSubmit(lines, scen);       // % (0..120+)
-  const cost   = Number.isFinite(window.totalCost) ? window.totalCost : 0;
-  const emis   = Number.isFinite(window.totalEmissions) ? window.totalEmissions : 0;
+  // Prefer window.* if present, else fall back to module-scope vars (if this runs inside the module),
+  // else empty arrays/objects.
+  const scen   = window.currentScenarioData || (typeof currentScenarioData !== "undefined" ? currentScenarioData : {}) || {};
+  const gens   = window.currentGenerators   || (typeof currentGenerators   !== "undefined" ? currentGenerators   : []) || [];
+  const lines  = Array.isArray(window.currentLines)
+                   ? window.currentLines
+                   : (typeof currentLines !== "undefined" ? currentLines : []) || [];
+
+  // Compute totals defensively. If module-scope totals exist, use them; otherwise recompute.
+  let cost = (typeof totalCost !== "undefined" && Number.isFinite(totalCost)) ? totalCost : NaN;
+  let emis = (typeof totalEmissions !== "undefined" && Number.isFinite(totalEmissions)) ? totalEmissions : NaN;
+
+  if (!Number.isFinite(cost) || !Number.isFinite(emis)) {
+    // Recompute from generators (same formulas used in renderOverview)
+    cost = gens.reduce((s, g) => s + (g.pg || 0) * (g.cost_per_mw || 0), 0);
+    emis = gens.reduce((s, g) => s + (g.pg || 0) * (g.emissions_per_mw || 0), 0);
+  }
+
+  // Highest load % at submit (skips disabled lines via window.disabledLineSet inside the helper)
+  const hiLoad = Math.round(
+    (typeof getHighestLoadPctAtSubmit === "function")
+      ? getHighestLoadPctAtSubmit(lines, scen)
+      : (function fallbackHiLoad(ls = []) {
+          let max = 0;
+          for (const L of ls) {
+            const rate = +(L.rate_a ?? L.rateA ?? 0);
+            const pct  = rate > 0 ? Math.abs(+L.flow || 0) / rate * 100 : 0;
+            if (Number.isFinite(pct) && pct > max) max = pct;
+          }
+          return max;
+        })(lines)
+  );
 
   // Overlay shell
   const overlay = document.createElement("div");
@@ -2757,7 +2785,7 @@ function showResultOverlay() {
       </thead>
       <tbody>
         <tr><td class="results-key">Time to complete</td><td class="results-val">${formatDuration(durMS)}</td></tr>
-        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${Math.round(hiLoad)}%</td></tr>
+        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${hiLoad}%</td></tr>
         <tr><td class="results-key">Total cost</td><td class="results-val">$${Math.round(cost).toLocaleString()}</td></tr>
         <tr><td class="results-key">Total emissions</td><td class="results-val">${Math.round(emis).toLocaleString()} tCO₂</td></tr>
       </tbody>
@@ -2774,11 +2802,15 @@ function showResultOverlay() {
   const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
   document.addEventListener("keydown", onKey);
 
-  // (Runner) advance only after dismissal
+  // Notify runner after dismissal
   document.getElementById("close-overlay").addEventListener("click", () => {
     try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
   });
 }
+
+// Make callable from other scripts even under <script type="module">
+try { window.showResultOverlay = showResultOverlay; } catch {}
+
 
 
 
