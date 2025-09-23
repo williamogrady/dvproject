@@ -1,0 +1,44 @@
+{
+  "gas": {                      
+    "cost_per_mwh": 110,
+    "co2_per_mwh": 0.60,
+    "pmax_range": [100, 300],
+    "ramp_up": 150,
+    "ramp_down": 150
+  },
+  "coal": {
+    "cost_per_mwh": 80,
+    "co2_per_mwh": 0.95,
+    "pmax_range": [300, 800],
+    "ramp_up": 40,
+    "ramp_down": 40
+  },
+  "combined": {                  
+    "cost_per_mwh": 55,
+    "co2_per_mwh": 0.40,
+    "pmax_range": [200, 600],
+    "ramp_up": 80,
+    "ramp_down": 80
+  },
+  "hydro": {
+    "cost_per_mwh": 12,
+    "co2_per_mwh": 0.00,
+    "pmax_range": [100, 400],
+    "ramp_up": 250,
+    "ramp_down": 250
+  },
+  "wind": {
+    "cost_per_mwh": 5,
+    "co2_per_mwh": 0.00,
+    "pmax_range": [100, 300],
+    "ramp_up": 999,
+    "ramp_down": 999
+  },
+  "nuclear": {
+    "cost_per_mwh": 28,
+    "co2_per_mwh": 0.00,
+    "pmax_range": [600, 900],
+    "ramp_up": 20,
+    "ramp_down": 20
+  }
+}

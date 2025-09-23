@@ -1,0 +1,30 @@
+{
+  "id": "test_full",
+  "title": "Full Attribute Test",
+  "description": "Scenario designed to exercise all schema attributes at once: power target, cost cap, emissions cap, line derating, locked/disabled generators, disabled lines, initial outputs, and instant_fail on overloads.",
+  
+  "target_mw": 2500,
+  "cost_cap": 120000,
+  "emissions_cap": 900,
+  "line_limit_pct": 0.9,
+
+  "disabled_lines": [
+    "Line-8-9",
+    "Line-30-38"
+  ],
+  "disabled_generators": [
+    "Gen10",
+    "Gen32"
+  ],
+  "locked_generators": [
+    "Gen25",
+    "Gen65"
+  ],
+  "initial_outputs": {
+    "Gen1": 200,
+    "Gen26": 600,
+    "Gen100": 700
+  },
+
+  "instant_fail": true
+}

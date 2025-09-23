@@ -87,6 +87,46 @@ def serve_sequences(filename):
 def serve_scenarios(filename):
     return send_from_directory(BASE_DIR / "scenarios", filename)
 
+@app.route('/api/scenario/<scenario_id>')
+def apply_scenario(scenario_id):
+    try:
+        # Apply scenario on the grid (this should set line_limit_pct, locks/disabled, initial_outputs)
+        scenario = grid.apply_scenario(scenario_id)
+
+        # Run PF (may immediately fail if instant_fail is true and lines overload)
+        solved = grid.run_power_flow()
+
+        # Echo back only the finalized schema keys, plus current grid state
+        return jsonify({
+            'id':                scenario.get('id', scenario_id),
+            'title':             scenario.get('title'),
+            'description':       scenario.get('description'),
+            'target_mw':         scenario.get('target_mw'),
+            'cost_cap':          scenario.get('cost_cap'),
+            'emissions_cap':     scenario.get('emissions_cap'),
+            'line_limit_pct':    grid.line_limit_pct,
+            'disabled_lines':    scenario.get('disabled_lines', []),
+            'disabled_generators': scenario.get('disabled_generators', []),
+            'locked_generators':   scenario.get('locked_generators', []),
+            'initial_outputs':     scenario.get('initial_outputs', {}),
+            'instant_fail':        scenario.get('instant_fail', False),
+            'generators':          grid.get_generators(),
+            'lines':               grid.get_branches(),
+            'total_cost':          grid.last_total_cost,
+            'solved':              solved
+        })
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({
+            "error": str(e),
+            "generators": grid.get_generators(),
+            "lines": grid.get_branches(),
+            "total_cost": None,
+            "solved": False
+        }), 500
+
+
+
 @app.route("/api/sequences")
 def api_sequences():
     base = BASE_DIR / "sequences"
@@ -184,35 +224,6 @@ def set_generation(gen_id):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-    
-
-@app.route('/api/scenario/<scenario_id>')
-def apply_scenario(scenario_id):
-    try:
-        scenario = grid.apply_scenario(scenario_id)
-        solved = grid.run_power_flow()
-
-        return jsonify({
-            **scenario,
-            'generators': grid.get_generators(),
-            'lines': grid.get_branches(),
-            'total_cost': grid.last_total_cost,
-            'solved': solved
-        })
-
-    except Exception as e:
-        print("❌ Error loading scenario:")
-        traceback.print_exc()
-        return jsonify({
-            "error": str(e),
-            "generators": grid.get_generators(),
-            "lines": grid.get_branches(),
-            "total_cost": None,
-            "solved": False
-        }), 500
-
-
-    
 @app.route("/api/scenarios")
 def get_all_scenarios():
     from scenarios import list_all_scenarios
@@ -220,19 +231,32 @@ def get_all_scenarios():
 
 @app.route('/api/status')
 def get_status():
+    # Current system state
     total_pg = sum(gen.pg for gen in grid.generators)
     total_cost = grid.last_total_cost or 0
     total_emissions = grid.compute_total_emissions()
-    overloaded_lines = sum(1 for line in grid.branches if line.flow > line.rate_a)
+    overloaded_lines = sum(1 for line in grid.branches if line.overloaded)  # respects line_limit_pct
 
-    scenario = grid.active_scenario or {}
+    # Active scenario (trimmed schema)
+    scen = grid.active_scenario or {}
+    target_mw     = scen.get('target_mw')
+    cost_cap      = scen.get('cost_cap')
+    emissions_cap = scen.get('emissions_cap')
+
+    # Target check (±5% default window if a target is set)
+    if target_mw:
+        tol = 0.05
+        within_target = (total_pg >= target_mw * (1 - tol)) and (total_pg <= target_mw * (1 + tol))
+    else:
+        within_target = True
 
     scenario_met = (
-    (not scenario.get('target_mw') or total_pg >= scenario['target_mw']) and
-    (not scenario.get('cost_limit') or total_cost <= scenario['cost_limit']) and
-    (not scenario.get('emissions_limit') or total_emissions <= scenario['emissions_limit']) and
-    overloaded_lines == 0
-        )
+        within_target and
+        (cost_cap is None or total_cost <= cost_cap) and
+        (emissions_cap is None or total_emissions <= emissions_cap) and
+        overloaded_lines == 0
+    )
+
     return jsonify({
         'current': {
             'pg': total_pg,
@@ -241,13 +265,14 @@ def get_status():
             'overloads': overloaded_lines
         },
         'target': {
-            'pg': scenario.get('target_mw'),
-            'cost': scenario.get('cost_limit'),
-            'emissions': scenario.get('emissions_limit'),
-            'line_pct': scenario.get('line_limit_pct')
+            'pg': target_mw,
+            'cost': cost_cap,
+            'emissions': emissions_cap,
+            'line_pct': grid.line_limit_pct
         },
         'scenario_met': scenario_met
     })
+
 
 
 

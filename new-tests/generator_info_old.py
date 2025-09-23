@@ -1,24 +1,21 @@
 GENERATOR_FUEL_TYPES = {
-    # West region
-    1:  "hydro",
-    4:  "hydro",
-    6:  "hydro",
-    8:  "hydro",
+    1: "hydro",
+    4: "hydro",
+    6: "hydro",
+    8: "hydro",
     10: "coal",
     12: "combined",
     15: "gas",
     18: "gas",
     19: "hydro",
     25: "coal",
-    26: "nuclear",   # was "coal" → nuclear (West baseload)
-    27: "wind",      # was "hydro" → wind
+    26: "coal",
+    27: "hydro",
     31: "hydro",
     32: "gas",
-
-    # North region
-    34: "wind",      # was "hydro" → wind
+    34: "hydro",
     36: "gas",
-    40: "wind",      # was "hydro" → wind
+    40: "hydro",
     42: "hydro",
     46: "gas",
     49: "combined",
@@ -28,29 +25,27 @@ GENERATOR_FUEL_TYPES = {
     59: "combined",
     61: "combined",
     62: "gas",
-    65: "nuclear",   # was "coal" → nuclear (North baseload)
+    65: "coal",
     66: "coal",
-
-    # South region
     69: "coal",
     70: "gas",
-    72: "wind",      # was "hydro" → wind
-    73: "wind",      # was "hydro" → wind
+    72: "hydro",
+    73: "hydro",
     74: "hydro",
     76: "gas",
     77: "gas",
     80: "coal",
     99: "gas",
-    100:"nuclear",   # was "combined" → nuclear (South baseload)
-    103:"wind",      # was "hydro" → wind
-    104:"gas",
-    105:"gas",
-    107:"wind",      # was "hydro" → wind
-    110:"gas",
-    111:"coal",      # was "gas" → coal (keep coal fleet diverse)
-    112:"gas",
-    113:"wind",      # was "gas"  → wind (West label, see regions map below)
-    116:"gas"
+    100: "combined",
+    103: "hydro",
+    104: "gas",
+    105: "gas",
+    107: "hydro",
+    110: "gas",
+    111: "gas",
+    112: "gas",
+    113: "gas",
+    116: "gas"
 }
 
 GENERATOR_REGIONS = {

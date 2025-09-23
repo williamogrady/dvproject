@@ -175,7 +175,7 @@
   .fuel-Coal     { background:linear-gradient(135deg,#444,#222); }
   .fuel-Hydro    { background:linear-gradient(135deg,#1e88e5,#1565c0); }
   .fuel-Wind     { background:linear-gradient(135deg,#6a1b9a,#4527a0); }
-  .fuel-Solar    { background:linear-gradient(135deg,#f6c343,#f4a261); color:#202020; text-shadow:none; }
+  .fuel-Nuclear { background:linear-gradient(135deg,#2f3e9e,#1b2556); color:#111; text-shadow:none; }
   .fuel-Unknown  { background:linear-gradient(135deg,#8e9eab,#eef2f3); color:#111; text-shadow:none; }
 
 
@@ -942,7 +942,11 @@ function setSelectedGen(id){
 
 
 
-// --- NEW: pure state computation (no DOM here) ---
+// Small helpers
+function nz(v){ return Number.isFinite(+v) ? +v : 0; }
+function normalizeLines(linesIn){ return Array.isArray(linesIn) ? linesIn : []; }
+
+// Pure state computation (no DOM)
 function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
   const lines = normalizeLines(linesIn);
 
@@ -952,46 +956,63 @@ function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
     emissions: gens.reduce((s,g) => s + nz(g.pg) * nz(g.emissions_per_mw), 0),
   };
 
-  const targetMW = nz(scenario.target_mw);
-  const maxCost  = (scenario.max_cost != null) ? nz(scenario.max_cost) : null;
-  const maxCO2   = (scenario.max_emissions != null) ? nz(scenario.max_emissions) : null;
+  const targetMW  = nz(scenario.target_mw);
+  const costCap   = (scenario.cost_cap       != null) ? nz(scenario.cost_cap)      : null;
+  const emisCap   = (scenario.emissions_cap  != null) ? nz(scenario.emissions_cap) : null;
+  const linePct   = (scenario.line_limit_pct != null) ? +scenario.line_limit_pct   : 1;
 
   const overloadedCount = lines.filter(l => {
+    // Prefer backend-computed overloaded flag (already respects line_limit_pct)
+    if (l.overloaded === true) return true;
     const rate = nz(l.rate_a ?? l.rateA);
     const flow = Math.abs(nz(l.flow));
-    return rate > 0 && flow > rate;
+    const limit = rate * (Number.isFinite(linePct) ? linePct : 1);
+    return rate > 0 && flow > limit;
   }).length;
 
-  const meetsPower = (targetMW > 0) ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05) : true;
-  const withinCost      = (maxCost == null) ? true : totals.cost      <= maxCost;
-  const withinEmissions = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
-  const noOverloads     = overloadedCount === 0;
+  const meetsPower       = (targetMW > 0) ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05) : true;
+  const withinCost       = (costCap == null) ? true : totals.cost      <= costCap;
+  const withinEmissions  = (emisCap == null) ? true : totals.emissions <= emisCap;
+  const noOverloads      = overloadedCount === 0;
 
   return {
-    totals, targetMW, maxCost, maxCO2, overloadedCount,
+    totals, targetMW,
+    costCap, emisCap, linePct,
+    overloadedCount,
     meetsPower, withinCost, withinEmissions, noOverloads,
     allMet: meetsPower && withinCost && withinEmissions && noOverloads
   };
 }
 
-// --- NEW: apply the computed state to checkboxes/buttons (DOM only) ---
+// Apply the computed state to checkboxes/buttons (DOM only)
 function applyScenarioUI(state){
   const cPower  = document.getElementById("check-power");
   const cLines  = document.getElementById("check-lines");
-  const cBudget = document.getElementById("check-budget");
-  if (cPower)  cPower.checked  = !!state.meetsPower;
-  if (cLines)  cLines.checked  = !!state.noOverloads;
-  if (cBudget){
-    cBudget.closest("li").style.display = (state.maxCost != null) ? "" : "none";
-    cBudget.checked = (state.maxCost != null) && !!state.withinCost;
-  }
+  const cCost   = document.getElementById("check-cost");
+  const cEmi    = document.getElementById("check-emissions");
+
+  if (cPower) cPower.checked = !!state.meetsPower;
+  if (cLines) cLines.checked = !!state.noOverloads;
+
+  // Toggle visibility + check for cost cap
+  const liCost = document.getElementById("cost-check");
+  if (liCost){ liCost.style.display = (state.costCap != null) ? "" : "none"; }
+  if (cCost){ cCost.checked = (state.costCap != null) && !!state.withinCost; }
+
+  // Toggle visibility + check for emissions cap
+  const liEmi = document.getElementById("emissions-check");
+  if (liEmi){ liEmi.style.display = (state.emisCap != null) ? "" : "none"; }
+  if (cEmi){ cEmi.checked = (state.emisCap != null) && !!state.withinEmissions; }
+
+  const allMet = !!(state.meetsPower && state.noOverloads &&
+                   (state.costCap == null || state.withinCost) &&
+                   (state.emisCap == null || state.withinEmissions));
+
   const submitBtn = document.getElementById("submit-button");
   if (submitBtn){
-    submitBtn.disabled = !state.allMet;
-    submitBtn.classList.toggle("active", state.allMet);
+    submitBtn.classList.toggle("active", allMet);
+    submitBtn.disabled = !allMet;
   }
-  const ctrlSubmit = document.querySelector("#row-4 .submit-button");
-  if (ctrlSubmit) ctrlSubmit.disabled = !state.allMet;
 }
 
 
@@ -1709,18 +1730,22 @@ function getEmissionColor(emissions) {
 const left = document.createElement("div");
 
 // Canonicalize many possible data keys into five families
+// Canonicalize many possible data keys into the 6 families we support
 function canonicalFuel(gen){
   const s = String(
     gen.fuel_type ?? gen.fuel ?? gen.type ?? gen.generator_type ?? ""
   ).toLowerCase();
 
   if (!s) return "Unknown";
-  if (s.includes("coal"))      return "Coal";
-  if (s.includes("hydro"))     return "Hydro";
-  if (s.includes("combined")   || s.includes("ccgt")) return "Combined";
-  if (s.includes("gas"))       return "Gas";
+  if (s.includes("coal"))                return "Coal";
+  if (s.includes("hydro") || s.includes("hydroe")) return "Hydro";
+  if (s.includes("combined") || s.includes("ccgt")) return "Combined";
+  if (s.includes("gas"))                 return "Gas";
+  if (s.includes("wind"))                return "Wind";
+  if (s.includes("nuclear"))             return "Nuclear";
   return "Unknown";
 }
+
 
 const fuelKey = canonicalFuel(gen);
 left.className = `gen-section left fuel-${fuelKey}`;
@@ -2242,13 +2267,14 @@ function setupTaskSection(scenario){
     return;
   }
 
-  const hasBudget  = scenario.max_cost !== undefined && scenario.max_cost !== null;
-  const lockedList = scenario.locked_generators || scenario.locked || [];
-  const disabList  = scenario.disabled_generators || scenario.disabled || [];
-  const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
-  const hasDisab   = Array.isArray(disabList)   && disabList.length > 0;
-   const lineList   = scenario.disabled_lines || [];
-  const hasDisabLines = Array.isArray(lineList) && lineList.length > 0;
+  const hasCostCap  = (scenario.cost_cap       !== undefined && scenario.cost_cap       !== null);
+  const hasEmiCap   = (scenario.emissions_cap  !== undefined && scenario.emissions_cap  !== null);
+  const lockedList  = scenario.locked_generators   || scenario.locked   || [];
+  const disabList   = scenario.disabled_generators || scenario.disabled || [];
+  const lineList    = scenario.disabled_lines      || [];
+  const hasLocked   = Array.isArray(lockedList)  && lockedList.length  > 0;
+  const hasDisab    = Array.isArray(disabList)   && disabList.length   > 0;
+  const hasDisabLin = Array.isArray(lineList)    && lineList.length    > 0;
 
   container.innerHTML = `
     <div class="task-card">
@@ -2259,23 +2285,33 @@ function setupTaskSection(scenario){
           <div class="task-left">
             <div class="task-title">Requirements</div>
             <ul id="task-requirements">
-<li>
-  <input type="checkbox" disabled id="check-power" />
-  Meet target power${scenario.target_mw != null ? ` (${scenario.target_mw} MW)` : ""}
-</li>
-              <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
-              ${hasBudget ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>` : ``}
+              <li>
+                <input type="checkbox" disabled id="check-power" />
+                Meet target power${scenario.target_mw != null ? ` (${scenario.target_mw} MW)` : ""}
+              </li>
+              <li>
+                <input type="checkbox" disabled id="check-lines" />
+                No line overloads
+              </li>
+              <li id="cost-check" style="${hasCostCap ? "" : "display:none"}">
+                <input type="checkbox" disabled id="check-cost" />
+                Meet target cost${hasCostCap ? ` ($${scenario.cost_cap})` : ""}
+              </li>
+              <li id="emissions-check" style="${hasEmiCap ? "" : "display:none"}">
+                <input type="checkbox" disabled id="check-emissions" />
+                Meet target emissions${hasEmiCap ? ` (${scenario.emissions_cap} tCO₂)` : ""}
+              </li>
             </ul>
           </div>
 
-          <!-- RIGHT: CONSTRAINTS (new copy) -->
+          <!-- RIGHT: CONSTRAINTS -->
           <div class="task-right">
             <div class="task-title">Constraints</div>
             <div class="task-subtitle" id="task-constraints">
-            ${hasLocked     ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
-            ${hasDisab      ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
-            ${hasDisabLines ? `<div id="constraint-lines">❌ Some lines are disabled</div>` : ``}
-          </div>
+              ${hasLocked   ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
+              ${hasDisab    ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
+              ${hasDisabLin ? `<div id="constraint-lines">❌ Some lines are disabled</div>` : ``}
+            </div>
           </div>
         </div>
 
@@ -2300,6 +2336,7 @@ function setupTaskSection(scenario){
   const state = evaluateScenarioState(window.currentGenerators || [], window.currentLines || [], scenario);
   applyScenarioUI(state);
 }
+
 
 
 

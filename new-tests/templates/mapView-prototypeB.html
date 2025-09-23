@@ -1318,9 +1318,15 @@ function renderOverview(gens, scenarioData = {}, lines) {
   totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
 
   const S = window.disabledLineSet || new Set();
-  const overloaded = (lines || []).filter(line => !S.has(line.id) && line.flow > line.rate_a).length;
-
-  const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
+  const lpct = Number((currentScenarioData && currentScenarioData.line_limit_pct) || 1);
+  const overloaded = (lines || []).filter(line => {
+    if (!line || S.has(line.id)) return false;
+    if (line.overloaded === true) return true; // backend already applied line_limit_pct
+    const rate = +(line.rate_a ?? line.rateA ?? 0);
+    const flow = Math.abs(+line.flow || 0);
+    const limit = rate * (Number.isFinite(lpct) ? lpct : 1);
+    return rate > 0 && flow > limit;
+  }).length;
 
   
   
@@ -1333,7 +1339,6 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} tCO₂`;
   document.getElementById("overview-lines").textContent = overloaded;
   updatePowerBlocks(totalPower, currentScenarioData.target_mw)
-  evaluateScenarioState(scenarioData, lines)
   if (lines) {
     console.log("🔁 Refreshing chevrons with updated line data");
     refreshChevrons(lines, currentMapMode);
@@ -1342,6 +1347,53 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   }
   
 }
+
+// --- Fallback state evaluator for MapView ---
+// Uses the finalized schema: target_mw, cost_cap, emissions_cap, line_limit_pct
+function computeEvalStateSafe(){
+  const gens = window.currentGenerators || [];
+  const lines = window.currentLines || [];
+  const scen = window.currentScenarioData || {};
+
+  const nz = v => Number.isFinite(+v) ? +v : 0;
+
+  const totals = {
+    power:     gens.reduce((s,g)=> s + nz(g.pg), 0),
+    cost:      gens.reduce((s,g)=> s + nz(g.pg) * nz(g.cost_per_mw), 0),
+    emissions: gens.reduce((s,g)=> s + nz(g.pg) * nz(g.emissions_per_mw), 0)
+  };
+
+  const targetMW = (scen.target_mw != null) ? +scen.target_mw : null;
+  const maxCost  = (scen.cost_cap != null) ? +scen.cost_cap : null;
+  const maxCO2   = (scen.emissions_cap != null) ? +scen.emissions_cap : null;
+  const linePct  = (scen.line_limit_pct != null) ? +scen.line_limit_pct : 1;
+
+  const S = window.disabledLineSet || new Set();
+  const overloadedCount = (lines || []).filter(l => {
+    if (!l || S.has(l.id)) return false;
+    if (l.overloaded === true) return true; // backend already applied line_limit_pct
+    const rate = nz(l.rate_a ?? l.rateA);
+    const flow = Math.abs(nz(l.flow));
+    const limit = rate * (Number.isFinite(linePct) ? linePct : 1);
+    return rate > 0 && flow > limit;
+  }).length;
+
+  const tol = 0.05;
+  const meetsPower      = (targetMW == null) ? true :
+                          (totals.power >= targetMW*(1-tol) && totals.power <= targetMW*(1+tol));
+  const withinCost      = (maxCost == null) ? true : totals.cost      <= maxCost;
+  const withinEmissions = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
+  const noOverloads     = overloadedCount === 0;
+
+  return {
+    totals, targetMW,
+    maxCost, maxCO2, linePct,
+    overloadedCount,
+    meetsPower, withinCost, withinEmissions, noOverloads,
+    allMet: meetsPower && withinCost && withinEmissions && noOverloads
+  };
+}
+
 
  async function loadScenario(scenarioId) {
   console.log("loadScenario")
@@ -1359,6 +1411,12 @@ updatePowerBlocks(totalPower, currentScenarioData.target_mw);
   setupTaskSection(currentScenarioData);
   updateMapGeneratorsFromScenario(); // Make sure this is called too
   renderOverview(currentGenerators, currentScenarioData || {}, currentLines);
+  setupTaskSection(window.currentScenarioData || {});
+const pre = (typeof evaluateScenarioState === 'function')
+  ? evaluateScenarioState(window.currentGenerators || [], window.currentLines || [], window.currentScenarioData || {})
+  : null;
+applyScenarioUI(pre || computeEvalStateSafe?.() || {});
+
 
 }
 
@@ -2617,112 +2675,267 @@ function updatePowerBlocks(totalPower, targetPower) {
   }
 }
   
+// Builds the right-rail task card using the new scenario schema
+function setupTaskSection(scenario){
+  const s  = (scenario && typeof scenario === 'object') ? scenario : (window.currentScenarioData || {});
+  const el = document.getElementById("task-placeholder");
+  if (!el) return;
 
-function setupTaskSection(scenario) {
-  const container = document.getElementById("overview-task-section");
-  const hasBudget = scenario.max_cost !== undefined && scenario.max_cost !== null;
-    const lockedList = scenario.locked_generators || scenario.locked || [];
-  const disabList  = scenario.disabled_generators || scenario.disabled || [];
-  const hasDisabledLines = (window.disabledLineSet && window.disabledLineSet.size > 0);
-const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
-  const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
+  // Normalize fields to new schema
+  const targetMW     = (s.target_mw != null) ? Number(s.target_mw) : null;
+  const costCap      = (s.cost_cap != null) ? Number(s.cost_cap) : null;
+  const emisCap      = (s.emissions_cap != null) ? Number(s.emissions_cap) : null;
+  const linePct      = (s.line_limit_pct != null) ? Number(s.line_limit_pct) : 1.0;
 
-  container.innerHTML = `
+  const disabledLs   = Array.isArray(s.disabled_lines)      ? s.disabled_lines      : [];
+  const disabledGs   = Array.isArray(s.disabled_generators) ? s.disabled_generators : [];
+  const lockedGs     = Array.isArray(s.locked_generators)   ? s.locked_generators   : [];
+  const initOut      = (s.initial_outputs && typeof s.initial_outputs === 'object') ? s.initial_outputs : {};
+  const instantFail  = !!s.instant_fail;
+
+  // Booleans used by the template (so nothing is undefined)
+  const hasCostCap   = costCap != null;
+  const hasEmiCap    = emisCap != null;
+  const hasLocked    = lockedGs.length   > 0;
+  const hasDisab     = disabledGs.length > 0;
+  const hasDisabLin  = disabledLs.length > 0;
+  const hasInitOut   = Object.keys(initOut).length > 0;
+
+  // Pretty helpers
+  const fmt = new Intl.NumberFormat();
+  const pct = (x)=> `${Math.round(x*100)}%`;
+
+  // Render (matches MapView layout: one card with checklist + constraints)
+  el.innerHTML = `
     <div class="task-card">
       <div class="overview-label">Scenario Task</div>
       <div class="task-card" id="task-checklist">
         <div class="task-content">
-          <!-- LEFT COLUMN: REQUIREMENTS -->
+          <!-- LEFT: REQUIREMENTS -->
           <div class="task-left">
             <div class="task-title">Requirements</div>
             <ul id="task-requirements">
               <li>
-  <input type="checkbox" disabled id="check-power" />
-  Meet target power${scenario.target_mw != null ? ` (${scenario.target_mw} MW)` : ""}
-</li>
-              <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
-              ${hasBudget
-                ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>`
-                : ``}
+                <input type="checkbox" disabled id="check-power" />
+                ${targetMW != null
+                  ? `Meet target power (<strong>${fmt.format(targetMW)} MW</strong>)`
+                  : `Meet target power (no target set)`}
+              </li>
+              <li title="Line overloads use the scenario's percentage of each line's rating">
+                <input type="checkbox" disabled id="check-lines" />
+                No line overloads <em>(cap ${pct(linePct)} of rating)</em>
+              </li>
+              <li id="cost-check" style="${hasCostCap ? '' : 'display:none'}">
+                <input type="checkbox" disabled id="check-cost" />
+                Meet target cost (≤ <strong>$${hasCostCap ? fmt.format(costCap) : ''}</strong>)
+              </li>
+              <li id="emissions-check" style="${hasEmiCap ? '' : 'display:none'}">
+                <input type="checkbox" disabled id="check-emissions" />
+                Meet target emissions (≤ <strong>${hasEmiCap ? fmt.format(emisCap) : ''} tCO₂</strong>)
+              </li>
             </ul>
           </div>
 
-          <!-- RIGHT COLUMN: CONSTRAINTS -->
+          <!-- RIGHT: CONSTRAINTS -->
           <div class="task-right">
-            <div class="task-title">Scenario Constraints</div>
+            <div class="task-title">Constraints</div>
             <div class="task-subtitle" id="task-constraints">
-              ${hasLocked ? `<div id="constraint-locked">🔒 Some generators are locked</div>` : ``}
-              ${hasDisabled ? `<div id="constraint-disabled">🚫 Some generators are disabled</div>` : ``}
-              ${hasDisabledLines ? `<div id="constraint-lines">❌ Some lines are disabled</div>` : ``}
+              ${hasLocked    ? `<div id="constraint-locked">🔒 Locked generators: ${lockedGs.join(', ')}</div>` : ``}
+              ${hasDisab     ? `<div id="constraint-disabled">🚫 Disabled generators: ${disabledGs.join(', ')}</div>` : ``}
+              ${hasDisabLin  ? `<div id="constraint-lines">❌ Some lines are disabled</div>` : ``}
+              ${hasInitOut   ? `<div id="constraint-init">⚙️ Initial outputs set (${Object.keys(initOut).length})</div>` : ``}
+              ${instantFail  ? `<div id="constraint-instant">⛔ Instant fail on line overloads</div>` : ``}
             </div>
           </div>
         </div>
 
-        <!-- SUBMIT BUTTON -->
-        <div class="task-submit-row">
+        <div class="task-actions">
           <button id="submit-button" disabled>Submit Solution</button>
         </div>
       </div>
     </div>
   `;
 
-  document.getElementById("submit-button").addEventListener("click", () => {
-  if (document.getElementById("submit-button").disabled) return;
-
-  showResultOverlay(totalPower, totalCost, totalEmissions);
-});
-}
-
-
-function evaluateScenarioState(scenario, lines) {
-  const meetsPower = !scenario.target_mw
-  ? true
-  : (totalPower >= scenario.target_mw * 0.95 &&
-     totalPower <= scenario.target_mw * 1.05);
-  const meetsLines = !lines.some(line => line.flow > line.rate_a);
-  const meetsBudget = !scenario.max_cost || totalCost <= scenario.max_cost;
-
-  console.log("🔎 Evaluating scenario state!");
-  //console.log("   ⚡ totalPower:", totalPower, "→ meetsPower:", meetsPower);
-  //console.log("   🔌 line overload check:", meetsLines ? "✅ OK" : "❌ Overloaded");
-  //console.log("   💸 totalCost:", totalCost, "/", scenario.max_cost, "→ meetsBudget:", meetsBudget);
-
-  const powerCheckbox = document.getElementById("check-power");
-  const linesCheckbox = document.getElementById("check-lines");
-  const budgetCheckbox = document.getElementById("check-budget");
-
-  if (powerCheckbox) {
-    powerCheckbox.checked = meetsPower;
-    //console.log("   📥 check-power checkbox updated:", meetsPower);
-  } else {
-    console.warn("⚠️ check-power checkbox not found");
-  }
-
-  if (linesCheckbox) {
-    linesCheckbox.checked = meetsLines;
-    //console.log("   📥 check-lines checkbox updated:", meetsLines);
-  } else {
-    console.warn("⚠️ check-lines checkbox not found");
-  }
-
-  if (budgetCheckbox && scenario.max_cost !== undefined) {
-    budgetCheckbox.checked = meetsBudget;
-    //console.log("   📥 check-budget checkbox updated:", meetsBudget);
-  } else if (scenario.max_cost !== undefined) {
-    console.warn("⚠️ check-budget checkbox not found");
-  }
-
-  const allMet = meetsPower && meetsLines && (scenario.max_cost ? meetsBudget : true);
+  // Wire submit button (existing handler contract)
   const submitBtn = document.getElementById("submit-button");
+  if (submitBtn){
+    submitBtn.onclick = () => {
+      if (submitBtn.disabled) return;
+      if (typeof submitSolution === "function") return submitSolution();
+      if (typeof showResultOverlay === "function") return showResultOverlay();
+    };
+  }
 
-    if (allMet) {
-    submitBtn.classList.add("active");
-    submitBtn.disabled = false;
-  } else {
-    submitBtn.classList.remove("active");
-    submitBtn.disabled = true;
+  // Optionally apply the current computed state to reflect checkmarks immediately
+  if (typeof evaluateScenarioState === 'function' && typeof applyScenarioUI === 'function') {
+    // MapView eval usually takes (scen, lines); ListView takes (gens, lines, scen).
+    try {
+      const state =
+        evaluateScenarioState.length >= 3
+          ? evaluateScenarioState(window.currentGenerators || [], window.currentLines || [], s)
+          : evaluateScenarioState(s, window.currentLines || []);
+      applyScenarioUI(state);
+    } catch (e) {
+      console.warn('[setupTaskSection] Could not pre-apply scenario UI:', e);
+    }
   }
 }
+
+
+
+function applyScenarioUI(state){
+  const s = state || {};
+  const t = s.totals || {power:0,cost:0,emissions:0};
+  const fmt = new Intl.NumberFormat();
+  const clamp01 = (x)=> Math.max(0, Math.min(1, x));
+
+  // ===== Overview: Power =====
+  const powerEl  = document.getElementById('overview-power');
+  const powerTxt = document.querySelector('#overview-power .fraction');
+  if (powerEl && powerTxt){
+    if (s.targetMW){
+      powerTxt.textContent = `${fmt.format(Math.round(t.power))} / ${fmt.format(s.targetMW)} MW`;
+      // small block meter (0..1; +/-5% band considered "good")
+      const ratio = clamp01(t.power / s.targetMW);
+      renderBlockMeter(powerEl.querySelector('.blocks'), ratio, (s.meetsPower ? 'ok':'warn'));
+      document.getElementById('status-power').textContent = s.meetsPower ? 'On target' : 'Off target';
+    } else {
+      powerTxt.textContent = `${fmt.format(Math.round(t.power))} MW`;
+      renderBlockMeter(powerEl.querySelector('.blocks'), 0, 'neutral');
+      document.getElementById('status-power').textContent = 'No target';
+    }
+  }
+
+  // ===== Overview: Lines =====
+  const linesEl = document.getElementById('overview-lines');
+  if (linesEl){
+    linesEl.textContent = s.overloadedCount ?? 0;
+    const okPill = document.getElementById('lines-ok-pill');
+    if (okPill) okPill.style.display = (s.overloadedCount===0)? 'inline-block':'none';
+    document.getElementById('status-lines').textContent = s.noOverloads ? 'Within line limits' : 'Over limit';
+  }
+
+  // ===== Overview: Cost (new stepped green→red) =====
+  const costEl = document.getElementById('overview-cost');
+  if (costEl){
+    costEl.textContent = `$${fmt.format(Math.round(t.cost))}`;
+    const stepColor = steppedCostColor(t.cost, s.maxCost); // null-safe
+    costEl.style.background = '';      // ensure solid fill
+    costEl.style.color = '#111';
+    costEl.style.padding = '2px 8px';
+    costEl.style.borderRadius = '8px';
+    costEl.style.backgroundColor = stepColor;
+    document.getElementById('status-cost').textContent =
+      (s.maxCost==null) ? 'No cap' : (s.withinCost ? 'Under cap' : 'Over cap');
+  }
+
+  // ===== Overview: Emissions (new hatch intensity) =====
+  const emisEl = document.getElementById('overview-emissions');
+  if (emisEl){
+    emisEl.textContent = `${fmt.format(Math.round(t.emissions))} tCO₂`;
+    const hatchId = ensureHatchDefs(); // once
+    const intensity = hatchIntensity(t.emissions, s.maxCO2); // 0..1
+    emisEl.style.backgroundColor = '#f3f4f6';
+    emisEl.style.backgroundImage = `url(${buildHatchDataUrl(intensity)})`; // css-safe raster hatch
+    emisEl.style.backgroundSize = '16px 16px';
+    emisEl.style.borderRadius = '8px';
+    emisEl.style.padding = '2px 8px';
+    document.getElementById('status-emissions').textContent =
+      (s.maxCO2==null) ? 'No cap' : (s.withinEmissions ? 'Under cap' : 'Over cap');
+  }
+
+  // ===== Right-rail requirement ticks =====
+  tick('req-power',  s.meetsPower !== false ? s.meetsPower : true);
+  tick('req-lines',  s.noOverloads);
+  tick('req-cost',   (s.maxCost==null) ? true : s.withinCost);
+  tick('req-emis',   (s.maxCO2==null)  ? true : s.withinEmissions);
+
+  // ===== Submit enablement =====
+  const canSubmit = !!s.allMet;
+  const submitBtn = document.getElementById('submit-button');
+  if (submitBtn){
+    submitBtn.disabled = !canSubmit;
+    submitBtn.title = canSubmit ? 'Submit this solution' : 'Meet all requirements to submit';
+  }
+}
+
+// Small helpers (MapView-local) -----------------------------
+
+function tick(id, ok){
+  const li = document.getElementById(id);
+  if (!li) return;
+  li.classList.toggle('ok', !!ok);
+  li.classList.toggle('bad', !ok);
+}
+
+function renderBlockMeter(container, ratio, mode){
+  if (!container) return;
+  const blocks = 10;
+  const active = Math.round(blocks * ratio);
+  container.innerHTML = '';
+  for (let i=0;i<blocks;i++){
+    const div = document.createElement('div');
+    div.style.width = '10px';
+    div.style.height = '14px';
+    div.style.marginRight = '2px';
+    div.style.display = 'inline-block';
+    div.style.borderRadius = '2px';
+    const on = i < active;
+    div.style.background = on ? (mode==='ok' ? '#42ad62' : mode==='warn' ? '#f59e0b' : '#d0d4da') : '#e9edf2';
+    container.appendChild(div);
+  }
+}
+
+// Cost color: stepped, more diverse greens→reds
+function steppedCostColor(cost, cap){
+  if (cap == null){
+    // scale using nice bands around median-ish values
+    const c = Number(cost||0);
+    if (c <  50_000) return '#a7f3d0'; // mint
+    if (c < 100_000) return '#6ee7b7';
+    if (c < 200_000) return '#34d399';
+    if (c < 400_000) return '#10b981';
+    if (c < 800_000) return '#059669';
+    return '#dc2626'; // very high cost → red
+  }
+  const r = Number(cost||0) / Math.max(1, Number(cap));
+  if (r <= 0.6) return '#b7f7a6';
+  if (r <= 0.8) return '#7ee08a';
+  if (r <= 1.0) return '#4cc26b';
+  if (r <= 1.1) return '#fbbc2c';
+  if (r <= 1.2) return '#f58a1f';
+  return '#e03a2a';
+}
+
+// Emissions hatch: intensity increases as ratio rises
+function hatchIntensity(em, cap){
+  if (cap == null) return 0.3;             // mild texture without a cap
+  const r = Math.max(0, Math.min(1.6, (Number(em||0) / Math.max(1, Number(cap)))));
+  // map 0..1.6 → 0.1..0.9
+  return 0.1 + (Math.min(r,1.6)/1.6) * 0.8;
+}
+
+// Draw a small diagonal hatch to a data URL (canvas) so we can use it in CSS backgrounds
+function buildHatchDataUrl(strength=0.5){
+  const sz = 16;
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = sz;
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,sz,sz);
+  ctx.strokeStyle = 'rgba(0,0,0,' + (0.08 + 0.6*strength).toFixed(3) + ')';
+  ctx.lineWidth = 2;
+  // three diagonals to make a crisp, repeating hatch
+  ctx.beginPath();
+  ctx.moveTo(-4, 12); ctx.lineTo(12, -4);
+  ctx.moveTo(0, 16);  ctx.lineTo(16, 0);
+  ctx.moveTo(4, 20);  ctx.lineTo(20, 4);
+  ctx.stroke();
+  return cvs.toDataURL('image/png');
+}
+
+// No-op, kept for future SVG legend syncing (returns an id)
+function ensureHatchDefs(){ return 'mv-hatch-canvas'; }
 
 
 // Paste-in replacement
