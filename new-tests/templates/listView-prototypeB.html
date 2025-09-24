@@ -953,8 +953,8 @@ function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
   };
 
   const targetMW = nz(scenario.target_mw);
-  const maxCost  = (scenario.max_cost != null) ? nz(scenario.max_cost) : null;
-  const maxCO2   = (scenario.max_emissions != null) ? nz(scenario.max_emissions) : null;
+  const targetCost  = (scenario.cost_limit != null) ? nz(scenario.cost_limit) : null;
+  const targetEmissions   = (scenario.emissions_limit != null) ? nz(scenario.emissions_limit) : null;
 
   const overloadedCount = lines.filter(l => {
     const rate = nz(l.rate_a ?? l.rateA);
@@ -963,12 +963,12 @@ function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
   }).length;
 
   const meetsPower = (targetMW > 0) ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05) : true;
-  const withinCost      = (maxCost == null) ? true : totals.cost      <= maxCost;
-  const withinEmissions = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
+  const withinCost      = (targetCost == null) ? true : totals.cost      <= targetCost;
+  const withinEmissions = (targetEmissions  == null) ? true : totals.emissions <= targetEmissions;
   const noOverloads     = overloadedCount === 0;
 
   return {
-    totals, targetMW, maxCost, maxCO2, overloadedCount,
+    totals, targetMW, targetCost, targetEmissions, overloadedCount,
     meetsPower, withinCost, withinEmissions, noOverloads,
     allMet: meetsPower && withinCost && withinEmissions && noOverloads
   };
@@ -982,8 +982,8 @@ function applyScenarioUI(state){
   if (cPower)  cPower.checked  = !!state.meetsPower;
   if (cLines)  cLines.checked  = !!state.noOverloads;
   if (cBudget){
-    cBudget.closest("li").style.display = (state.maxCost != null) ? "" : "none";
-    cBudget.checked = (state.maxCost != null) && !!state.withinCost;
+    cBudget.closest("li").style.display = (state.targetCost != null) ? "" : "none";
+    cBudget.checked = (state.targetCost != null) && !!state.withinCost;
   }
   const submitBtn = document.getElementById("submit-button");
   if (submitBtn){
@@ -1116,9 +1116,9 @@ function renderTaskSection(scenario = {}, evalStateArg) {
     ? evaluateScenarioState(gens, lines, scenario)
     : {
         totals: { power: 0, cost: 0, emissions: 0 },
-        targetMW: Number(scenario?.target_mw || 0),
-        maxCost:  (scenario?.max_cost ?? null),
-        maxCO2:   (scenario?.max_emissions ?? null),
+        targetMW:   Number(scenario?.target_mw || 0),
+        costLimit:  (scenario?.cost_limit ?? null),
+        emisLimit:  (scenario?.emissions_limit ?? null),
         overloadedCount: 0,
         meetsPower: false, withinCost: true, withinEmissions: true, noOverloads: true,
         allMet: false
@@ -1129,16 +1129,35 @@ function renderTaskSection(scenario = {}, evalStateArg) {
   const desc  = scenario?.description || scenario?.task || "";
 
   const reqList = document.getElementById("task-requirements");
-  if (reqList) {
-    const hasBudget = state.maxCost != null;
-    // update checkboxes (if present)
-    const cPower  = document.getElementById("check-power");
-    const cLines  = document.getElementById("check-lines");
-    const cBudget = document.getElementById("check-budget");
-    if (cPower)  cPower.checked  = !!state.meetsPower;
-    if (cLines)  cLines.checked  = !!state.noOverloads;
-    if (cBudget) { cBudget.closest("li").style.display = hasBudget ? "" : "none"; cBudget.checked = hasBudget && !!state.withinCost; }
+if (reqList) {
+  // checkboxes
+  const cPower  = document.getElementById("check-power");
+  const cLines  = document.getElementById("check-lines");
+  const cBudget = document.getElementById("check-budget");
+  const cEmis   = document.getElementById("check-emissions");
+
+  // caps present?
+  const hasBudget = state.costLimit != null;       // <- standardized
+  const hasEmis   = state.emisLimit != null;       // or state.emissionsLimit
+
+  // tick the boxes
+  if (cPower) cPower.checked = !!state.meetsPower;
+  // choose one: meetsLines (preferred) or noOverloads if that’s your current flag
+  if (cLines) cLines.checked = !!state.meetsLines; // or !!state.noOverloads
+
+  // show/hide & tick budget
+  if (cBudget) {
+    cBudget.closest("li").style.display = hasBudget ? "" : "none";
+    cBudget.checked = hasBudget && !!state.withinCost;
   }
+
+  // show/hide & tick emissions
+  if (cEmis) {
+    cEmis.closest("li").style.display = hasEmis ? "" : "none";
+    cEmis.checked = hasEmis && !!state.withinEmissions;
+  }
+}
+
 
   // Constraints
   const powerSpan = document.getElementById("constraint-power");
@@ -1146,8 +1165,8 @@ function renderTaskSection(scenario = {}, evalStateArg) {
 
   const costWrap = document.getElementById("constraint-cost-container");
   const costSpan = document.getElementById("constraint-cost");
-  if (costWrap) costWrap.style.display = (state.maxCost != null) ? "" : "none";
-  if (costSpan && state.maxCost != null) costSpan.textContent = String(state.maxCost);
+  if (costWrap) costWrap.style.display = (state.targetCost != null) ? "" : "none";
+  if (costSpan && state.targetCost != null) costSpan.textContent = String(state.targetCost);
 
   // Submit enablement
   const submitBtn = document.getElementById("submit-button");
@@ -2242,7 +2261,7 @@ function setupTaskSection(scenario){
     return;
   }
 
-  const hasBudget  = scenario.max_cost !== undefined && scenario.max_cost !== null;
+  const hasBudget  = scenario.cost_limit !== undefined && scenario.cost_limit !== null;
   const lockedList = scenario.locked_generators || scenario.locked || [];
   const disabList  = scenario.disabled_generators || scenario.disabled || [];
   const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
@@ -2813,10 +2832,10 @@ window.debugEval = function(){
     targetMW: s.targetMW,
     meetsPower: s.meetsPower,
     cost: Math.round(s.totals.cost),
-    maxCost: s.maxCost,
+    targetCost: s.targetCost,
     withinCost: s.withinCost,
     emissions: Math.round(s.totals.emissions),
-    maxCO2: s.maxCO2,
+    targetEmissions: s.targetEmissions,
     withinEmissions: s.withinEmissions,
     overloaded: s.overloadedCount,
     noOverloads: s.noOverloads,
@@ -2868,17 +2887,17 @@ window.debugEval = function(){
       emissions: gens.reduce((s,g)=>s+nz(g.pg)*nz(g.emissions_per_mw), 0),
     };
     const targetMW = nz(scen.target_mw);
-    const maxCost  = (scen.max_cost != null) ? nz(scen.max_cost) : null;
-    const maxCO2   = (scen.max_emissions != null) ? nz(scen.max_emissions) : null;
+    const targetCost = (scen.cost_limit != null) ? nz(scen.cost_limit) : null;
+    const targetEmissions  = (scen.emissions_limit != null) ? nz(scen.emissions_limit) : null;
     const overloadedCount = lines.filter(l => {
       const r = nz(l.rate_a ?? l.rateA), f = Math.abs(nz(l.flow));
       return r > 0 && f > r;
     }).length;
     const meetsPower       = targetMW > 0 ? (totals.power >= targetMW*0.95 && totals.power <= targetMW*1.05) : true;
-    const withinCost       = (maxCost == null) ? true : totals.cost <= maxCost;
-    const withinEmissions  = (maxCO2  == null) ? true : totals.emissions <= maxCO2;
+    const withinCost       = (targetCost == null) ? true : totals.cost <= targetCost;
+    const withinEmissions  = (targetEmissions  == null) ? true : totals.emissions <= targetEmissions;
     const noOverloads      = overloadedCount === 0;
-    return { totals, targetMW, maxCost, maxCO2, overloadedCount,
+    return { totals, targetMW, targetCost, targetEmissions, overloadedCount,
              meetsPower, withinCost, withinEmissions, noOverloads,
              allMet: meetsPower && withinCost && withinEmissions && noOverloads };
   }
