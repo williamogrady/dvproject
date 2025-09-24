@@ -882,6 +882,21 @@
   background: #e8e8e8;
 }
 
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-left: 8px;
+  line-height: 1.6;
+}
+.pill.good { background:#def7ec; color:#03543f; }   /* green */
+.pill.warn { background:#fdf6b2; color:#723b13; }   /* yellow (>=90% & <100%) */
+.pill.bad  { background:#fde8e8; color:#9b1c1c; }   /* red (>=100%) */
+.pill.hidden { display:none; }
+
+
 
 
 </style>
@@ -920,17 +935,27 @@
   <div class="overview-status" id="status-lines">Click to focus</div>
 </div>
 <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
-    <div class="overview-card" id="scale-cost">
-      <div class="overview-label">Total Cost</div>
-      <div class="overview-value" id="overview-cost">–</div>
-      <div class="overview-status" id="status-cost">Click to scale</div>
+  <div class="overview-card" id="scale-cost">
+    <div class="overview-label">Total Cost</div>
+    <div class="overview-value" id="overview-cost">
+      <span id="overview-cost-now">–</span>
+      <span id="overview-cost-cap"></span>
+      <span id="overview-cost-pill" class="pill hidden">Under budget</span>
     </div>
-    <div class="overview-card" id="scale-emissions">
-      <div class="overview-label">Total Emissions</div>
-      <div class="overview-value" id="overview-emissions">–</div>
-      <div class="overview-status" id="status-emissions">Click to scale</div>
-    </div>
+    <div class="overview-status" id="status-cost">Click to scale</div>
   </div>
+
+  <div class="overview-card" id="scale-emissions">
+    <div class="overview-label">Total Emissions</div>
+    <div class="overview-value" id="overview-emissions">
+      <span id="overview-emis-now">–</span>
+      <span id="overview-emis-cap"></span>
+      <span id="overview-emis-pill" class="pill hidden">Under cap</span>
+    </div>
+    <div class="overview-status" id="status-emissions">Click to scale</div>
+  </div>
+</div>
+
   </div>
   <div id="overview-task-section">
   <div class="task-card">
@@ -1311,36 +1336,82 @@ async function fetchAllScenarios() {
 }
 
 
-function renderOverview(gens, scenarioData = {}, lines) {
-  totalPower = gens.reduce((sum, g) => sum + g.pg, 0);
-  console.log("in renderOverview with totalPower:", totalPower)
-  totalCost = gens.reduce((sum, g) => sum + g.pg * g.cost_per_mw, 0);
-  totalEmissions = gens.reduce((sum, g) => sum + g.pg * g.emissions_per_mw, 0);
+function renderOverview(gens, scenarioData = {}, lines = []) {
+  const scen = scenarioData || {};
 
-  const S = window.disabledLineSet || new Set();
-  const overloaded = (lines || []).filter(line => !S.has(line.id) && line.flow > line.rate_a).length;
+  // --- totals
+  const totalPower      = gens.reduce((sum, g) => sum + (g.pg || 0), 0);
+  const totalCost       = gens.reduce((sum, g) => sum + (g.pg || 0) * (g.cost_per_mw || 0), 0);
+  const totalEmissions  = gens.reduce((sum, g) => sum + (g.pg || 0) * (g.emissions_per_mw || 0), 0);
 
-  const currentPower = gens.reduce((acc, g) => acc + (g.pg || 0), 0);
+  console.log("in renderOverview with totalPower:", totalPower);
 
-  
-  
-// in renderOverview(...)
-const powerFraction = document.querySelector("#overview-power .fraction");
-if (powerFraction) powerFraction.textContent = `${Math.round(totalPower)} MW`;
-updatePowerBlocks(totalPower, currentScenarioData.target_mw);
+  // --- overloaded count (ignore disabled lines)
+  const disabled = window.disabledLineSet || new Set();
+  const overloaded = (lines || []).reduce((n, L) => {
+    const id = String(L.id ?? `Line-${L.from_bus}-${L.to_bus}`);
+    const rate = Number(L.rate_a || 0), flow = Math.abs(Number(L.flow || 0));
+    return n + (!disabled.has(id) && rate > 0 && flow > rate ? 1 : 0);
+  }, 0);
 
-  document.getElementById("overview-cost").textContent = `$${totalCost.toFixed(0)}`;
-  document.getElementById("overview-emissions").textContent = `${totalEmissions.toFixed(0)} tCO₂`;
-  document.getElementById("overview-lines").textContent = overloaded;
-  updatePowerBlocks(totalPower, currentScenarioData.target_mw)
-  evaluateScenarioState(scenarioData, lines)
-  if (lines) {
-    console.log("🔁 Refreshing chevrons with updated line data");
-    refreshChevrons(lines, currentMapMode);
-    updateLinesCard(lines || []);
+  // --- POWER card
+  const powerFraction = document.querySelector("#overview-power .fraction");
+  if (powerFraction) powerFraction.textContent = `${Math.round(totalPower).toLocaleString()} MW`;
 
+  const targetMW = Number(scen.target_mw ?? 0);
+  if (typeof updatePowerBlocks === "function") {
+    updatePowerBlocks(totalPower, targetMW);
   }
-  
+
+  // --- COST & EMISSIONS values (support both old single-span IDs and new sub-spans)
+  const costNowEl = document.getElementById("overview-cost-now");
+  const costCapEl = document.getElementById("overview-cost-cap");
+  const costOldEl = document.getElementById("overview-cost"); // old single-span fallback
+
+  if (costNowEl) {
+    costNowEl.textContent = `$${Math.round(totalCost).toLocaleString()}`;
+    if (costCapEl) {
+      costCapEl.textContent = (scen.cost_limit != null)
+        ? ` / $${Math.round(scen.cost_limit).toLocaleString()}`
+        : "";
+    }
+  } else if (costOldEl) {
+    costOldEl.textContent = `$${Math.round(totalCost).toLocaleString()}`;
+  }
+
+  const emiNowEl = document.getElementById("overview-emis-now");
+  const emiCapEl = document.getElementById("overview-emis-cap");
+  const emiOldEl = document.getElementById("overview-emissions"); // old single-span fallback
+
+  if (emiNowEl) {
+    emiNowEl.textContent = `${Math.round(totalEmissions).toLocaleString()} tCO₂`;
+    if (emiCapEl) {
+      emiCapEl.textContent = (scen.emissions_limit != null)
+        ? ` / ${Math.round(scen.emissions_limit).toLocaleString()} tCO₂`
+        : "";
+    }
+  } else if (emiOldEl) {
+    emiOldEl.textContent = `${Math.round(totalEmissions).toLocaleString()} tCO₂`;
+  }
+
+  // --- LINES card
+  const linesEl = document.getElementById("overview-lines");
+  if (linesEl) linesEl.textContent = overloaded;
+
+  // --- Pills (only if you added the new pill spans + helper)
+  if (typeof updateCapAndPill === "function") {
+    updateCapAndPill("overview-cost", totalCost, scen.cost_limit, "budget");
+    updateCapAndPill("overview-emis",  totalEmissions, scen.emissions_limit, "emissions");
+  }
+
+  // --- Evaluate scenario + refresh map details
+  evaluateScenarioState(scen, lines);
+
+  if (Array.isArray(lines) && lines.length) {
+    console.log("🔁 Refreshing chevrons with updated line data");
+    if (typeof refreshChevrons === "function") refreshChevrons(lines, window.currentMapMode);
+    if (typeof updateLinesCard === "function") updateLinesCard(lines);
+  }
 }
 
  async function loadScenario(scenarioId) {
@@ -1653,6 +1724,37 @@ function refreshChevrons(liveLines, currentMapMode){
     d3.select(`#chev-${CSS.escape(L.id)}`).attr("data-pct", L._pct);
   });
 }
+
+function formatMoney(n){ return `$${Math.round(n).toLocaleString()}`; }
+function formatCO2(n){ return `${Math.round(n).toLocaleString()} tCO₂`; }
+
+function pillState(curr, cap){
+  if (cap == null || !isFinite(cap)) return { label:"", cls:"pill hidden" };
+  const r = (cap === 0) ? Infinity : curr / cap;
+  if (r < 0.90) return { label:"Under budget", cls:"pill good" };
+  if (r < 1.00) return { label:"Close to cap", cls:"pill warn" };
+  return { label:"Over budget", cls:"pill bad" };
+}
+
+function updateCapAndPill(prefix, curr, cap, type /* "budget" | "emissions" */){
+  const nowEl = document.getElementById(`${prefix}-now`);
+  const capEl = document.getElementById(`${prefix}-cap`);
+  const pill  = document.getElementById(`${prefix}-pill`);
+
+  if (nowEl) nowEl.textContent = (type === "budget") ? formatMoney(curr) : formatCO2(curr);
+  if (capEl) capEl.textContent = (cap != null)
+    ? " / " + ((type === "budget") ? formatMoney(cap) : formatCO2(cap))
+    : "";
+
+  if (pill){
+    const st = pillState(curr, cap);
+    // emissions wording says “cap” instead of “budget”
+    const label = (type === "emissions") ? st.label.replace("budget","cap") : st.label;
+    pill.className = st.cls;
+    pill.textContent = label;
+  }
+}
+
 
 
 // === Rect Generators: settings (tune freely) ================================
@@ -2683,53 +2785,64 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
 
 
 function evaluateScenarioState(scenario, lines) {
-  const meetsPower = !scenario.target_mw
-  ? true
-  : (totalPower >= scenario.target_mw * 0.95 &&
-     totalPower <= scenario.target_mw * 1.05);
-  const meetsLines = !lines.some(line => line.flow > line.rate_a);
-  const meetsBudget = !scenario.cost_limit || totalCost <= scenario.cost_limit;
+  const scen = scenario || {};
 
-  console.log("🔎 Evaluating scenario state!");
-  //console.log("   ⚡ totalPower:", totalPower, "→ meetsPower:", meetsPower);
-  //console.log("   🔌 line overload check:", meetsLines ? "✅ OK" : "❌ Overloaded");
-  //console.log("   💸 totalCost:", totalCost, "/", scenario.cost_limit, "→ meetsBudget:", meetsBudget);
+  // Totals (assumes you keep these globals up to date)
+  const totalP  = Number(window.totalPower ?? 0);
+  const totalC  = Number(window.totalCost ?? 0);
+  const totalE  = Number(window.totalEmissions ?? 0);
 
-  const powerCheckbox = document.getElementById("check-power");
-  const linesCheckbox = document.getElementById("check-lines");
-  const budgetCheckbox = document.getElementById("check-budget");
+  // Caps (standardized keys only)
+  const costCap = (scen.cost_limit != null) ? Number(scen.cost_limit) : null;
+  const emiCap  = (scen.emissions_limit != null) ? Number(scen.emissions_limit) : null;
 
-  if (powerCheckbox) {
-    powerCheckbox.checked = meetsPower;
-    //console.log("   📥 check-power checkbox updated:", meetsPower);
-  } else {
-    console.warn("⚠️ check-power checkbox not found");
+  // Power window (±5%)
+  const meetsPower = !Number.isFinite(Number(scen.target_mw)) ? true :
+    (totalP >= scen.target_mw * 0.95 && totalP <= scen.target_mw * 1.05);
+
+  // Overloads (ignore disabled lines)
+  const disabled = window.disabledLineSet || new Set();
+  const overloads = (Array.isArray(lines) ? lines : []).reduce((n, L) => {
+    const id = String(L.id ?? `Line-${L.from_bus}-${L.to_bus}`);
+    const rate = Number(L.rate_a || 0), flow = Math.abs(Number(L.flow || 0));
+    return n + (!disabled.has(id) && rate > 0 && flow > rate ? 1 : 0);
+  }, 0);
+  const allowedOverloads = Number(scen.allowed_overloads ?? 0);
+  const meetsLines = overloads <= allowedOverloads;
+
+  // Budget / Emissions caps
+  const withinCost      = (costCap == null) ? true : (Number.isFinite(costCap) && totalC <= costCap);
+  const withinEmissions = (emiCap  == null) ? true : (Number.isFinite(emiCap)  && totalE <= emiCap);
+
+  // --- Update checkboxes
+  const cPower  = document.getElementById("check-power");
+  const cLines  = document.getElementById("check-lines");
+  const cBudget = document.getElementById("check-budget");
+  const cEmis   = document.getElementById("check-emissions");
+
+  if (cPower)  cPower.checked = meetsPower;
+  if (cLines)  cLines.checked = meetsLines;
+
+  if (cBudget) {
+    cBudget.closest("li").style.display = (costCap != null) ? "" : "none";
+    cBudget.checked = (costCap != null) && withinCost;
+  }
+  if (cEmis) {
+    cEmis.closest("li").style.display = (emiCap != null) ? "" : "none";
+    cEmis.checked = (emiCap != null) && withinEmissions;
   }
 
-  if (linesCheckbox) {
-    linesCheckbox.checked = meetsLines;
-    //console.log("   📥 check-lines checkbox updated:", meetsLines);
-  } else {
-    console.warn("⚠️ check-lines checkbox not found");
-  }
+  // --- Enable/disable Submit based on ALL requirements
+  const allMet = meetsPower && meetsLines && withinCost && withinEmissions;
+  const btn = document.getElementById("submit-button");
+  if (btn) { btn.classList.toggle("active", allMet); btn.disabled = !allMet; }
 
-  if (budgetCheckbox && scenario.cost_limit !== undefined) {
-    budgetCheckbox.checked = meetsBudget;
-    //console.log("   📥 check-budget checkbox updated:", meetsBudget);
-  } else if (scenario.cost_limit !== undefined) {
-    console.warn("⚠️ check-budget checkbox not found");
-  }
-
-  const allMet = meetsPower && meetsLines && (scenario.cost_limit ? meetsBudget : true);
-  const submitBtn = document.getElementById("submit-button");
-
-    if (allMet) {
-    submitBtn.classList.add("active");
-    submitBtn.disabled = false;
-  } else {
-    submitBtn.classList.remove("active");
-    submitBtn.disabled = true;
-  }
+  // Optional: debug snapshot
+  console.log("[submit-stats] eval",
+    { totalP, target: scen.target_mw, meetsPower,
+      overloads, allowedOverloads, meetsLines,
+      totalC, costCap, withinCost,
+      totalE, emiCap, withinEmissions });
 }
 
 
@@ -3036,6 +3149,9 @@ function computeSubmitStats(){
     const pg = _nz(g?.pg);
     totalCost      += pg * _nz(g?.cost_per_mw);
     totalEmissions += pg * _nz(g?.emissions_per_mw);
+
+    updateCapAndPill("overview-cost", totalCost, scen.cost_limit, "budget");
+    updateCapAndPill("overview-emis",  totalEmissions,  scen.emissions_limit, "emissions");
   }
 
   // highest |flow| / rate_a * 100 across ENABLED lines
