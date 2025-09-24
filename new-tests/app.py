@@ -95,6 +95,27 @@ def apply_scenario(scenario_id):
 
         # Run PF (may immediately fail if instant_fail is true and lines overload)
         solved = grid.run_power_flow()
+        # --- debug: scenario + lines snapshot ---
+        try:
+            lines = grid.get_branches()
+            nz = sum(1 for L in lines if abs(L.get("flow", 0.0)) > 1e-3)
+            print(f"[API /scenario] id={scenario_id} | solved={solved} | lines>0: {nz}/{len(lines)} "
+                f"| limit_pct={grid.line_limit_pct:.2f} | instant_fail={scenario.get('instant_fail', False)}")
+        except Exception as _e:
+            print("[API /scenario] debug failed:", _e)
+        # --- end debug ---
+
+        # --- debug: ensure lines are present in response ---
+        try:
+            lines = grid.get_branches()
+            # optional: assert they're all finite now
+            for L in lines[:5]:
+                # if any invalid slips through, replace with 0.0
+                if not isinstance(L.get('line_pct', 0), (int, float)) or (isinstance(L['line_pct'], float) and not math.isfinite(L['line_pct'])):
+                    L['line_pct'] = 0.0
+        except Exception as e:
+            print("[app.py:/api/scenario] lines debug failed:", e)
+        # --- end debug ---
 
         # Echo back only the finalized schema keys, plus current grid state
         return jsonify({
@@ -111,7 +132,7 @@ def apply_scenario(scenario_id):
             'initial_outputs':     scenario.get('initial_outputs', {}),
             'instant_fail':        scenario.get('instant_fail', False),
             'generators':          grid.get_generators(),
-            'lines':               grid.get_branches(),
+            "lines":                lines,
             'total_cost':          grid.last_total_cost,
             'solved':              solved
         })
@@ -182,6 +203,17 @@ def toggle_generator(gen_id):
         success = grid.toggle_generator(gen_id)
         print("✅ TOGGLE SOLVE RESULT:", success)
 
+        # --- debug: summarize outgoing lines ---
+        try:
+            lines = grid.get_branches()
+            nz = sum(1 for L in lines if abs(L.get("flow", 0.0)) > 1e-3)
+            mx = max((abs(L.get("flow", 0.0)) for L in lines), default=0.0)
+            print(f"[API /toggle] solved={success} | lines>0: {nz}/{len(lines)} | max|flow|={mx:.3f}")
+        except Exception as _e:
+            print("[API /toggle] debug failed:", _e)
+        # --- end debug ---
+
+
         return jsonify({
             'generators': grid.get_generators(),
             'lines': grid.get_branches(),
@@ -212,9 +244,19 @@ def set_generation(gen_id):
 
         success = grid.run_power_flow()
 
+        try:
+            lines = grid.get_branches()
+            nz = sum(1 for L in lines if abs(L.get("flow", 0.0)) > 1e-3)
+            mx = max((abs(L.get("flow", 0.0)) for L in lines), default=0.0)
+            print(f"[API /set_generation] gen_id={gen_id} percent={percent} solved={success} "
+                f"| lines>0: {nz}/{len(lines)} | max|flow|={mx:.3f}")
+        except Exception as _e:
+            print("[API /set_generation] debug failed:", _e)
+        # --- end debug ---
+
         return jsonify({
             'generators': grid.get_generators(),
-            'lines': grid.get_branches(),
+            "lines": lines,
             'total_cost': grid.last_total_cost,
             'solved': success
         })

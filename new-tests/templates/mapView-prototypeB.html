@@ -1355,6 +1355,17 @@ function computeEvalStateSafe(){
   const lines = window.currentLines || [];
   const scen = window.currentScenarioData || {};
 
+  (function(){
+  const lines = Array.isArray(window.currentLines) ? window.currentLines : [];
+  const nz = lines.filter(L => Math.abs(+L.flow || 0) > 1e-3).length;
+  const mx = lines.reduce((m,L)=>Math.max(m, Math.abs(+L.flow||0)), 0);
+  console.log(`[UI] lines with |flow|>1e-3: ${nz}/${lines.length} | max|flow|=${mx.toFixed(3)}`);
+  console.table(lines.slice(0,5).map(L => ({
+    id: L.id, flow: +(L.flow||0), rate_a: +(L.rate_a||0), pct: +(L.line_pct||0),
+    over: !!L.overloaded, unavail: !!L.unavailable
+  })));
+})();
+
   const nz = v => Number.isFinite(+v) ? +v : 0;
 
   const totals = {
