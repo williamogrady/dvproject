@@ -70,13 +70,25 @@ class Generator:
         else:
             self.user_active = percent > 0
 
+    def toggle(self):
+        # simple on/off: if off → set to 50% as a visible start; if on → 0%
+        if self.pg <= 0:
+            self.set_percent(50, user_active=True)
+        else:
+            self.set_percent(0, user_active=False)
+
 
 class Branch:
     def __init__(self, index, row):
         self.index = index
         self.from_bus = int(row[0])
-        self.to_bus = int(row[1])
-        self.rate_a = float(row[5])  # Rating A (limit)
+        self.to_bus   = int(row[1])
+        self.rate_a   = float(row[5])  # Rating A (limit)
+        self.base_rate_a = self.rate_a  # <-- remember original
+
+        lo, hi = (self.from_bus, self.to_bus) if self.from_bus < self.to_bus else (self.to_bus, self.from_bus)
+        self.id = f"Line_Bus{lo}_Bus{hi}"         # <-- stable, UI-compatible ID
+
         self.flow = 0.0
         self.overloaded = False
 
@@ -86,13 +98,14 @@ class Branch:
 
     def to_dict(self):
         return {
+            'id': self.id,                            # <-- add this
             'index': int(self.index),
             'from_bus': int(self.from_bus),
             'to_bus': int(self.to_bus),
             'flow': float(self.flow),
             'rate_a': float(self.rate_a),
             'overloaded': bool(self.overloaded),
-            'unavailable': getattr(self, 'unavailable', False)
+            'unavailable': getattr(self, 'unavailable', False),
         }
 
 class Grid:
@@ -107,18 +120,21 @@ class Grid:
         self.branches = [
             Branch(i, row) for i, row in enumerate(self.case['branch'])
             ]
-        
-        #Debug: testing overloaded lines
-        for branch in self.branches:
-            branch.rate_a = 1000  # Set all line limits low
 
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
+    # grid.py
     def update_case_from_objects(self):
         print("🔍 Generator PGs before runpf:", [g.pg for g in self.generators])
         for gen in self.generators:
-            pg = gen.pg
-            self.case['gen'][gen.index][1] = pg      # column 1 = Pg
+            self.case['gen'][gen.index][1] = float(gen.pg)   # Pg
+
+        # push line limits + availability
+        for br in self.branches:
+            self.case['branch'][br.index][5]  = float(br.rate_a or 0.0)                       # RATE_A
+            self.case['branch'][br.index][10] = 0 if getattr(br, "unavailable", False) else 1 # BR_STATUS
+
+
 
 
     def compute_total_cost(self, results):
@@ -149,62 +165,99 @@ class Grid:
 
 
     def apply_scenario(self, scenario_id):
-        import os
-        import json
-        
+        # grid.py (inside Grid.apply_scenario)
+        import os, json, re
+        from pathlib import Path  # ← add at top of file if not present
 
-        path = os.path.join("scenarios", f"{scenario_id}.json")
-        with open(path, 'r') as f:
+        here = Path(__file__).resolve().parent
+        path = here / "scenarios" / f"{scenario_id}.json"
+        with path.open('r', encoding='utf-8') as f:
             scenario_data = json.load(f)
 
         self.active_scenario = scenario_data
-        initial_outputs = scenario_data.get("initial_outputs", {})
+
+        # -------- Generators (original behavior) --------
+        initial_outputs = scenario_data.get("initial_outputs", {}) or {}
 
         def extract_bus_id(gid):
-            if gid.startswith("Gen") and gid[3:].isdigit():
+            if isinstance(gid, str) and gid.startswith("Gen") and gid[3:].isdigit():
                 return int(gid[3:])
             return None
 
-        disabled_gens = [
-            extract_bus_id(gid) for gid in scenario_data.get("disabled_generators", [])
-        ]
-        disabled_gens = [bus for bus in disabled_gens if bus is not None]
-
-        locked_gens = [
-            extract_bus_id(gid) for gid in scenario_data.get("locked_generators", [])
-        ]
-        locked_gens = [bus for bus in locked_gens if bus is not None]
-
+        disabled_gens = [extract_bus_id(gid) for gid in scenario_data.get("disabled_generators", [])]
+        locked_gens   = [extract_bus_id(gid) for gid in scenario_data.get("locked_generators", [])]
+        disabled_gens = [b for b in disabled_gens if b is not None]
+        locked_gens   = [b for b in locked_gens if b is not None]
 
         for gen in self.generators:
-            gen.pg = 0
+            gen.pg = 0.0
             gen.disabled = gen.bus in disabled_gens
-            gen.locked = gen.bus in locked_gens
-            gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
-            gen.user_active = gen.pg > 0  # ✅ initialize user_active properly
+            gen.locked   = gen.bus in locked_gens
+            gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0) or 0)
+            gen.user_active = gen.pg > 0
 
-        for b in self.branches:
-            print(f"{b.from_bus} → {b.to_bus} = {b.flow:.2f}")
+        # -------- Line sensitivity (NEW) --------
+        # Scenario knobs
+        gmult      = float(scenario_data.get("line_limit_pct", 1.0) or 1.0)
+        overrides  = scenario_data.get("line_limit_overrides", {}) or {}
+        default_ra = float(scenario_data.get("default_rate_a", 300.0) or 300.0)
+        use_native = bool(scenario_data.get("use_native_rate_a", False))  # opt-in to 9900
 
-        # Apply initial outputs
-        initial_outputs = scenario_data.get("initial_outputs", {})
-        for gen in self.generators:
-            gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
+        # Normalize helper
+        def _norm_from_any(key):
+            nums = re.findall(r"(\d+)", str(key))
+            if len(nums) >= 2:
+                a, b = int(nums[0]), int(nums[1])
+                lo, hi = (a, b) if a < b else (b, a)
+                return f"Line_Bus{lo}_Bus{hi}"
+            return str(key)
 
-        # Reset branch states
-        disabled_lines = scenario_data.get("disabled_lines", [])
-        for branch in self.branches:
-            line_id = f"Line-{branch.from_bus}-{branch.to_bus}"
-            branch.unavailable = line_id in disabled_lines
+        # Reset limits to realistic base * global, then apply per-line overrides
+        id_to_branch = {br.id: br for br in self.branches}
+        for br in self.branches:
+            # Treat 0 or very large (e.g., 9900) as "no native rating"
+            native_ok = (br.base_rate_a > 0.0 and br.base_rate_a < 9000.0) if use_native else (br.base_rate_a > 0.0 and br.base_rate_a < 9000.0)
+            base = br.base_rate_a if native_ok else default_ra
+            br.rate_a = base * gmult
 
-        # ✅ Return full scenario including title, ID, and limits
+        for key, val in overrides.items():
+            lid = _norm_from_any(key)
+            br = id_to_branch.get(lid)
+            if not br:
+                continue
+            if isinstance(val, (int, float)):
+                br.rate_a = br.rate_a * float(val)
+            elif isinstance(val, str) and val.lower().startswith("abs:"):
+                try:
+                    br.rate_a = float(val.split(":", 1)[1])
+                except Exception:
+                    pass
+
+        # -------- Disabled lines (flag for UI + PF sync will use it) --------
+        disabled_lines = scenario_data.get("disabled_lines", []) or []
+        self._disabled_line_ids = set(_norm_from_any(x) for x in disabled_lines)
+        for br in self.branches:
+            br.unavailable = (br.id in self._disabled_line_ids)
+
+        for br in self.branches[:8]:
+            print("[GRID.PY]", br.id, "rate_a:", br.rate_a, "flow:", br.flow, "unavail:", br.unavailable)
+
         return scenario_data
 
 
 
+
+
+    # grid.py
     def run_power_flow(self):
         self.case = copy.deepcopy(self.original_case)
         self.update_case_from_objects()
+
+        # ✅ If user/scenario left absolutely everything at 0, give the slack ~100 MW
+        if all(gen.pg == 0 for gen in self.generators):
+            slack_idx = 0  # case118's first generator is the slack
+            self.case['gen'][slack_idx][1] = 100.0
+            print("⚠️ All Pg were 0 → setting slack Pg to 100 MW to ensure network isn't trivial.")
 
         try:
             options = ppoption(VERBOSE=0, OUT_ALL=0)
@@ -213,21 +266,21 @@ class Grid:
             print("✅ runpf executed, success =", success)
         except Exception as e:
             print("❌ runpf exception:", e)
-            success = False
-            results = None
+            success, results = False, None
 
         if success:
             self.update_branch_flows(results['branch'])
             self.last_total_cost = self.compute_total_cost(results)
         else:
             print("⚠️ Power flow failed — clearing branch flows")
-            success = False
             for branch in self.branches:
                 branch.flow = 0.0
                 branch.overloaded = False
             self.last_total_cost = None
 
         return success
+        
+
 
 
 

@@ -192,13 +192,33 @@ def apply_scenario(scenario_id):
         scenario = grid.apply_scenario(scenario_id)
         solved = grid.run_power_flow()
 
+        # ✅ add a tiny debug payload
+        dbg = {
+            "pf_solved": bool(solved),
+            "first_gens_pg": [round(g.pg, 2) for g in grid.generators[:8]],
+            "first_branches": [
+                {
+                    "id": b.id,
+                    "flow": round(b.flow, 3),
+                    "rate_a": round(b.rate_a, 3),
+                    "status": 0 if getattr(b, "unavailable", False) else 1
+                } for b in grid.branches[:8]
+            ]
+        }
+
+        mx = max((b.flow for b in grid.branches), default=0.0)
+        mn_ra = min((b.rate_a for b in grid.branches if b.rate_a > 0), default=0.0)
+        dbg.update({"max_flow": round(mx, 3), "min_rate_a": round(mn_ra, 3)})
+
         return jsonify({
             **scenario,
             'generators': grid.get_generators(),
             'lines': grid.get_branches(),
             'total_cost': grid.last_total_cost,
-            'solved': solved
+            'solved': solved,
+            'debug': dbg   # ✅ here
         })
+
 
     except Exception as e:
         print("❌ Error loading scenario:")

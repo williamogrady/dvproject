@@ -1,0 +1,28 @@
+{
+  "scenario_id": "north_hair_trigger",
+  "title": "North Hair-Trigger Ties",
+  "target_mw": 3000,
+  "cost_limit": 3200,
+  "emissions_limit": 220,
+
+  "initial_outputs": {
+    "Gen69": 190, "Gen70": 190, "Gen72": 160, "Gen73": 160, "Gen74": 160,
+    "Gen76": 170, "Gen77": 170, "Gen80": 210, "Gen99": 120, "Gen100": 190,
+    "Gen103": 130, "Gen104": 170, "Gen105": 170, "Gen107": 120,
+    "Gen110": 160, "Gen111": 160, "Gen112": 160, "Gen116": 190
+  },
+  "locked_generators": [], 
+  "disabled_generators": [],
+
+  "line_limit_pct": 0.90,
+  "line_limit_overrides": {
+    "Line_Bus36_Bus40": 0.50,
+    "Line_Bus40_Bus42": 0.50,
+    "Line_Bus42_Bus49": 0.60
+  },
+
+  "disabled_lines": [
+    "Line_Bus38_Bus65",
+    "Line_Bus49_Bus54"
+  ]
+}

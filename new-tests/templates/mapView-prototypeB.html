@@ -1414,24 +1414,31 @@ function renderOverview(gens, scenarioData = {}, lines = []) {
   }
 }
 
- async function loadScenario(scenarioId) {
-  console.log("loadScenario")
-  const res = await fetch(`/api/scenario/${scenarioId}`);
+// app-module.js (or wherever loadScenario is defined)
+async function loadScenario(scenarioId) {
+  console.log("loadScenario", scenarioId);
+
+  // ❌ Remove any renderOverview()/refreshChevrons() calls BEFORE the fetch finishes.
+
+  const res  = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
-  currentScenarioId = scenarioId;
-  window.lvScenarioStartedAt = performance.now();   // ← start timer for this scenario
-  currentScenarioData = data;
-  currentGenerators = data.generators;
-  currentLines = data.lines;
-  window.disabledLineSet = buildDisabledLineSet(currentScenarioData);
 
+  // 1) Set globals FIRST from payload
+  window.currentScenarioData = data;
+  window.currentGenerators   = Array.isArray(data.generators) ? data.generators : [];
+  window.currentLines        = Array.isArray(data.lines) ? data.lines : [];
 
-  console.log("calling renderOverview");
-  setupTaskSection(currentScenarioData);
-  updateMapGeneratorsFromScenario(); // Make sure this is called too
-  renderOverview(currentGenerators, currentScenarioData || {}, currentLines);
+  // 2) Now render with real data
+  renderOverview();                              // uses currentGenerators/Scenario
+  refreshChevrons(window.currentLines);          // uses currentLines
 
+  // 3) Optional: loud sanity snapshot so we can SEE real numbers post-load
+  console.log("[after-load] totals", {
+    totalPower: (window.currentGenerators || []).reduce((s,g)=>s+(+g.pg||0), 0),
+    maxLinePct: getHighestLoadPctAtSubmit(window.currentLines, data) // your helper
+  });
 }
+
 
 function formatDuration(ms){
   const s = Math.max(0, Math.floor(ms/1000));

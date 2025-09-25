@@ -1,0 +1,27 @@
+{
+  "scenario_id": "west_corridor_hair_trigger",
+  "title": "West Corridor Hair-Trigger",
+  "target_mw": 3200,
+  "cost_limit": 3400,
+  "emissions_limit": 260,
+
+  "initial_outputs": {
+    "Gen69": 170, "Gen70": 170, "Gen72": 150, "Gen73": 150, "Gen74": 150,
+    "Gen76": 160, "Gen77": 160, "Gen80": 200, "Gen99": 120, "Gen100": 180,
+    "Gen103": 130, "Gen104": 160, "Gen105": 160, "Gen107": 120,
+    "Gen110": 150, "Gen111": 150, "Gen112": 150, "Gen116": 180
+  },
+  "locked_generators": [],
+  "disabled_generators": [],
+
+  "line_limit_pct": 2.00,
+  "line_limit_overrides": {
+    "Line_Bus49_Bus54": 0.45,
+    "Line_Bus54_Bus59": 0.55
+  },
+
+  "disabled_lines": [
+    "Line_Bus42_Bus49", 
+    "Line_Bus38_Bus49"
+  ]
+}

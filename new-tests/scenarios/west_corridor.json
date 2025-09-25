@@ -1,0 +1,17 @@
+{
+  "scenario_id": "west_corridor",
+  "title": "West Corridor Stress",
+  "target_mw": 3200,
+  "cost_limit": 3400,
+  "emissions_limit": 260,
+
+  "initial_outputs": {
+    "Gen100": 200, "Gen104": 200, "Gen105": 200, "Gen110": 200
+  },
+  "locked_generators": ["Gen54","Gen55"],
+
+  "disabled_lines": [],
+
+  "line_limit_pct": 0.95,
+  "line_limit_overrides": { "Line_Bus48_Bus49": 0.70, "Line_Bus49_Bus54": 0.80 }
+}
