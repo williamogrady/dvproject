@@ -1025,10 +1025,12 @@ let selectedGeneratorId = null;
 
 const roundToHalf = v => Math.round((v || 0) / HALF_STEP) * HALF_STEP;
 
-let totalPower = 0;
-let totalCost = 0;
-let totalEmissions = 0;
-let highestLoadPct = 0;
+
+// --- totals
+const totalPower      = 0
+const totalCost       = 0
+const totalEmissions  = 0
+const highestLoadPct = 0
 
 // === Overloaded lines state ===
 let previousLineLoads = {}; // line.id -> previous load pct (0..1)
@@ -1339,10 +1341,15 @@ async function fetchAllScenarios() {
 function renderOverview(gens, scenarioData = {}, lines = []) {
   const scen = scenarioData || {};
 
-  // --- totals
+    // --- totals
   const totalPower      = gens.reduce((sum, g) => sum + (g.pg || 0), 0);
   const totalCost       = gens.reduce((sum, g) => sum + (g.pg || 0) * (g.cost_per_mw || 0), 0);
   const totalEmissions  = gens.reduce((sum, g) => sum + (g.pg || 0) * (g.emissions_per_mw || 0), 0);
+
+  // ✅ make these visible to evaluateScenarioState
+  window.totalPower     = totalPower;
+  window.totalCost      = totalCost;
+  window.totalEmissions = totalEmissions;
 
   console.log("in renderOverview with totalPower:", totalPower);
 
@@ -2747,12 +2754,12 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
               ${hasBudget ? `
               <li id="budget-check">
                 <input type="checkbox" disabled id="check-budget" />
-                Cost ≤ $${Math.round(scenario.cost_limit).toLocaleString()}
+                Stay within budget
               </li>` : ``}
               ${hasEmis ? `
               <li id="emissions-check">
                 <input type="checkbox" disabled id="check-emissions" />
-                Emissions ≤ ${Math.round(scenario.emissions_limit).toLocaleString()} tCO₂
+                Keep emissions below cap
               </li>` : ``}
             </ul>
           </div>
