@@ -4,7 +4,7 @@
     "target_mw": 3000,
     "emissions_limit": 10000,
     "cost_limit": 20000,
-    "line_limit_pct": 0.8,
+    "line_limit_pct": 0.2,
     "locked_generators": [
         "Gen8"
     ],
@@ -17,6 +17,5 @@
     },
     "disabled_lines": [
         "Line_Bus48_Bus49"
-    ],
-    "bonus": null
+    ]
 }

@@ -218,36 +218,115 @@ def get_all_scenarios():
     from scenarios import list_all_scenarios
     return jsonify(list_all_scenarios())
 
+
 @app.route('/api/status')
 def get_status():
+    scenario = grid.active_scenario or {}
+
+    # Effective cap scalar (Method C)
+    try:
+        limit_pct = float(scenario.get('line_limit_pct', 1.0) or 1.0)
+        if limit_pct <= 0:
+            limit_pct = 1e-6
+    except Exception:
+        limit_pct = 1.0
+
     total_pg = sum(gen.pg for gen in grid.generators)
     total_cost = grid.last_total_cost or 0
     total_emissions = grid.compute_total_emissions()
-    overloaded_lines = sum(1 for line in grid.branches if line.flow > line.rate_a)
 
-    scenario = grid.active_scenario or {}
+    ui_filter_on = bool(getattr(grid, "_ui_map_ready", False))
+    ui_pairs = getattr(grid, "_ui_pairs", set())
+
+    overloaded_lines = 0
+    overloaded_list = []
+
+    # For diagnostics
+    def _rows_iter():
+        for line in grid.branches:
+            # Skip disabled lines
+            if getattr(line, 'unavailable', False):
+                continue
+            # Skip PF-only branches if UI whitelist is available
+            a = int(getattr(line, 'from_bus', 0)); b = int(getattr(line, 'to_bus', 0))
+            lo, hi = (a, b) if a <= b else (b, a)
+            if ui_filter_on and (lo, hi) not in ui_pairs:
+                continue
+
+            flow = float(getattr(line, 'flow', 0.0) or 0.0)
+            base_cap = float(getattr(line, 'rate_a', 0.0) or 0.0)
+            eff_cap = base_cap * limit_pct
+            line_id = getattr(line, 'ui_id', None) or f"Line_Bus{lo}_Bus{hi}"
+            yield (line_id, flow, base_cap, eff_cap)
+
+    rows = list(_rows_iter())
+
+    # Overload count (effective definition)
+    for line_id, flow, base_cap, eff_cap in rows:
+        if eff_cap > 0 and flow > eff_cap:
+            overloaded_lines += 1
+            overloaded_list.append({
+                "id": line_id,
+                "flow": flow,
+                "rate_eff": eff_cap
+            })
+
+    # Diagnostics: highest % and top-5 under both definitions
+    def _pct(x, cap): 
+        return (x / cap) if cap and cap > 0 else 0.0
+
+    # Effective
+    ranked_eff = sorted(
+        [{"id": i, "flow": f, "rate_eff": e, "pct_eff": _pct(f,e)} for (i,f,_,e) in rows],
+        key=lambda r: r["pct_eff"], reverse=True
+    )
+    highest_eff = (ranked_eff[0]["pct_eff"] * 100.0) if ranked_eff else 0.0
+    top_eff = [
+        {"id": r["id"], "flow": r["flow"], "rate_eff": r["rate_eff"], "pct_eff": r["pct_eff"] * 100.0}
+        for r in ranked_eff[:5]
+    ]
+
+    # Base
+    ranked_base = sorted(
+        [{"id": i, "flow": f, "rate_base": b, "pct_base": _pct(f,b)} for (i,f,b,_) in rows],
+        key=lambda r: r["pct_base"], reverse=True
+    )
+    highest_base = (ranked_base[0]["pct_base"] * 100.0) if ranked_base else 0.0
+    top_base = [
+        {"id": r["id"], "flow": r["flow"], "rate_base": r["rate_base"], "pct_base": r["pct_base"] * 100.0}
+        for r in ranked_base[:5]
+    ]
 
     scenario_met = (
-    (not scenario.get('target_mw') or total_pg >= scenario['target_mw']) and
-    (not scenario.get('cost_limit') or total_cost <= scenario['cost_limit']) and
-    (not scenario.get('emissions_limit') or total_emissions <= scenario['emissions_limit']) and
-    overloaded_lines == 0
-        )
+        (not scenario.get('target_mw') or total_pg >= scenario['target_mw']) and
+        (not scenario.get('cost_limit') or total_cost <= scenario['cost_limit']) and
+        (not scenario.get('emissions_limit') or total_emissions <= scenario['emissions_limit']) and
+        overloaded_lines == 0
+    )
+
     return jsonify({
-        'current': {
-            'pg': total_pg,
-            'cost': total_cost,
-            'emissions': total_emissions,
-            'overloads': overloaded_lines
+        "current": {
+            "pg": total_pg,
+            "cost": total_cost,
+            "emissions": total_emissions,
+            "overloads": overloaded_lines
         },
-        'target': {
-            'pg': scenario.get('target_mw'),
-            'cost': scenario.get('cost_limit'),
-            'emissions': scenario.get('emissions_limit'),
-            'line_pct': scenario.get('line_limit_pct')
+        "target": {
+            "pg": scenario.get("target_mw"),
+            "cost": scenario.get("cost_limit"),
+            "emissions": scenario.get("emissions_limit"),
+            "line_pct": scenario.get("line_limit_pct")
         },
-        'scenario_met': scenario_met
+        "overloaded": overloaded_list,             # effective definition
+        "highest_load_eff_pct": highest_eff,       # %
+        "highest_load_base_pct": highest_base,     # %
+        "top_lines_eff": top_eff,                  # top-5 effective
+        "top_lines_base": top_base,                # top-5 base
+        "scenario_met": scenario_met
     })
+
+
+
 
 
 

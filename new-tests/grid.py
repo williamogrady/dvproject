@@ -5,6 +5,48 @@ import numpy as np
 import copy
 from scenarios import load_scenario
 from generator_info import GENERATOR_FUEL_TYPES, GENERATOR_NAMES
+import os, json, re  # add to your imports if not present
+
+# Path to the same JSON the UI uses. Adjust if your backend runs from a different cwd.
+UI_LINES_JSON_PATH = os.environ.get("UI_LINES_JSON_PATH", "full_lines.json")
+
+_bus_re = re.compile(r"^Bus(\d+)$")
+
+def _bus_num(label: str):
+    """Return int bus number from 'BusNNN', else None."""
+    if not isinstance(label, str):
+        return None
+    m = _bus_re.match(label.strip())
+    return int(m.group(1)) if m else None
+
+def _load_ui_busbus_map(json_path: str):
+    """
+    Build a mapping from unordered (lo, hi) bus pair -> a UI line id.
+    Prefers ids without a trailing '_2' when duplicates exist.
+    Ignores Gen/Load edges; keeps only Bus–Bus lines.
+    """
+    pair_to_id = {}
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for item in data:
+            sid, tid = item.get("source"), item.get("target")
+            bs, bt = _bus_num(sid), _bus_num(tid)
+            if bs is None or bt is None:
+                # skip Gen/Load or anything not Bus–Bus
+                continue
+            lo, hi = (bs, bt) if bs <= bt else (bt, bs)
+            ui_id = item.get("id")
+            if not ui_id:
+                continue
+            # prefer base id over duplicates like *_2
+            existing = pair_to_id.get((lo, hi))
+            if existing is None or existing.endswith("_2"):
+                pair_to_id[(lo, hi)] = ui_id
+    except Exception as e:
+        print(f"⚠️ Could not load UI lines from {json_path}: {e}")
+    return pair_to_id
+
 
 def json_clean(d):
     def safe(v):
@@ -85,15 +127,29 @@ class Branch:
         self.overloaded = self.flow > self.rate_a
 
     def to_dict(self):
+        # Canonical, order-normalized id (and UI id if present)
+        a, b = int(self.from_bus), int(self.to_bus)
+        lo, hi = (a, b) if a <= b else (b, a)
+        fallback_id = f"Line_Bus{lo}_Bus{hi}"
+        ui_id = getattr(self, "ui_id", None)
+        line_id = ui_id if ui_id else fallback_id
+
+        # Base vs effective (Method C)
+        limit_pct = float(getattr(self, "limit_pct", 1.0) or 1.0)
+        base_rate = float(getattr(self, "rate_a", 0.0) or 0.0)
+        rate_eff  = base_rate * limit_pct
+
         return {
-            'index': int(self.index),
-            'from_bus': int(self.from_bus),
-            'to_bus': int(self.to_bus),
-            'flow': float(self.flow),
-            'rate_a': float(self.rate_a),
-            'overloaded': bool(self.overloaded),
-            'unavailable': getattr(self, 'unavailable', False)
+            "id": line_id,
+            "from_bus": a,
+            "to_bus": b,
+            "flow": float(getattr(self, "flow", 0.0) or 0.0),
+            "rate_base": base_rate,   # ← NEW: raw cap from case118/PF
+            "rate_a": rate_eff,       # (unchanged) effective cap seen by UI logic
+            "unavailable": bool(getattr(self, "unavailable", False)),
         }
+
+
 
 class Grid:
     def __init__(self):
@@ -107,18 +163,48 @@ class Grid:
         self.branches = [
             Branch(i, row) for i, row in enumerate(self.case['branch'])
             ]
-        
+         # Map PF branches to UI line ids; used to zero mismatches and label ids.
+        self._ui_pair_to_id = _load_ui_busbus_map(UI_LINES_JSON_PATH)
+        self._ui_pairs = set(self._ui_pair_to_id.keys())
+        print(f"🧭 UI bus-bus pairs loaded: {len(self._ui_pairs)} from {UI_LINES_JSON_PATH}")
         #Debug: testing overloaded lines
-        for branch in self.branches:
-            branch.rate_a = 1000  # Set all line limits low
+        #for branch in self.branches:
+        #    branch.rate_a = 1000  # Set all line limits low
 
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
     def update_case_from_objects(self):
-        print("🔍 Generator PGs before runpf:", [g.pg for g in self.generators])
-        for gen in self.generators:
-            pg = gen.pg
-            self.case['gen'][gen.index][1] = pg      # column 1 = Pg
+        # Write generator PG and status directly into the PF case
+        # using 2-D indexing to avoid any numpy view/copy pitfalls.
+        print("🔍 Generator PGs before runpf:", [float(getattr(g, "pg", 0.0) or 0.0) for g in self.generators])
+
+        GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
+
+        for i, gen in enumerate(self.generators):
+            pg_val = float(getattr(gen, "pg", 0.0) or 0.0)
+            is_disabled = bool(getattr(gen, "disabled", False))
+
+            # Set on/off status
+            self.case['gen'][i, GEN_STATUS] = 0 if is_disabled else 1
+
+            if is_disabled:
+                # If disabled: force zero output
+                self.case['gen'][i, PG] = 0.0
+            else:
+                # Ensure feasibility: PMAX must be >= scheduled PG
+                current_pmax = float(self.case['gen'][i, PMAX])
+                if pg_val > current_pmax:
+                    self.case['gen'][i, PMAX] = pg_val
+                # Set scheduled PG
+                self.case['gen'][i, PG] = pg_val
+
+        # Quick sanity: total scheduled PG right before runpf
+        try:
+            total_pg = float(np.sum(self.case['gen'][:, PG]))
+            print("🧮 Scheduled total PG (MW):", total_pg)
+        except Exception as _e:
+            print("⚠️ Could not sum scheduled PG:", _e)
+
 
 
     def compute_total_cost(self, results):
@@ -197,6 +283,15 @@ class Grid:
             line_id = f"Line-{branch.from_bus}-{branch.to_bus}"
             branch.unavailable = line_id in disabled_lines
 
+        try:
+            limit_pct = float(scenario_data.get("line_limit_pct", 1.0) or 1.0)
+        except Exception:
+            limit_pct = 1.0
+
+        for br in self.branches:
+            # Physics (PF) still uses true RATE_A; UI will see rate_a * limit_pct
+            setattr(br, "limit_pct", limit_pct)
+
         # ✅ Return full scenario including title, ID, and limits
         return scenario_data
 
@@ -205,6 +300,38 @@ class Grid:
     def run_power_flow(self):
         self.case = copy.deepcopy(self.original_case)
         self.update_case_from_objects()
+
+
+        GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
+        try:
+            for i, gen in enumerate(self.generators):
+                pg_val = float(getattr(gen, "pg", 0.0) or 0.0)
+                is_disabled = bool(getattr(gen, "disabled", False))
+
+                # status
+                self.case['gen'][i, GEN_STATUS] = 0 if is_disabled else 1
+
+                if is_disabled:
+                    # force offline & zero output
+                    self.case['gen'][i, PG] = 0.0
+                else:
+                    # ensure PMAX >= desired PG (avoid infeasible case)
+                    current_pmax = float(self.case['gen'][i, PMAX])
+                    if pg_val > current_pmax:
+                        self.case['gen'][i, PMAX] = pg_val
+                    # set scheduled PG (initial dispatch)
+                    self.case['gen'][i, PG] = pg_val
+        except Exception as _e:
+            print("⚠️ Failed to apply generator Pg/status to case:", _e)
+
+        try:
+            BR_STATUS_COL = 10
+            for i, br in enumerate(self.branches):
+                # default to enabled unless scenario marked it unavailable
+                self.case['branch'][i, BR_STATUS_COL] = 0 if getattr(br, 'unavailable', False) else 1
+        except Exception as _e:
+            # Non-fatal: we still try to run PF; this just logs what went wrong
+            print("⚠️ Failed to apply branch statuses from scenario:", _e)
 
         try:
             options = ppoption(VERBOSE=0, OUT_ALL=0)
@@ -230,11 +357,41 @@ class Grid:
         return success
 
 
+    def update_branch_flows(self, pf_branch_matrix):
+        """
+        Copy PF results into Branch objects, then:
+        - attach a UI id if we have one
+        - zero flow for any PF branch that has no corresponding UI line
+        """
+        # PYPOWER branch columns: F_BUS=0, T_BUS=1, PF=13 (MW from "from" to "to")
+        F_BUS, T_BUS, PF = 0, 1, 13
 
+        for i, br in enumerate(self.branches):
+            try:
+                f = int(pf_branch_matrix[i, F_BUS])
+                t = int(pf_branch_matrix[i, T_BUS])
+                lo, hi = (f, t) if f <= t else (t, f)
+                ui_id = self._ui_pair_to_id.get((lo, hi))
 
-    def update_branch_flows(self, new_branch_data):
-        for i, branch_data in enumerate(new_branch_data):
-            self.branches[i].update_flow(branch_data)
+                # Attach UI id for API output
+                setattr(br, "ui_id", ui_id if ui_id else None)
+
+                # Flow from PF
+                flow_val = float(pf_branch_matrix[i, PF])
+
+                # If this pair is not present in the UI, zero it to avoid mismatches
+                if (lo, hi) not in self._ui_pairs:
+                    br.flow = 0.0
+                    setattr(br, "ui_mismatch", True)
+                else:
+                    br.flow = flow_val
+                    setattr(br, "ui_mismatch", False)
+
+            except Exception as e:
+                print(f"⚠️ update_branch_flows row {i} error: {e}")
+                br.flow = 0.0
+                setattr(br, "ui_mismatch", True)
+
 
 
     def compute_total_emissions(self):
