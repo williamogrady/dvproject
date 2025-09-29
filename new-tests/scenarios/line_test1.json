@@ -1,0 +1,14 @@
+{
+  "scenario_id": "line_test1",
+  "target_mw": 1000,
+  "line_limit_pct": 0.20,
+  "line_multipliers": {
+    "Line_Bus68_Bus69": 0.55
+  },
+  "initial_outputs": {
+    "Gen8": 100,
+    "Gen25": 300,
+    "Gen69": 805,
+    "Gen80": 577
+  }
+}

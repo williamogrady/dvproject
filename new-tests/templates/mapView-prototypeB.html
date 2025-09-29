@@ -1501,7 +1501,7 @@ function drawChevrons(lines, nodes, mode) {
     const midX = (A.x + B.x) / 2;
     const midY = (A.y + B.y) / 2;
 
-    const loadPct = (line.rate_a > 0) ? (line.flow / line.rate_a) : 0;
+    const loadPct = (line.rate_a > 0) ? (Math.abs(line.flow) / line.rate_a) : 0;
     const color = getLoadColor ? getLoadColor(loadPct) : d3.interpolateYlOrRd(Math.max(0, Math.min(1, loadPct)));
 
     // Slight size boost in Lines mode
@@ -1553,8 +1553,8 @@ function updateLinesCard(/* liveLines not needed anymore */) {
 
   // Partition/sort
   const byPctDesc = (a,b) => b._pct - a._pct;
-  const overloaded = lines.filter(l => l._pct > 1).sort(byPctDesc);
-  const nonOver    = lines.filter(l => l._pct <= 1).sort(byPctDesc);
+  const overloaded = filtered.filter(l => l._pct > 1).sort(byPctDesc);
+  const nonOver    = filtered.filter(l => l._pct <= 1).sort(byPctDesc);
 
   // Row 2: count + All good! pill
   countEl.textContent = overloaded.length;

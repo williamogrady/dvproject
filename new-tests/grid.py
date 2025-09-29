@@ -47,6 +47,42 @@ def _load_ui_busbus_map(json_path: str):
         print(f"⚠️ Could not load UI lines from {json_path}: {e}")
     return pair_to_id
 
+# --- NEW: normalize scenario "line key" to a (lo, hi) bus pair -------------
+def _normalize_line_key_to_pair(key, id_to_pair=None):
+    """
+    Accepts:
+      - exact UI id (e.g., 'Line_Bus48_Bus49')
+      - dashed/loose strings ('Line-48-49', '48-49', 'Bus48 -> Bus49')
+      - (a,b) tuples / lists
+      - dicts: {from_bus,to_bus} or aliases {i,j}/{bus1,bus2}/{from,to}
+    Returns (lo, hi) or None.
+    """
+    # tuple/list
+    if isinstance(key, (list, tuple)) and len(key) >= 2:
+        a, b = int(key[0]), int(key[1])
+        return (a, b) if a <= b else (b, a)
+
+    # dict
+    if isinstance(key, dict):
+        a = key.get('from_bus') or key.get('i') or key.get('bus1') or key.get('from') or key.get('a')
+        b = key.get('to_bus')   or key.get('j') or key.get('bus2') or key.get('to')   or key.get('b')
+        if a is not None and b is not None:
+            a, b = int(a), int(b)
+            return (a, b) if a <= b else (b, a)
+
+    # string: try direct UI id map first, then any two ints in order
+    if isinstance(key, str):
+        if id_to_pair and key in id_to_pair:
+            return id_to_pair[key]
+        m = re.search(r'(\d+).*(\d+)', key)
+        if m:
+            a, b = int(m.group(1)), int(m.group(2))
+            return (a, b) if a <= b else (b, a)
+
+    return None
+
+
+
 
 def json_clean(d):
     def safe(v):
@@ -170,6 +206,9 @@ class Grid:
         #Debug: testing overloaded lines
         #for branch in self.branches:
         #    branch.rate_a = 1000  # Set all line limits low
+        # Reverse lookup so scenarios can reference UI ids directly
+        self._id_to_pair = {ui_id: pair for pair, ui_id in self._ui_pair_to_id.items()}
+
 
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
@@ -278,19 +317,63 @@ class Grid:
             gen.pg = float(initial_outputs.get(f"Gen{gen.bus}", 0))
 
         # Reset branch states
-        disabled_lines = scenario_data.get("disabled_lines", [])
-        for branch in self.branches:
-            line_id = f"Line-{branch.from_bus}-{branch.to_bus}"
-            branch.unavailable = line_id in disabled_lines
+        raw_disabled = scenario_data.get("disabled_lines", []) or []
+        disabled_pairs = set()
+        for key in raw_disabled:
+            # accepts "Line_Bus48_Bus49", "Line-48-49", "48-49", {from_bus:48,to_bus:49}, (48,49), etc.
+            pair = _normalize_line_key_to_pair(key, getattr(self, "_id_to_pair", None))
+            if pair:
+                disabled_pairs.add(pair)
 
+        # Keep for later PF enforcement (next step); mark objects for API/UI now
+        self._disabled_pairs = disabled_pairs
+
+        for br in self.branches:
+            a, b = int(br.from_bus), int(br.to_bus)
+            lo, hi = (a, b) if a <= b else (b, a)
+            br.unavailable = (lo, hi) in disabled_pairs
+
+
+        # Global scalar (same as before)
         try:
             limit_pct = float(scenario_data.get("line_limit_pct", 1.0) or 1.0)
         except Exception:
             limit_pct = 1.0
 
+        # NEW: per-line multipliers (optional)
+        raw_lm = scenario_data.get("line_multipliers", {})
+        pair_mult = {}  # (lo,hi) -> multiplier
+
+        def _clamp_mult(x, lo=0.0, hi=10.0):
+            try:
+                return max(lo, min(float(x), hi))
+            except Exception:
+                return 1.0
+
+        # Allow either an object map { "<lineKey>": number } or an array of objects
+        if isinstance(raw_lm, dict):
+            for k, v in raw_lm.items():
+                pair = _normalize_line_key_to_pair(k, self._id_to_pair)
+                if pair:
+                    pair_mult[pair] = _clamp_mult(v)
+        elif isinstance(raw_lm, list):
+            for item in raw_lm:
+                if not isinstance(item, dict):
+                    continue
+                # accept { id: "Line_Bus68_Bus69", multiplier: 0.5 } or {from_bus,to_bus,multiplier}
+                key = item.get('id') or item
+                pair = _normalize_line_key_to_pair(key, self._id_to_pair)
+                mult = item.get('multiplier') or item.get('m') or item.get('mult')
+                if pair and mult is not None:
+                    pair_mult[pair] = _clamp_mult(mult)
+
+        # Apply: effective cap = RATE_A × limit_pct × per-line-mult (default 1)
         for br in self.branches:
-            # Physics (PF) still uses true RATE_A; UI will see rate_a * limit_pct
-            setattr(br, "limit_pct", limit_pct)
+            a, b = int(br.from_bus), int(br.to_bus)
+            lo, hi = (a, b) if a <= b else (b, a)
+            local = pair_mult.get((lo, hi), 1.0)
+            setattr(br, "limit_pct", limit_pct * local)
+
 
         # ✅ Return full scenario including title, ID, and limits
         return scenario_data

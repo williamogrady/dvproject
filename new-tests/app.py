@@ -305,24 +305,24 @@ def get_status():
     )
 
     return jsonify({
-        "current": {
-            "pg": total_pg,
-            "cost": total_cost,
-            "emissions": total_emissions,
-            "overloads": overloaded_lines
+        'current': {
+            'pg': total_pg,
+            'cost': total_cost,
+            'emissions': total_emissions,
+            'overloads': overloaded_lines
         },
-        "target": {
-            "pg": scenario.get("target_mw"),
-            "cost": scenario.get("cost_limit"),
-            "emissions": scenario.get("emissions_limit"),
-            "line_pct": scenario.get("line_limit_pct")
+        'target': {
+            'pg': scenario.get('target_mw'),
+            'cost': scenario.get('cost_limit'),
+            'emissions': scenario.get('emissions_limit'),
+            'line_pct': limit_pct
         },
-        "overloaded": overloaded_list,             # effective definition
-        "highest_load_eff_pct": highest_eff,       # %
-        "highest_load_base_pct": highest_base,     # %
-        "top_lines_eff": top_eff,                  # top-5 effective
-        "top_lines_base": top_base,                # top-5 base
-        "scenario_met": scenario_met
+        'overloaded': overloaded_list,
+        'highest_load_eff_pct': highest_eff,
+        'highest_load_base_pct': highest_base,
+        'top_lines_eff': top_eff,
+        'top_lines_base': top_base,
+        'scenario_met': scenario_met
     })
 
 

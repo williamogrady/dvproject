@@ -1,0 +1,13 @@
+{
+  "scenario_id": "line_test2",
+  "target_mw": 1000,
+  "initial_outputs": {
+    "Gen8": 100,
+    "Gen25": 300,
+    "Gen69": 805,
+    "Gen80": 577
+  },
+  "disabled_lines": [
+    "Line_Bus48_Bus49"
+  ]
+}
