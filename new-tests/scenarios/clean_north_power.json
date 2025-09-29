@@ -20,6 +20,9 @@
     ],
   "line_multipliers": {
     "Line_Bus68_Bus69": 0.60,
-    "Line_Bus69_Bus77": 0.70
+    "Line_Bus69_Bus77": 0.70,
+  "Line_Bus18_Bus19": 0.0015
+
+
   }
 }

@@ -3,6 +3,9 @@
 import traceback
 from flask import Flask, render_template, send_from_directory, jsonify, request, abort
 from grid import Grid
+import inspect
+print("🔎 grid module file:", inspect.getfile(Grid))
+
 import os
 from pathlib import Path
 import json, datetime

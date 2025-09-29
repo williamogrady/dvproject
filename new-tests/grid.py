@@ -340,39 +340,32 @@ class Grid:
         except Exception:
             limit_pct = 1.0
 
-        # NEW: per-line multipliers (optional)
-        raw_lm = scenario_data.get("line_multipliers", {})
-        pair_mult = {}  # (lo,hi) -> multiplier
+        # Optional: per-line multipliers as an OBJECT map
+        # { "Line_Bus68_Bus69": 0.55, "Line_Bus69_Bus77": 0.7, ... }
+        line_multipliers = scenario_data.get("line_multipliers") or {}
 
-        def _clamp_mult(x, lo=0.0, hi=10.0):
+        # Build a map from (lo,hi) bus pair -> per-line multiplier
+        pair_mult = {}
+        for key, val in line_multipliers.items():
+            # accepts "Line_BusX_BusY", "X-Y", etc. (falls back to digits)
+            pair = _normalize_line_key_to_pair(key, getattr(self, "_id_to_pair", None))
+            if not pair:
+                continue
             try:
-                return max(lo, min(float(x), hi))
+                mline = float(val)
             except Exception:
-                return 1.0
+                mline = 1.0
+            if mline <= 0:  # avoid zero/negative caps
+                mline = 0.01
+            pair_mult[pair] = mline
 
-        # Allow either an object map { "<lineKey>": number } or an array of objects
-        if isinstance(raw_lm, dict):
-            for k, v in raw_lm.items():
-                pair = _normalize_line_key_to_pair(k, self._id_to_pair)
-                if pair:
-                    pair_mult[pair] = _clamp_mult(v)
-        elif isinstance(raw_lm, list):
-            for item in raw_lm:
-                if not isinstance(item, dict):
-                    continue
-                # accept { id: "Line_Bus68_Bus69", multiplier: 0.5 } or {from_bus,to_bus,multiplier}
-                key = item.get('id') or item
-                pair = _normalize_line_key_to_pair(key, self._id_to_pair)
-                mult = item.get('multiplier') or item.get('m') or item.get('mult')
-                if pair and mult is not None:
-                    pair_mult[pair] = _clamp_mult(mult)
-
-        # Apply: effective cap = RATE_A × limit_pct × per-line-mult (default 1)
+        # Apply: effective cap = RATE_A × limit_pct × per-line multiplier (default 1.0)
         for br in self.branches:
             a, b = int(br.from_bus), int(br.to_bus)
             lo, hi = (a, b) if a <= b else (b, a)
             local = pair_mult.get((lo, hi), 1.0)
             setattr(br, "limit_pct", limit_pct * local)
+
 
 
         # ✅ Return full scenario including title, ID, and limits
