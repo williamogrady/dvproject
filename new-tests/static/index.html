@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Top Line Loads — case118 (remixed)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f7f7f8; --panel:#ffffff; --muted:#e9e9ec;
+      --text:#222; --sub:#555; --ok:#2563eb; --bad:#b91c1c;
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .wrap { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .panel { background: var(--panel); border:1px solid var(--muted); border-radius:12px; padding:16px; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+    .row { display:flex; gap:8px; flex-wrap: wrap; }
+    .row > label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--sub); }
+    .row input { padding:8px; border:1px solid var(--muted); border-radius:8px; min-width: 80px; }
+    .row button { padding:10px 12px; border-radius: 10px; border:1px solid var(--muted); background:#fff; cursor:pointer; }
+    .row button:hover { background:#f3f4f6; }
+    table { width:100%; border-collapse:separate; border-spacing:0; margin-top:12px; }
+    th, td { padding:10px 12px; text-align:left; }
+    thead th { font-size:12px; color:var(--sub); border-bottom:1px solid var(--muted); }
+    tbody tr { background:#fff; }
+    tbody tr + tr td { border-top:1px solid var(--muted); }
+    .util { font-variant-numeric: tabular-nums; }
+    .chip { display:inline-block; padding:2px 8px; border-radius: 999px; font-size:12px; border:1px solid var(--muted); background:#fff; }
+    .chip.bad { border-color:#fca5a5; background:#fee2e2; color:var(--bad); }
+    .chip.ok  { border-color:#bfdbfe; background:#dbeafe; color:var(--ok); }
+    .foot { margin-top:10px; font-size:12px; color:var(--sub);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Top Line Loads — case118 (remixed)</h1>
+    <div class="panel">
+     <div class="row" style="align-items:flex-end; margin-bottom: 8px;">
+  <label>Top N
+    <input id="n" type="number" value="12" />
+  </label>
+  <label>Load scale (all)
+    <input id="load_scale" type="number" step="0.05" value="1.00" />
+  </label>
+  <label>Focus lo bus
+    <input id="focus_lo" type="number" value="60" />
+  </label>
+  <label>Focus hi bus
+    <input id="focus_hi" type="number" value="80" />
+  </label>
+  <label>Focus scale
+    <input id="focus_scale" type="number" step="0.05" value="1.30" />
+  </label>
+  <label>Line rating ×
+    <input id="rate_mult" type="number" step="0.05" value="1.00" />
+  </label>
+  <label>Out lines (a-b,a-b)
+    <input id="out_lines" type="text" placeholder="68-69,69-77" />
+  </label>
+</div>
+
+<!-- NEW targeted controls -->
+<div class="row" style="align-items:flex-end; margin-bottom: 8px;">
+  <label>Offline gens (by BUS)
+    <input id="offline_gens" type="text" placeholder="68,69,77" />
+  </label>
+  <label>Tighten lines (a-b:x,…)
+    <input id="tighten_lines" type="text" placeholder="15-19:0.6,19-21:0.6" />
+  </label>
+  <label>Relax lines (a-b:x,…)
+    <input id="relax_lines" type="text" placeholder="65-68:2.0,68-69:2.0" />
+  </label>
+  <label>Region loads (lo-hi:x,…)
+    <input id="region_loads" type="text" placeholder="1-30:1.35,31-59:0.95" />
+  </label>
+
+  <button id="runBtn">Run</button>
+  <button id="hairTriggerBtn" title="Make lines very easy to overload">Hair-trigger</button>
+  <button id="relaxBtn" title="Make lines harder to overload">Relax</button>
+</div>
+
+<!-- NEW preset row -->
+<div class="row" style="align-items:flex-end; margin-bottom: 8px;">
+  <label style="flex:1">Preset (paste or edit a query string)
+    <input id="preset_qs" type="text"
+           placeholder='?n=12&relax_lines=65-68:2.0,68-69:2.0&region_loads=1-30:1.35,31-59:0.95&tighten_lines=15-19:0.6,19-21:0.6' />
+  </label>
+  <button id="applyPresetBtn">Apply preset</button>
+  <button id="copyPresetBtn" title="Copy current inputs as a shareable query string">Copy current as preset</button>
+</div>
+
+      
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Line</th>
+            <th>PF (MW)</th>
+            <th>RATE_A (MVA)</th>
+            <th>Utilization</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <div class="foot" id="foot"></div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchTopLines(params) {
+      const q = new URLSearchParams(params).toString();
+      const res = await fetch(`/api/top-lines?${q}`);
+      return await res.json();
+    }
+
+    function readParams() {
+      return {
+        n:          document.querySelector("#n").value || 12,
+        load_scale: document.querySelector("#load_scale").value || 1.00,
+        focus_lo:   document.querySelector("#focus_lo").value || 60,
+        focus_hi:   document.querySelector("#focus_hi").value || 80,
+        focus_scale:document.querySelector("#focus_scale").value || 1.30,
+        out_lines:  document.querySelector("#out_lines").value || "",
+        rate_mult:  document.querySelector("#rate_mult").value || 1.00
+      };
+    }
+
+    function render(data) {
+      const tbody = document.querySelector("#tbody");
+      const foot  = document.querySelector("#foot");
+      tbody.innerHTML = "";
+      if (!data.ok) {
+        foot.textContent = `Error: ${data.error || "unknown"}`;
+        return;
+      }
+      data.top_lines.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>Bus ${row.from} → Bus ${row.to}</td>
+          <td class="util">${row.pf_mw}</td>
+          <td class="util">${row.rate_a_mva}</td>
+          <td class="util">${row.util_pct}%</td>
+          <td>${row.overloaded ? '<span class="chip bad">Overloaded</span>' : '<span class="chip ok">OK</span>'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      foot.textContent = `Params → ` + JSON.stringify(data.params);
+    }
+
+    async function runOnce() {
+      const params = readParams();
+      const data = await fetchTopLines(params);
+      render(data);
+    }
+
+    document.querySelector("#runBtn").addEventListener("click", runOnce);
+
+    document.querySelector("#hairTriggerBtn").addEventListener("click", () => {
+      document.querySelector("#rate_mult").value = 0.75;   // tighten ratings
+      document.querySelector("#focus_scale").value = 1.5;  // stress region more
+      runOnce();
+    });
+
+    document.querySelector("#relaxBtn").addEventListener("click", () => {
+      document.querySelector("#rate_mult").value = 1.25;   // loosen ratings
+      document.querySelector("#focus_scale").value = 1.15; // mild stress
+      runOnce();
+    });
+
+  // If you also run on :5500, keep your API_BASE trick here if you already added it.
+  const API_BASE = location.port === "5500" ? "http://127.0.0.1:5000" : "";
+
+  function parseQueryStringToObject(qs) {
+    // Accepts with or without leading '?'
+    const q = qs.trim().replace(/^\?+/, "");
+    const params = {};
+    // Don't use URLSearchParams for comma/colon values; we just split on & safely
+    q.split("&").forEach(kv => {
+      if (!kv) return;
+      const [k, vRaw] = kv.split("=");
+      if (!k) return;
+      // keep raw (we’ll decode)
+      const v = vRaw ? decodeURIComponent(vRaw) : "";
+      params[k] = v;
+    });
+    return params;
+  }
+
+  function objectToQueryString(obj) {
+    const pairs = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === undefined || v === null || v === "") continue;
+      pairs.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+    }
+    return "?" + pairs.join("&");
+  }
+
+  function setIfPresent(id, val) {
+    if (val !== undefined && val !== null && val !== "") {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    }
+  }
+
+  function applyParamsToInputs(params) {
+    // Base/global
+    setIfPresent("n",            params.n);
+    setIfPresent("load_scale",   params.load_scale);
+    setIfPresent("focus_lo",     params.focus_lo);
+    setIfPresent("focus_hi",     params.focus_hi);
+    setIfPresent("focus_scale",  params.focus_scale);
+    setIfPresent("out_lines",    params.out_lines);
+    setIfPresent("rate_mult",    params.rate_mult);
+
+    // Targeted
+    setIfPresent("offline_gens", params.offline_gens);
+    setIfPresent("tighten_lines",params.tighten_lines);
+    setIfPresent("relax_lines",  params.relax_lines);
+    setIfPresent("region_loads", params.region_loads);
+  }
+
+  async function fetchTopLines(params) {
+    const q = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/api/top-lines?${q}`);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}...`);
+    }
+    return await res.json();
+  }
+
+  function readParams() {
+    return {
+      n:              document.querySelector("#n").value || 12,
+      load_scale:     document.querySelector("#load_scale").value || 1.00,
+      focus_lo:       document.querySelector("#focus_lo").value || 60,
+      focus_hi:       document.querySelector("#focus_hi").value || 80,
+      focus_scale:    document.querySelector("#focus_scale").value || 1.30,
+      out_lines:      document.querySelector("#out_lines").value || "",
+      rate_mult:      document.querySelector("#rate_mult").value || 1.00,
+      // NEW targeted
+      offline_gens:   document.querySelector("#offline_gens").value || "",
+      tighten_lines:  document.querySelector("#tighten_lines").value || "",
+      relax_lines:    document.querySelector("#relax_lines").value || "",
+      region_loads:   document.querySelector("#region_loads").value || ""
+    };
+  }
+
+  function render(data) {
+    const tbody = document.querySelector("#tbody");
+    const foot  = document.querySelector("#foot");
+    tbody.innerHTML = "";
+    if (!data.ok) {
+      foot.textContent = `Error: ${data.error || "unknown"}`;
+      return;
+    }
+    data.top_lines.forEach((row, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>Bus ${row.from} → Bus ${row.to}</td>
+        <td class="util">${row.pf_mw}</td>
+        <td class="util">${row.rate_a_mva}</td>
+        <td class="util">${row.util_pct}%</td>
+        <td>${row.overloaded ? '<span class="chip bad">Overloaded</span>' : '<span class="chip ok">OK</span>'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    foot.textContent = `Params → ` + JSON.stringify(data.params);
+    // Sync the URL hash so the whole state is shareable/bookmarkable
+    try {
+      const qs = objectToQueryString(data.params);
+      history.replaceState(null, "", "#" + qs);
+    } catch {}
+  }
+
+  async function runOnce() {
+    const params = readParams();
+    const foot  = document.querySelector("#foot");
+    try {
+      const data = await fetchTopLines(params);
+      render(data);
+    } catch (err) {
+      foot.textContent = `Fetch error: ${err.message}`;
+      document.querySelector("#tbody").innerHTML = "";
+    }
+  }
+
+  // Buttons
+  document.querySelector("#runBtn").addEventListener("click", runOnce);
+
+  document.querySelector("#hairTriggerBtn").addEventListener("click", () => {
+    document.querySelector("#rate_mult").value = 0.75;
+    document.querySelector("#focus_scale").value = 1.5;
+    runOnce();
+  });
+
+  document.querySelector("#relaxBtn").addEventListener("click", () => {
+    document.querySelector("#rate_mult").value = 1.25;
+    document.querySelector("#focus_scale").value = 1.15;
+    runOnce();
+  });
+
+  // NEW: Apply preset
+  document.querySelector("#applyPresetBtn").addEventListener("click", () => {
+    const raw = document.querySelector("#preset_qs").value;
+    const params = parseQueryStringToObject(raw);
+    applyParamsToInputs(params);
+    runOnce();
+  });
+
+  // NEW: Copy current as preset (to clipboard)
+  document.querySelector("#copyPresetBtn").addEventListener("click", async () => {
+    const qs = objectToQueryString(readParams());
+    try {
+      await navigator.clipboard.writeText(qs);
+      document.querySelector("#preset_qs").value = qs;
+    } catch {
+      // fallback for older browsers
+      document.querySelector("#preset_qs").value = qs;
+      document.querySelector("#preset_qs").select();
+      document.execCommand("copy");
+    }
+  });
+
+  // On load: if URL hash contains a saved qs, apply it
+  (function bootFromHash() {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (h.startsWith("?")) {
+      const params = parseQueryStringToObject(h);
+      applyParamsToInputs(params);
+    }
+    runOnce();
+  })();
+
+
+
+    // Run on load
+    runOnce();
+  </script>
+</body>
+</html>
