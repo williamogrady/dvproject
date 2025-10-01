@@ -154,36 +154,47 @@ class Branch:
         self.index = index
         self.from_bus = int(row[0])
         self.to_bus = int(row[1])
-        self.rate_a = float(row[5])  # Rating A (limit)
+        # Base (from case118) — never change this
+        self.rate_base = float(row[5])  # A rating from PYPOWER
+        # Multipliers (can be changed by scenario)
+        self.limit_pct = 1.0           # global scalar S_g or line_limit_pct
+        self.m_line    = 1.0           # per-line nudge (fragile/relief)
+        # Runtime
         self.flow = 0.0
         self.overloaded = False
+        self.unavailable = False
+        self.ui_id = None
+
+    def effective_cap(self) -> float:
+        """Effective continuous rating seen by the UI/evaluator."""
+        return float(self.rate_base) * float(self.limit_pct) * float(self.m_line)
 
     def update_flow(self, new_row):
-        self.flow = abs(new_row[13])  # Real power flow
-        self.overloaded = self.flow > self.rate_a
+        # PF column 13 (MW from "from" to "to")
+        self.flow = float(abs(new_row[13]))
+        self.overloaded = self.flow > self.effective_cap()
 
     def to_dict(self):
-        # Canonical, order-normalized id (and UI id if present)
         a, b = int(self.from_bus), int(self.to_bus)
         lo, hi = (a, b) if a <= b else (b, a)
         fallback_id = f"Line_Bus{lo}_Bus{hi}"
         ui_id = getattr(self, "ui_id", None)
         line_id = ui_id if ui_id else fallback_id
 
-        # Base vs effective (Method C)
-        limit_pct = float(getattr(self, "limit_pct", 1.0) or 1.0)
-        base_rate = float(getattr(self, "rate_a", 0.0) or 0.0)
-        rate_eff  = base_rate * limit_pct
+        rate_eff = self.effective_cap()
 
         return {
             "id": line_id,
             "from_bus": a,
             "to_bus": b,
-            "flow": float(getattr(self, "flow", 0.0) or 0.0),
-            "rate_base": base_rate,   # ← NEW: raw cap from case118/PF
-            "rate_a": rate_eff,       # (unchanged) effective cap seen by UI logic
-            "unavailable": bool(getattr(self, "unavailable", False)),
+            "flow": float(self.flow),
+            # Expose both for clarity
+            "rate_base": float(self.rate_base),
+            "rate_a": float(rate_eff),    # effective continuous cap
+            "unavailable": bool(self.unavailable),
         }
+    
+
 
 
 
@@ -213,8 +224,6 @@ class Grid:
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
     def update_case_from_objects(self):
-        # Write generator PG and status directly into the PF case
-        # using 2-D indexing to avoid any numpy view/copy pitfalls.
         print("🔍 Generator PGs before runpf:", [float(getattr(g, "pg", 0.0) or 0.0) for g in self.generators])
 
         GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
@@ -244,33 +253,114 @@ class Grid:
         except Exception as _e:
             print("⚠️ Could not sum scheduled PG:", _e)
 
+    def calibrate_global_rate(self, percentile=0.90, target_level=0.90, exclude_pairs=None):
+        """
+        Run PF once with neutral multipliers, measure baseline utilizations U_i,
+        and compute a global scalar S_g so that the chosen percentile sits at target_level.
+        Returns S_g (float). If anything goes wrong, falls back to 0.20.
+        """
+        # 1) Temporarily neutralize multipliers
+        for br in self.branches:
+            br.limit_pct = 1.0
+            br.m_line = 1.0
+
+        # 2) PF with current generator settings
+        _ = self.run_power_flow()
+
+        # 3) Collect baseline utilizations for UI-visible, enabled lines
+        utils = []
+        excl = set(exclude_pairs or [])
+        for br in self.branches:
+            a, b = br.from_bus, br.to_bus
+            lo, hi = (a, b) if a <= b else (b, a)
+            if getattr(br, "unavailable", False):
+                continue
+            if (lo, hi) not in self._ui_pairs:
+                continue
+            if (lo, hi) in excl:
+                continue
+            base = max(1e-6, float(br.rate_base))
+            U = abs(float(br.flow)) / base
+            utils.append(U)
+
+        if not utils:
+            return 0.20  # safe fallback
+
+        utils = np.array(utils, dtype=float)
+        uq = float(np.quantile(utils, percentile))
+        if uq <= 0:
+            return 0.20
+
+        # 4) S_g — if 90th perc is 0.18 and we want 0.90, S_g = 0.18 / 0.90 = 0.20
+        S_g = uq / max(1e-6, float(target_level))
+        # Optional guardrails so denominators never get too small/large
+        S_g = float(np.clip(S_g, 0.10, 0.50))
+        return S_g
+    
+    def debug_utilization_report(self, k=12, tag=""):
+        lines = []
+        rows = []
+        for br in self.branches:
+            try:
+                eff_cap = br.effective_cap()
+                if eff_cap <= 0: 
+                    continue
+                util = abs(float(br.flow)) / eff_cap
+                rows.append((
+                    util,
+                    getattr(br, "ui_id", f"Line_Bus{min(br.from_bus, br.to_bus)}_Bus{max(br.from_bus, br.to_bus)}"),
+                    float(br.flow),
+                    float(br.rate_base),
+                    float(getattr(br, "limit_pct", 1.0)),
+                    float(getattr(br, "m_line", 1.0)),
+                    float(eff_cap),
+                    bool(getattr(br, "overloaded", False)),
+                ))
+            except Exception:
+                pass
+        rows.sort(key=lambda r: r[0], reverse=True)
+        header = f"\n====== TOP {k} LINES by utilization (effective) {tag} ======\n"
+        header += "util%   id                  flow    base   S_g   m_line   eff_cap   OVER?\n"
+        lines.append(header)
+        for r in rows[:k]:
+            util_pct = f"{100*r[0]:5.1f}%"
+            lines.append(f"{util_pct}  {r[1]:20s}  {r[2]:7.1f}  {r[3]:6.1f}  {r[4]:.3f}  {r[5]:.3f}   {r[6]:7.1f}   {r[7]}\n")
+        text = "".join(lines)
+        print(text)
+        self._last_debug_report = text  # <-- save it
+
+    def get_last_debug_report(self):
+        return getattr(self, "_last_debug_report", "")
+
+
+
 
 
     def compute_total_cost(self, results):
-        
-        """
-        total_cost = 0
-        Pg_matrix = results['gen'][:, 1]  # PG values after runpf
-        gencost = results['gencost']
+            
+            """
+            total_cost = 0
+            Pg_matrix = results['gen'][:, 1]  # PG values after runpf
+            gencost = results['gencost']
 
-        for i, row in enumerate(gencost):
-            model = int(row[0])
-            n = int(row[3])
-            coeffs = row[4:4+n]
+            for i, row in enumerate(gencost):
+                model = int(row[0])
+                n = int(row[3])
+                coeffs = row[4:4+n]
 
-            # PyPower gives highest-degree term first
-            Pg = Pg_matrix[i]
-            cost = 0
-            for power, coeff in enumerate(reversed(coeffs)):
-                cost += coeff * Pg**power
-            total_cost += cost
+                # PyPower gives highest-degree term first
+                Pg = Pg_matrix[i]
+                cost = 0
+                for power, coeff in enumerate(reversed(coeffs)):
+                    cost += coeff * Pg**power
+                total_cost += cost
 
-        return float(total_cost)
-        """
-        return sum(
-            gen.pg * gen.cost_per_mw
-            for gen in self.generators
-        )
+            return float(total_cost)
+            """
+            return sum(
+                gen.pg * gen.cost_per_mw
+                for gen in self.generators
+            )
 
 
     def apply_scenario(self, scenario_id):
@@ -342,12 +432,33 @@ class Grid:
 
         # Optional: per-line multipliers as an OBJECT map
         # { "Line_Bus68_Bus69": 0.55, "Line_Bus69_Bus77": 0.7, ... }
-        line_multipliers = scenario_data.get("line_multipliers") or {}
+                # --- Global scalar S_g (calibrated or provided) ---------------------
+        stress_cfg = scenario_data.get("stress") or {}
+        use_calibration = bool(stress_cfg.get("calibrate", False))
+        if use_calibration:
+            perc   = float(stress_cfg.get("percentile", 0.90) or 0.90)
+            level  = float(stress_cfg.get("target_level", 0.90) or 0.90)
+            # Optional: exclude a set of pairs by id list
+            excl_keys = stress_cfg.get("exclude_lines") or []
+            excl_pairs = set()
+            for key in excl_keys:
+                pair = _normalize_line_key_to_pair(key, getattr(self, "_id_to_pair", None))
+                if pair:
+                    excl_pairs.add(pair)
+            S_g = self.calibrate_global_rate(percentile=perc, target_level=level, exclude_pairs=excl_pairs)
+        else:
+            # Backwards-compatible global knob
+            try:
+                S_g = float(scenario_data.get("line_limit_pct", 1.0) or 1.0)
+            except Exception:
+                S_g = 1.0
+            # Optional safety, keep S_g sensible
+            S_g = float(np.clip(S_g, 0.10, 0.50))
 
-        # Build a map from (lo,hi) bus pair -> per-line multiplier
+        # --- Per-line multipliers (bounded) ---------------------------------
+        line_multipliers = scenario_data.get("line_multipliers") or {}
         pair_mult = {}
         for key, val in line_multipliers.items():
-            # accepts "Line_BusX_BusY", "X-Y", etc. (falls back to digits)
             pair = _normalize_line_key_to_pair(key, getattr(self, "_id_to_pair", None))
             if not pair:
                 continue
@@ -355,21 +466,24 @@ class Grid:
                 mline = float(val)
             except Exception:
                 mline = 1.0
-            if mline <= 0:  # avoid zero/negative caps
-                mline = 0.01
+            # Boundaries to avoid tiny denominators or absurd relief
+            mline = float(np.clip(mline, 0.85, 1.25))
             pair_mult[pair] = mline
 
-        # Apply: effective cap = RATE_A × limit_pct × per-line multiplier (default 1.0)
+        # --- Apply both to branches -----------------------------------------
         for br in self.branches:
             a, b = int(br.from_bus), int(br.to_bus)
             lo, hi = (a, b) if a <= b else (b, a)
-            local = pair_mult.get((lo, hi), 1.0)
-            setattr(br, "limit_pct", limit_pct * local)
+            br.limit_pct = float(S_g)
+            br.m_line    = float(pair_mult.get((lo, hi), 1.0))
 
 
 
         # ✅ Return full scenario including title, ID, and limits
+        # at the end of apply_scenario(...)
+        self.run_power_flow()  # run once so the report prints right away
         return scenario_data
+
 
 
 
@@ -422,13 +536,20 @@ class Grid:
         if success:
             self.update_branch_flows(results['branch'])
             self.last_total_cost = self.compute_total_cost(results)
+            # 👇 add this
+            self.debug_utilization_report(k=12, tag=f"(scenario={self.active_scenario.get('id') if self.active_scenario else ''})")
         else:
             print("⚠️ Power flow failed — clearing branch flows")
             success = False
-            for branch in self.branches:
-                branch.flow = 0.0
-                branch.overloaded = False
-            self.last_total_cost = None
+            # after apply_scenario applies multipliers
+            for probe in ["Line_Bus18_Bus19","Line_Bus65_Bus68","Line_Bus68_Bus69"]:
+                pair = _normalize_line_key_to_pair(probe, getattr(self, "_id_to_pair", None))
+                if pair:
+                    for br in self.branches:
+                        lo, hi = (min(br.from_bus, br.to_bus), max(br.from_bus, br.to_bus))
+                        if (lo, hi) == pair:
+                            print("multiplier check:", probe, "=>", br.m_line)
+
 
         return success
 
@@ -438,8 +559,8 @@ class Grid:
         Copy PF results into Branch objects, then:
         - attach a UI id if we have one
         - zero flow for any PF branch that has no corresponding UI line
+        - compute 'overloaded' against the effective cap (limit_pct × m_line × rate_base)
         """
-        # PYPOWER branch columns: F_BUS=0, T_BUS=1, PF=13 (MW from "from" to "to")
         F_BUS, T_BUS, PF = 0, 1, 13
 
         for i, br in enumerate(self.branches):
@@ -459,14 +580,21 @@ class Grid:
                 if (lo, hi) not in self._ui_pairs:
                     br.flow = 0.0
                     setattr(br, "ui_mismatch", True)
+                    br.overloaded = False
                 else:
-                    br.flow = flow_val
+                    br.flow = abs(flow_val)
                     setattr(br, "ui_mismatch", False)
+                    # ✅ overloaded vs effective cap
+                    try:
+                        br.overloaded = br.flow > br.effective_cap()
+                    except Exception:
+                        br.overloaded = False
 
             except Exception as e:
                 print(f"⚠️ update_branch_flows row {i} error: {e}")
                 br.flow = 0.0
                 setattr(br, "ui_mismatch", True)
+                br.overloaded = False
 
 
 

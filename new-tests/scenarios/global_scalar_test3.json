@@ -1,0 +1,31 @@
+{
+  "id": "north_corridor_stress_exclude_south",
+  "label": "North hotspot; south excluded from calibration",
+  "stress": {
+    "calibrate": true,
+    "percentile": 0.85,
+    "target_level": 0.85
+  },
+
+  "target_mw": 2000,
+  "cost_limit": 10000,
+
+  "disabled_generators": [],
+  "disabled_lines": [],
+
+  "line_multipliers": {
+
+    "Line_Bus54_Bus55": 0.85,
+    "Line_Bus55_Bus56": 0.85,
+    "Line_Bus53_Bus54": 0.88,
+
+    
+    "Line_Bus65_Bus68": 1.25,
+    "Line_Bus68_Bus69": 1.25,
+    "Line_Bus69_Bus77": 1.22,
+    "Line_Bus69_Bus75": 1.18,
+    "Line_Bus69_Bus70": 1.18,
+    "Line_Bus68_Bus81": 1.15,
+    "Line_Bus81_Bus80": 1.15
+  }
+}

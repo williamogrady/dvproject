@@ -1,0 +1,41 @@
+{
+  "id": "west_overload_no_south_v2_safe",
+  "label": "West Overload with South Gens Offline (PF-safe, case118)",
+  "stress": { "calibrate": true, "percentile": 0.90, "target_level": 0.90 },
+
+  "target_mw": 2000,
+  "cost_limit": 10000,
+
+  "disabled_generators": [
+    "Gen69","Gen70","Gen72","Gen73","Gen74","Gen76","Gen77","Gen80",
+    "Gen99","Gen100","Gen103","Gen104","Gen105","Gen107","Gen110",
+    "Gen111","Gen112","Gen116"
+  ],
+
+  "disabled_lines": [],
+
+  "line_multipliers": {
+    
+    "Line_Bus18_Bus19": 0.90,
+    "Line_Bus17_Bus18": 0.92,
+    "Line_Bus15_Bus19": 0.92,
+    "Line_Bus15_Bus17": 0.98,
+    "Line_Bus19_Bus34": 0.98,
+
+    
+    
+    "Line_Bus92_Bus100": 1.15,
+    "Line_Bus94_Bus100": 1.10,
+    "Line_Bus95_Bus96": 1.10,
+    "Line_Bus94_Bus96": 1.10,
+    "Line_Bus91_Bus92": 1.10,
+    "Line_Bus90_Bus91": 1.10,
+    "Line_Bus89_Bus90": 1.10,
+    "Line_Bus92_Bus93": 1.10,
+    "Line_Bus92_Bus94": 1.10,
+    "Line_Bus94_Bus95": 1.10,
+    "Line_Bus96_Bus97": 1.10
+  },
+
+  "notes": "Keep all lines connected to avoid PF failure. South *generators* are off; South lines are relieved (m>1) so they won’t be the bottleneck. West lines are mildly fragile to place the starting overload in the west."
+}

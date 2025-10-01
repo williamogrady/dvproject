@@ -1,0 +1,17 @@
+{
+  "id": "west_corridor_test",
+  "target_mw": 2500,
+    "emissions_limit": 8000,
+    "cost_limit": 15000,
+  "stress": { "calibrate": true, "percentile": 0.90, "target_level": 0.90 },
+  "line_multipliers": {
+    "Line_Bus18_Bus19": 0.90,
+    "Line_BusXX_BusYY": 1.10
+  },
+  "disabled_lines": [],
+  "initial_outputs": { "Gen4": 100, "Gen8": 100 },
+  "disabled_generators": [
+    "Gen80", 
+  "Gen18"
+]
+}

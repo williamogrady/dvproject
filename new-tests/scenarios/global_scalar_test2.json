@@ -1,0 +1,48 @@
+{
+  "id": "north_corridor_stress_minimal_v2",
+  "label": "North Corridor Stress (extra south relief on 65→68 and 68→69)",
+
+   "stress": { "calibrate": true, "percentile": 0.90, "target_level": 0.90 },
+
+  "target_mw": 2000,
+  "cost_limit": 10000,
+
+  "disabled_generators": [],
+
+  "line_multipliers": {
+   
+    "Line_Bus18_Bus19": 0.86,
+    "Line_Bus17_Bus18": 0.88,
+    "Line_Bus15_Bus19": 0.88,
+    "Line_Bus14_Bus15": 0.94,
+    "Line_Bus19_Bus34": 0.92,
+
+    
+    "Line_Bus65_Bus68": 1.22,
+    "Line_Bus68_Bus69": 1.22,
+
+    "Line_Bus92_Bus100": 1.22,
+    "Line_Bus94_Bus100": 1.18,
+    "Line_Bus94_Bus96": 1.18,
+    "Line_Bus95_Bus96": 1.18,
+
+    "Line_Bus91_Bus92": 1.15,
+    "Line_Bus90_Bus91": 1.15,
+    "Line_Bus89_Bus90": 1.15,
+    "Line_Bus92_Bus93": 1.15,
+    "Line_Bus92_Bus94": 1.18,
+    "Line_Bus94_Bus95": 1.15,
+    "Line_Bus96_Bus97": 1.15,
+
+    
+    "Line_Bus75_Bus118": 1.20,
+    "Line_Bus76_Bus118": 1.20,
+    "Line_Bus77_Bus80": 1.15,
+    "Line_Bus80_Bus96": 1.18
+  },
+
+  "initial_outputs": { "Gen4": 100, "Gen10": 550, "Gen12": 185 },
+  "locked_generators": ["Gen4", "Gen10", "Gen12"],
+
+  "notes": "Extra relief on 65→68 and 68→69 so South won’t steal focus; North lines carry the initial stress."
+}
