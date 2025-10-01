@@ -194,6 +194,21 @@ class Branch:
             "unavailable": bool(self.unavailable),
         }
     
+def scale_bus_loads(case, multipliers):
+    """
+    multipliers: dict {bus_number: scale}  (applies to both Pd and Qd)
+    Example: {69: 1.6, 77: 1.5, 80: 1.5, 81: 1.4}
+    """
+    BUS_I, PD, QD = 0, 2, 3
+    bus = case['bus']
+    for i in range(bus.shape[0]):
+        b = int(bus[i, BUS_I])
+        s = multipliers.get(b)
+        if s is not None:
+            bus[i, PD] = float(bus[i, PD]) * s
+            bus[i, QD] = float(bus[i, QD]) * s
+    case['bus'] = bus
+    return case
 
 
 
@@ -201,15 +216,13 @@ class Branch:
 class Grid:
     def __init__(self):
         self.original_case = case118.case118()
-        self.case = copy.deepcopy(self.original_case)
-        self.active_scenario = None
+        self.case = copy.deepcopy(self.original_case)      # <-- create self.case first
+        self._base_gen_pg = self.case['gen'][:, 1].astype(float).copy()  # <-- now safe
 
-        self.generators = [
-            Generator(i, row) for i, row in enumerate(self.case['gen'])
-            ]
-        self.branches = [
-            Branch(i, row) for i, row in enumerate(self.case['branch'])
-            ]
+        self.active_scenario = None
+        self.generators = [Generator(i, row) for i, row in enumerate(self.case['gen'])]
+        self.branches   = [Branch(i, row)    for i, row in enumerate(self.case['branch'])]
+
          # Map PF branches to UI line ids; used to zero mismatches and label ids.
         self._ui_pair_to_id = _load_ui_busbus_map(UI_LINES_JSON_PATH)
         self._ui_pairs = set(self._ui_pair_to_id.keys())
@@ -224,34 +237,61 @@ class Grid:
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
 
     def update_case_from_objects(self):
-        print("🔍 Generator PGs before runpf:", [float(getattr(g, "pg", 0.0) or 0.0) for g in self.generators])
-
         GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
 
-        for i, gen in enumerate(self.generators):
-            pg_val = float(getattr(gen, "pg", 0.0) or 0.0)
-            is_disabled = bool(getattr(gen, "disabled", False))
+        total_pd = float(np.sum(self.case['bus'][:, 2]))  # Pd sum after any scaling
+        # default to original case PG unless user set a value
+        desired_pg = self._base_gen_pg.copy()
 
-            # Set on/off status
+        # apply user toggles / scenario: status & explicit pg
+        for i, gen in enumerate(self.generators):
+            is_disabled = bool(getattr(gen, "disabled", False))
             self.case['gen'][i, GEN_STATUS] = 0 if is_disabled else 1
 
             if is_disabled:
-                # If disabled: force zero output
-                self.case['gen'][i, PG] = 0.0
+                desired_pg[i] = 0.0
             else:
-                # Ensure feasibility: PMAX must be >= scheduled PG
-                current_pmax = float(self.case['gen'][i, PMAX])
-                if pg_val > current_pmax:
-                    self.case['gen'][i, PMAX] = pg_val
-                # Set scheduled PG
-                self.case['gen'][i, PG] = pg_val
+                # if user specified a PG (>0) use it; otherwise keep original
+                pg_val = float(getattr(gen, "pg", 0.0) or 0.0)
+                if pg_val > 0:
+                    desired_pg[i] = pg_val
 
-        # Quick sanity: total scheduled PG right before runpf
+            # keep PMAX >= scheduled PG so we never make it trivially infeasible
+            if desired_pg[i] > float(self.case['gen'][i, PMAX]):
+                self.case['gen'][i, PMAX] = desired_pg[i]
+
+        # OPTIONAL: gently normalize the non-user generators to hit load level
+        # so runpf has a reasonable starting point (helps convergence).
+        scheduled = float(np.sum(desired_pg))
+        deficit = total_pd - scheduled
+        if abs(deficit) > 1e-6:
+            # distribute the deficit over generators that the user did NOT pin
+            free_idx = []
+            fixed = np.zeros_like(desired_pg, dtype=bool)
+            for i, gen in enumerate(self.generators):
+                # "fixed" if disabled OR user explicitly set pg>0
+                if (self.case['gen'][i, GEN_STATUS] == 0) or (float(getattr(gen, "pg", 0.0) or 0.0) > 0.0):
+                    fixed[i] = True
+                else:
+                    free_idx.append(i)
+
+            if free_idx:
+                base_free = np.maximum(self._base_gen_pg[free_idx], 1e-3)
+                weights = base_free / base_free.sum()
+                desired_pg[free_idx] += deficit * weights
+
+                # keep within [0, PMAX]; not strictly required for PF, but sensible
+                for j in free_idx:
+                    desired_pg[j] = float(np.clip(desired_pg[j], 0.0, self.case['gen'][j, PMAX]))
+
+        # write PG to the case (this is the initial dispatch for runpf)
+        self.case['gen'][:, PG] = desired_pg
+
         try:
-            total_pg = float(np.sum(self.case['gen'][:, PG]))
-            print("🧮 Scheduled total PG (MW):", total_pg)
+            print("🧮 Scheduled total PG (MW):", float(np.sum(self.case['gen'][:, PG])))
         except Exception as _e:
             print("⚠️ Could not sum scheduled PG:", _e)
+
 
     def calibrate_global_rate(self, percentile=0.90, target_level=0.90, exclude_pairs=None):
         """
@@ -489,30 +529,45 @@ class Grid:
 
     def run_power_flow(self):
         self.case = copy.deepcopy(self.original_case)
+
+        # --- PROBES: totals and specific buses
+        BUS_I, PD, QD = 0, 2, 3
+        def _bus_row(case, bnum):
+            return case['bus'][case['bus'][:, BUS_I] == bnum][0]
+
+        print("🔎 BEFORE scaling Pd sums:",
+            float(self.case['bus'][:,PD].sum()),
+            "Qd sum:",
+            float(self.case['bus'][:,QD].sum()))
+        print("🔎 Bus80 before:", float(_bus_row(self.case, 80)[PD]), float(_bus_row(self.case, 80)[QD]))
+        print("🔎 Bus116 before:", float(_bus_row(self.case, 116)[PD]), float(_bus_row(self.case, 116)[QD]))
+
+
+        # 🔻 Decrease Pd/Qd for buses 80 and 116
+        # NEW: heavily decrease Pd/Qd at buses 80 and 116
+        self.case = scale_bus_loads(self.case, {80:0.20, 116:0.20})
+
+        # Shift stress to the 70s east corridor:
+        self.case = scale_bus_loads(self.case, {70:1.7, 74:1.6, 76:1.6, 78:1.5, 80:0.6})
+
+        # Push southeast pocket:
+        self.case = scale_bus_loads(self.case, {90:1.8, 91:1.7, 92:1.5, 94:1.4, 95:1.4, 100:1.5, 104:1.6})
+
+        # Pull mid-east (15–21):
+        self.case = scale_bus_loads(self.case, {12:1.4, 15:1.7, 16:1.4, 18:1.6, 19:1.4, 21:1.4})
+
+        print("🔎 AFTER scaling Pd sums:",
+      float(self.case['bus'][:,PD].sum()),
+      "Qd sum:",
+        float(self.case['bus'][:,QD].sum()))
+        print("🔎 Bus80 after:", float(_bus_row(self.case, 80)[PD]), float(_bus_row(self.case, 80)[QD]))
+        print("🔎 Bus116 after:", float(_bus_row(self.case, 116)[PD]), float(_bus_row(self.case, 116)[QD]))
+
+
+
+
+
         self.update_case_from_objects()
-
-
-        GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
-        try:
-            for i, gen in enumerate(self.generators):
-                pg_val = float(getattr(gen, "pg", 0.0) or 0.0)
-                is_disabled = bool(getattr(gen, "disabled", False))
-
-                # status
-                self.case['gen'][i, GEN_STATUS] = 0 if is_disabled else 1
-
-                if is_disabled:
-                    # force offline & zero output
-                    self.case['gen'][i, PG] = 0.0
-                else:
-                    # ensure PMAX >= desired PG (avoid infeasible case)
-                    current_pmax = float(self.case['gen'][i, PMAX])
-                    if pg_val > current_pmax:
-                        self.case['gen'][i, PMAX] = pg_val
-                    # set scheduled PG (initial dispatch)
-                    self.case['gen'][i, PG] = pg_val
-        except Exception as _e:
-            print("⚠️ Failed to apply generator Pg/status to case:", _e)
 
         try:
             BR_STATUS_COL = 10
