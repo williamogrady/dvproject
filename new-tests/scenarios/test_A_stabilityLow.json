@@ -1,10 +1,10 @@
 {
-    "scenario_id": "test_A",
+    "scenario_id": "test_A_stabilityLow",
     "title": "Stability Low",
     "target_mw": 3200,
     "line_limit_pct": 0.04,
     "locked_generators": ["Gen12", "Gen4", "Gen27", "Gen25", 
-                            "Gen8", "Gen31", "Gen32"
+                          "Gen31", "Gen32"
                           ],
     "disabled_generators": ["Gen6", "Gen40", "Gen42", 
                             "Gen49", "Gen54", "Gen56", 

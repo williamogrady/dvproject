@@ -1,0 +1,36 @@
+{
+    "scenario_id": "test_G_mixedLow",
+    "title": "Mixed Low",
+    "target_mw": 3000,
+    "emissions_limit": 3000,
+    "cost_limit": 15000,
+    "line_limit_pct": 0.04,
+    "locked_generators": [
+        "Gen8", "Gen32", "Gen4", "Gen12", "Gen49", "Gen61"
+    ],
+    "disabled_generators": [
+        "Gen6", "Gen80"
+    ],
+    "initial_outputs": {
+        "Gen8": 100,
+        "Gen10": 400,
+        "Gen25": 320,
+        "Gen18": 100,
+        "Gen24": 100,
+        "Gen32": 100,
+        "Gen36": 100,
+        "Gen46": 100,
+        "Gen65": 200,
+        "Gen69": 805,
+        "Gen70": 100,
+        "Gen49": 300,
+        "Gen61": 300,
+        "Gen110": 100,
+        "Gen111": 100,
+        "Gen112": 100,
+        "Gen40": 100,
+        "Gen85": 100
+
+    
+}
+}

@@ -1,0 +1,11 @@
+{
+    "scenario_id": "test_D_balanceHigh",
+    "title": "Balance High",
+    "target_mw": 2000,
+    "line_limit_pct": 0.09,
+    "initial_outputs": {
+        "Gen40": 100, "Gen42": 100, "Gen54": 100, "Gen55": 100, "Gen56": 100
+    },
+    "disabled_generators": ["Gen65", "Gen69", "Gen70", "Gen116"],
+    "locked_generators": ["Gen40", "Gen42", "Gen54", "Gen55", "Gen56"]
+}

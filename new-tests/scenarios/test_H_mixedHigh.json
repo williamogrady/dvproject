@@ -1,0 +1,20 @@
+{
+    "scenario_id": "test_H_mixedHigh",
+    "title": "Mixed High",
+    "target_mw": 5000,
+    "emissions_limit": 7000,
+    "cost_limit": 10000,
+    "line_limit_pct": 0.04,
+    "locked_generators": [
+    ],
+    "disabled_generators": [
+    ],
+    "initial_outputs": {
+        "Gen8": 100,
+        "Gen36": 100,
+        "Gen46": 100,
+        "Gen65": 200
+
+    
+}
+}

@@ -1,0 +1,13 @@
+{
+    "scenario_id": "test_F_budgetHigh",
+    "title": "Budget High",
+    "target_mw": 4000,
+    "cost_limit": 20000,
+    "line_limit_pct": 0.03,
+    "disabled_generators": ["Gen10", "Gen65", "Gen70", "Gen116", "Gen87", "Gen85", "Gen90", "Gen40"],
+    "locked_generators": ["Gen26"],
+    "initial_outputs": {
+        "Gen4": 100, "Gen6": 100, "Gen12": 200, "Gen69": 400, "Gen26": 400
+
+    }
+}

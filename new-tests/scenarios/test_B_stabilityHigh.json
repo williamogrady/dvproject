@@ -1,0 +1,21 @@
+{
+    "scenario_id": "test_B_stabilityHigh",
+    "title": "Stability High",
+    "target_mw": 4000,
+    "line_limit_pct": 0.04,
+    "locked_generators": ["Gen24", "Gen72", "Gen73", "Gen74", "Gen70"],
+    "disabled_generators": ["Gen10", "Gen89", "Gen90", "Gen87", "Gen85"
+                        ],
+    "initial_outputs": {
+        "Gen24": 100, "Gen72": 100, "Gen73": 100, "Gen74": 100, "Gen70": 100,
+      "Gen69": 805,
+      "Gen65": 400,
+      "Gen80": 600,
+        "Gen31": 100,
+        "Gen32": 100,
+        "Gen26": 200,
+        "Gen27": 100,
+        "Gen8": 100
+    },
+    "bonus": null
+  }

@@ -1,0 +1,19 @@
+{
+    "scenario_id": "test_E_budgetLow",
+    "title": "Budget Low",
+    "target_mw": 2800,
+    "cost_limit": 10000,
+    "line_limit_pct": 0.05,
+    "initial_outputs": {
+        
+        "Gen4": 100, "Gen6": 100, "Gen8": 100, "Gen10": 400, "Gen12": 200,
+        "Gen40": 100, "Gen42": 100, "Gen54": 100, "Gen55": 100, "Gen56": 100,
+        "Gen104": 100, "Gen105": 100, "Gen112": 100, "Gen110": 100,
+        "Gen26": 400, "Gen80": 600, "Gen113": 100, "Gen18": 100, "Gen32": 100
+    },
+    "disabled_generators": ["Gen31", "Gen19", "Gen15", "Gen26", "Gen24"],
+    "locked_generators": [
+        
+        "Gen4", "Gen6", "Gen12", "Gen10", "Gen8"
+    ]
+}
