@@ -297,7 +297,7 @@ class Grid:
         """
         Run PF once with neutral multipliers, measure baseline utilizations U_i,
         and compute a global scalar S_g so that the chosen percentile sits at target_level.
-        Returns S_g (float). If anything goes wrong, falls back to 0.20.
+        Returns S_g (float). Falls back to 0.20 only if we truly have no data.
         """
         # 1) Temporarily neutralize multipliers
         for br in self.branches:
@@ -326,16 +326,14 @@ class Grid:
         if not utils:
             return 0.20  # safe fallback
 
-        utils = np.array(utils, dtype=float)
-        uq = float(np.quantile(utils, percentile))
-        if uq <= 0:
+        uq = float(np.quantile(np.array(utils, dtype=float), percentile))
+        if uq <= 0 or target_level <= 1e-6:
             return 0.20
 
-        # 4) S_g — if 90th perc is 0.18 and we want 0.90, S_g = 0.18 / 0.90 = 0.20
-        S_g = uq / max(1e-6, float(target_level))
-        # Optional guardrails so denominators never get too small/large
-        S_g = float(np.clip(S_g, 0.10, 0.50))
-        return S_g
+        # No clipping: let scenarios dictate stress naturally.
+        S_g = uq / float(target_level)
+        return float(S_g)
+
     
     def debug_utilization_report(self, k=12, tag=""):
         lines = []
@@ -464,14 +462,6 @@ class Grid:
             br.unavailable = (lo, hi) in disabled_pairs
 
 
-        # Global scalar (same as before)
-        try:
-            limit_pct = float(scenario_data.get("line_limit_pct", 1.0) or 1.0)
-        except Exception:
-            limit_pct = 1.0
-
-        # Optional: per-line multipliers as an OBJECT map
-        # { "Line_Bus68_Bus69": 0.55, "Line_Bus69_Bus77": 0.7, ... }
                 # --- Global scalar S_g (calibrated or provided) ---------------------
         stress_cfg = scenario_data.get("stress") or {}
         use_calibration = bool(stress_cfg.get("calibrate", False))
@@ -487,15 +477,13 @@ class Grid:
                     excl_pairs.add(pair)
             S_g = self.calibrate_global_rate(percentile=perc, target_level=level, exclude_pairs=excl_pairs)
         else:
-            # Backwards-compatible global knob
+            # Use scenario-provided knob as-is; default 1.0 (no global scaling)
             try:
                 S_g = float(scenario_data.get("line_limit_pct", 1.0) or 1.0)
             except Exception:
                 S_g = 1.0
-            # Optional safety, keep S_g sensible
-            S_g = float(np.clip(S_g, 0.10, 0.50))
 
-        # --- Per-line multipliers (bounded) ---------------------------------
+        # --- Per-line multipliers (use scenario values as-is) ---------------
         line_multipliers = scenario_data.get("line_multipliers") or {}
         pair_mult = {}
         for key, val in line_multipliers.items():
@@ -506,8 +494,7 @@ class Grid:
                 mline = float(val)
             except Exception:
                 mline = 1.0
-            # Boundaries to avoid tiny denominators or absurd relief
-            mline = float(np.clip(mline, 0.85, 1.25))
+            # No clipping — trust the scenario to define sensitivity
             pair_mult[pair] = mline
 
         # --- Apply both to branches -----------------------------------------
@@ -516,6 +503,7 @@ class Grid:
             lo, hi = (a, b) if a <= b else (b, a)
             br.limit_pct = float(S_g)
             br.m_line    = float(pair_mult.get((lo, hi), 1.0))
+
 
 
 
@@ -528,56 +516,21 @@ class Grid:
 
 
     def run_power_flow(self):
+        # Always start from the original case
         self.case = copy.deepcopy(self.original_case)
 
-        # --- PROBES: totals and specific buses
-        BUS_I, PD, QD = 0, 2, 3
-        def _bus_row(case, bnum):
-            return case['bus'][case['bus'][:, BUS_I] == bnum][0]
-
-        print("🔎 BEFORE scaling Pd sums:",
-            float(self.case['bus'][:,PD].sum()),
-            "Qd sum:",
-            float(self.case['bus'][:,QD].sum()))
-        print("🔎 Bus80 before:", float(_bus_row(self.case, 80)[PD]), float(_bus_row(self.case, 80)[QD]))
-        print("🔎 Bus116 before:", float(_bus_row(self.case, 116)[PD]), float(_bus_row(self.case, 116)[QD]))
-
-
-        # 🔻 Decrease Pd/Qd for buses 80 and 116
-        # NEW: heavily decrease Pd/Qd at buses 80 and 116
-        self.case = scale_bus_loads(self.case, {80:0.20, 116:0.20})
-
-        # Shift stress to the 70s east corridor:
-        self.case = scale_bus_loads(self.case, {70:1.7, 74:1.6, 76:1.6, 78:1.5, 80:0.6})
-
-        # Push southeast pocket:
-        self.case = scale_bus_loads(self.case, {90:1.8, 91:1.7, 92:1.5, 94:1.4, 95:1.4, 100:1.5, 104:1.6})
-
-        # Pull mid-east (15–21):
-        self.case = scale_bus_loads(self.case, {12:1.4, 15:1.7, 16:1.4, 18:1.6, 19:1.4, 21:1.4})
-
-        print("🔎 AFTER scaling Pd sums:",
-      float(self.case['bus'][:,PD].sum()),
-      "Qd sum:",
-        float(self.case['bus'][:,QD].sum()))
-        print("🔎 Bus80 after:", float(_bus_row(self.case, 80)[PD]), float(_bus_row(self.case, 80)[QD]))
-        print("🔎 Bus116 after:", float(_bus_row(self.case, 116)[PD]), float(_bus_row(self.case, 116)[QD]))
-
-
-
-
-
+        # Update case with current generator/user/scenario state
         self.update_case_from_objects()
 
+        # Apply branch enable/disable flags from the active scenario (if any)
         try:
             BR_STATUS_COL = 10
             for i, br in enumerate(self.branches):
-                # default to enabled unless scenario marked it unavailable
                 self.case['branch'][i, BR_STATUS_COL] = 0 if getattr(br, 'unavailable', False) else 1
         except Exception as _e:
-            # Non-fatal: we still try to run PF; this just logs what went wrong
             print("⚠️ Failed to apply branch statuses from scenario:", _e)
 
+        # Run power flow
         try:
             options = ppoption(VERBOSE=0, OUT_ALL=0)
             print("🚧 CASE GEN BEFORE RUNPF:\n", self.case['gen'])
@@ -591,22 +544,19 @@ class Grid:
         if success:
             self.update_branch_flows(results['branch'])
             self.last_total_cost = self.compute_total_cost(results)
-            # 👇 add this
-            self.debug_utilization_report(k=12, tag=f"(scenario={self.active_scenario.get('id') if self.active_scenario else ''})")
+            # Helpful debug report without biasing the network
+            self.debug_utilization_report(
+                k=12,
+                tag=f"(scenario={self.active_scenario.get('id') if self.active_scenario else ''})"
+            )
         else:
             print("⚠️ Power flow failed — clearing branch flows")
-            success = False
-            # after apply_scenario applies multipliers
-            for probe in ["Line_Bus18_Bus19","Line_Bus65_Bus68","Line_Bus68_Bus69"]:
-                pair = _normalize_line_key_to_pair(probe, getattr(self, "_id_to_pair", None))
-                if pair:
-                    for br in self.branches:
-                        lo, hi = (min(br.from_bus, br.to_bus), max(br.from_bus, br.to_bus))
-                        if (lo, hi) == pair:
-                            print("multiplier check:", probe, "=>", br.m_line)
-
+            for br in self.branches:
+                br.flow = 0.0
+                br.overloaded = False
 
         return success
+
 
 
     def update_branch_flows(self, pf_branch_matrix):

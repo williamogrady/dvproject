@@ -1,24 +1,27 @@
 {
     "scenario_id": "clean_north_power",
     "title": "Clean North Power",
-    "target_mw": 3000,
+    "target_mw": 7000,
     "emissions_limit": 10000,
     "cost_limit": 20000,
-    "line_limit_pct": 0.2,
+    "line_limit_pct": 0.04,
     "locked_generators": [
-        "Gen8"
+        "Gen8", "Gen32", "Gen4", "Gen12"
     ],
     "disabled_generators": [
         "Gen6"
     ],
     "initial_outputs": {
         "Gen8": 100,
-        "Gen25": 320
-    },
-    "disabled_lines": [
-        "Line_Bus48_Bus49"
-    ]
+        "Gen10": 400,
+        "Gen25": 320,
+        "Gen18": 100,
+        "Gen24": 100,
+        "Gen32": 100,
+        "Gen36": 100,
+        "Gen46": 100,
+        "Gen65": 200
 
-
-
+    
+}
 }

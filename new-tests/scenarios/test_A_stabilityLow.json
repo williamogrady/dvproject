@@ -1,0 +1,35 @@
+{
+    "scenario_id": "test_A",
+    "title": "Stability Low",
+    "target_mw": 3200,
+    "line_limit_pct": 0.04,
+    "locked_generators": ["Gen12", "Gen4", "Gen27", "Gen25", 
+                            "Gen8", "Gen31", "Gen32"
+                          ],
+    "disabled_generators": ["Gen6", "Gen40", "Gen42", 
+                            "Gen49", "Gen54", "Gen56", 
+                            "Gen61", "Gen46", "Gen36", 
+                            "Gen34", "Gen55", "Gen59"
+                        ],
+    "initial_outputs": {
+      "Gen10": 400,
+      "Gen12": 200,
+      "Gen27": 100,
+      "Gen32": 100,
+      "Gen4": 100,
+      "Gen100": 200,
+      "Gen31": 100,
+      "Gen104": 100,
+      "Gen15": 400,
+      "Gen25": 200,
+      "Gen76": 100,
+      "Gen74": 100,
+      "Gen73": 100,
+      "Gen72": 100,
+      "Gen70": 100,
+      "Gen24": 100,
+      "Gen89": 700
+
+    },
+    "bonus": null
+  }

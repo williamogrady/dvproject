@@ -2606,6 +2606,15 @@ drawPowerBlocks(
 
   });
 
+
+  // Call this at the end of updateMapGeneratorsFromScenario()
+d3.selectAll(".map-gen-group").each(function () {
+  const g = d3.select(this);
+  const id = g.select(".map-gen").attr("id") || "";
+  const t = g.select("title").empty() ? g.append("title") : g.select("title");
+  t.text(id);
+});
+
   // if you keep these hooks:
   if (typeof updateGeneratorStrokes === "function") updateGeneratorStrokes();
 }
@@ -3254,6 +3263,8 @@ function computeSubmitStats(){
     if (ev?.data?.type === 'dv:state') window.logSubmitStats('after dv:state');
   });
 })();
+
+
 </script>
 
 </body>
