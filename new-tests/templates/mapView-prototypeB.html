@@ -1497,7 +1497,9 @@ function drawChevrons(lines, nodes, mode) {
     const A = pathEl.getPointAtLength(totalLen * 0.45);
     const B = pathEl.getPointAtLength(totalLen * 0.55);
 
-    const angleDeg = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI + 180;
+    let angleDeg = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI;
+    // flip only when flow is negative
+    if (line.flow < 0) angleDeg += 180;
     const midX = (A.x + B.x) / 2;
     const midY = (A.y + B.y) / 2;
 

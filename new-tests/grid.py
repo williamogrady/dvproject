@@ -160,7 +160,9 @@ class Branch:
         self.limit_pct = 1.0           # global scalar S_g or line_limit_pct
         self.m_line    = 1.0           # per-line nudge (fragile/relief)
         # Runtime
-        self.flow = 0.0
+        self.flow = 0.0            # magnitude (MW)
+        self.flow_signed = 0.0     # signed (MW), + = from_bus→to_bus, - = reverse
+        self.direction = 0         # +1 forward, -1 reverse
         self.overloaded = False
         self.unavailable = False
         self.ui_id = None
@@ -170,29 +172,32 @@ class Branch:
         return float(self.rate_base) * float(self.limit_pct) * float(self.m_line)
 
     def update_flow(self, new_row):
-        # PF column 13 (MW from "from" to "to")
-        self.flow = float(abs(new_row[13]))
+        # PF column 13 is MW from "from_bus" → "to_bus"
+        self.flow_signed = float(new_row[13])     # ← keep the sign
+        self.flow = abs(self.flow_signed)         # magnitude for % load/widths/etc.
+        self.direction = 1 if self.flow_signed >= 0 else -1
         self.overloaded = self.flow > self.effective_cap()
 
     def to_dict(self):
         a, b = int(self.from_bus), int(self.to_bus)
         lo, hi = (a, b) if a <= b else (b, a)
         fallback_id = f"Line_Bus{lo}_Bus{hi}"
-        ui_id = getattr(self, "ui_id", None)
-        line_id = ui_id if ui_id else fallback_id
-
-        rate_eff = self.effective_cap()
+        ui_id = getattr(self, "ui_id", None) or fallback_id
 
         return {
-            "id": line_id,
+            "id": ui_id,
             "from_bus": a,
             "to_bus": b,
-            "flow": float(self.flow),
-            # Expose both for clarity
+            "flow_mw": float(self.flow),              # magnitude
+            "flow_signed_mw": float(self.flow_signed),# signed
+            "dir_sign": 1 if self.direction >= 0 else -1,
+            "dir": "from_to" if self.direction >= 0 else "to_from",
             "rate_base": float(self.rate_base),
-            "rate_a": float(rate_eff),    # effective continuous cap
+            "rate_a": float(self.effective_cap()),
             "unavailable": bool(self.unavailable),
+            "overloaded": bool(self.overloaded),
         }
+
     
 def scale_bus_loads(case, multipliers):
     """
@@ -232,9 +237,13 @@ class Grid:
         #    branch.rate_a = 1000  # Set all line limits low
         # Reverse lookup so scenarios can reference UI ids directly
         self._id_to_pair = {ui_id: pair for pair, ui_id in self._ui_pair_to_id.items()}
-
-
         self.last_total_cost = 0  # ✅ added to prevent errors before toggle
+
+        for br in self.branches:
+            a, b = br.from_bus, br.to_bus
+            lo, hi = (a, b) if a <= b else (b, a)
+            br.ui_id = self._ui_pair_to_id.get((lo, hi), f"Line_Bus{lo}_Bus{hi}")
+
 
     def update_case_from_objects(self):
         GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)

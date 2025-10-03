@@ -285,6 +285,21 @@
   box-shadow: 0 6px 14px rgba(0,0,0,.18);
 }
 .added-toast.on{ opacity: 1; transform: translateY(0); }
+
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-left: 8px;
+  line-height: 1.6;
+}
+.pill.good { background:#def7ec; color:#03543f; }   /* green */
+.pill.warn { background:#fdf6b2; color:#723b13; }   /* yellow (>=90% & <100%) */
+.pill.bad  { background:#fde8e8; color:#9b1c1c; }   /* red (>=100%) */
+.pill.hidden { display:none; }
 </style>
 
 
@@ -335,11 +350,20 @@
           <div class="column" style="display: flex; flex-direction: column; gap: 0.5rem;">
             <div class="overview-card" id="scale-cost">
               <div class="overview-label">Total Cost</div>
-              <div class="overview-value" id="overview-cost">–</div>
+              <div class="overview-value" id="overview-cost">
+                <span id="overview-cost-now">–</span>
+                <span id="overview-cost-cap"></span>
+                <span id="overview-cost-pill" class="pill hidden">Under budget</span>
+              </div>
             </div>
+
             <div class="overview-card" id="scale-emissions">
               <div class="overview-label">Total Emissions</div>
-              <div class="overview-value" id="overview-emissions">–</div>
+              <div class="overview-value" id="overview-emissions">
+                <span id="overview-emis-now">–</span>
+                <span id="overview-emis-cap"></span>
+                <span id="overview-emis-pill" class="pill hidden">Under cap</span>
+              </div>
             </div>
           </div>
         </div>
@@ -495,8 +519,7 @@ let previousLineLoads = {};
 
 // Small format helpers
 const formatMW  = v => `${Math.round(Number(v||0))} MW`;
-const formatUSD = v => `$${Math.round(Number(v||0))}`;
-const formatCO2 = v => `${Math.round(Number(v||0))} tCO₂`;
+const formatUSD = v => formatMoney(v);
 
 
 
@@ -757,6 +780,42 @@ function afterGeneratorAdded(gen){
     showAddedToast(label);
   });
 }
+
+function formatMoney(n){ return `$${Math.round(n).toLocaleString()}`; }
+function formatCO2(n){ return `${Math.round(n).toLocaleString()} tCO₂`; }
+
+function pillState(curr, cap){
+  if (cap == null || !isFinite(cap)) return { label:"", cls:"pill hidden" };
+  const r = (cap === 0) ? Infinity : curr / cap;
+  if (r < 0.90) return { label:"Under budget", cls:"pill good" };
+  if (r < 1.00) return { label:"Close to cap", cls:"pill warn" };
+  return { label:"Over budget", cls:"pill bad" };
+}
+
+function updateCapAndPill(prefix, curr, cap, type /* "budget" | "emissions" */){
+  const nowEl = document.getElementById(`${prefix}-now`);
+  const capEl = document.getElementById(`${prefix}-cap`);
+  const pill  = document.getElementById(`${prefix}-pill`);
+
+  const nCurr = Math.round(curr).toLocaleString();
+  const nCap  = (cap != null && isFinite(cap)) ? Math.round(cap).toLocaleString() : null;
+
+  if (type === "budget") {
+    if (nowEl) nowEl.textContent = `$${nCurr}`;
+    if (capEl) capEl.textContent = nCap ? `/${nCap}` : "";
+  } else if (type === "emissions") {
+    if (nowEl) nowEl.textContent = nCurr;
+    if (capEl) capEl.textContent = nCap ? `/${nCap} tCO₂` : "";
+  }
+
+  if (pill) {
+    const st = pillState(curr, cap);
+    const label = (type === "emissions") ? st.label.replace("budget","cap") : st.label;
+    pill.className = st.cls;
+    pill.textContent = label;
+  }
+}
+
 
 
 
@@ -1193,10 +1252,16 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
   // COST / EMISSIONS
   const totalCost = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.cost_per_mw||0), 0);
   const totalEmis = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.emissions_per_mw||0), 0);
-  const costEl = document.querySelector('#overview-cost');
-  const emiEl  = document.querySelector('#overview-emissions');
-  if (costEl) costEl.textContent = `$${Math.round(totalCost).toLocaleString()}`;
-  if (emiEl)  emiEl.textContent  = `${Math.round(totalEmis).toLocaleString()} tCO₂`;
+  // Structured values + pills (mirrors MapView)
+  const costLimit = (scenario.cost_limit != null) ? Number(scenario.cost_limit) : null;
+  const emisLimit = (scenario.emissions_limit != null) ? Number(scenario.emissions_limit) : null;
+
+  // Updates #overview-cost-now/#overview-cost-cap/#overview-cost-pill
+  updateCapAndPill("overview-cost", totalCost, costLimit, "budget");
+
+  // Updates #overview-emis-now/#overview-emis-cap/#overview-emis-pill
+  updateCapAndPill("overview-emis",  totalEmis, emisLimit, "emissions");
+
 
   // LINES
   updateLinesCard(lines);
@@ -2262,6 +2327,7 @@ function setupTaskSection(scenario){
   }
 
   const hasBudget  = scenario.cost_limit !== undefined && scenario.cost_limit !== null;
+  const hasEmis    = scenario.emissions_limit !== undefined && scenario.emissions_limit !== null;
   const lockedList = scenario.locked_generators || scenario.locked || [];
   const disabList  = scenario.disabled_generators || scenario.disabled || [];
   const hasLocked  = Array.isArray(lockedList)  && lockedList.length > 0;
@@ -2284,6 +2350,7 @@ function setupTaskSection(scenario){
 </li>
               <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
               ${hasBudget ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>` : ``}
+              ${hasEmis ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within emissions cap</li>` : ``}
             </ul>
           </div>
 
