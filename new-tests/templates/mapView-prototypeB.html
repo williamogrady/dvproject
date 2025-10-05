@@ -1214,6 +1214,108 @@ function drawDicePipsCollapsed(containerSel, size, currentMW, maxMW, isOn){
 }
 
 
+function ensureChevronTooltip() {
+  const root = d3.select("#zoom-group");     // ← live inside the zoomed group
+  let g = root.select("#chev-tooltip");
+  if (g.empty()) {
+    g = root.append("g")
+      .attr("id", "chev-tooltip")
+      .style("pointer-events", "none")
+      .style("display", "none");
+
+    g.append("rect")
+      .attr("rx", 6).attr("ry", 6)
+      .attr("height", 24)
+      .attr("width", 80);
+
+    g.append("text")
+      .attr("x", 8).attr("y", 16)
+      .attr("font-family", "Figtree, sans-serif")
+      .attr("font-size", 12)
+      .attr("fill", "#111");
+  }
+  return g;
+}
+
+
+// Utilization color for chevrons/circles with real nuance from 10–50%,
+// gentle warm-up <60%, orange ~60–85%, red ~85–100%, bright (not maroon) >100%.
+function getChevronColor(pct) {
+  const p = Math.max(0, +pct || 0);
+
+  // 0–10%: very pale yellow → visibly pale yellow
+  if (p <= 0.10) {
+    const t = p / 0.10;
+    return d3.interpolateRgb("#FFFDE7", "#FFF9C4")(t); // almost white → pale yellow
+  }
+  // 10–30%: pale yellow → mellow yellow (visible difference vs 10%)
+  if (p <= 0.30) {
+    const t = (p - 0.10) / 0.20;
+    return d3.interpolateRgb("#FFF9C4", "#FFF59D")(t);
+  }
+  // 30–50%: mellow yellow → warm yellow (clearly deeper than 30%)
+  if (p <= 0.50) {
+    const t = (p - 0.30) / 0.20;
+    return d3.interpolateRgb("#FFF59D", "#FFE082")(t);
+  }
+  // 50–70%: warm yellow → light orange (begins feeling "active" near 60%)
+  if (p <= 0.70) {
+    const t = (p - 0.50) / 0.20;
+    return d3.interpolateRgb("#FFE082", "#FFB74D")(t);
+  }
+  // 70–85%: light orange → orange
+  if (p <= 0.85) {
+    const t = (p - 0.70) / 0.15;
+    return d3.interpolateRgb("#FFB74D", "#FF9800")(t);
+  }
+  // 85–100%: orange → bright red
+  if (p <= 1.00) {
+    const t = (p - 0.85) / 0.15;
+    return d3.interpolateRgb("#FF9800", "#EF5350")(t);
+  }
+  // >100%: keep bright, pleasant red (no dark maroon)
+  const t = Math.min(1, (p - 1) / 0.50); // by 150% we reach slightly lighter bright red
+  return d3.interpolateRgb("#EF5350", "#FF6E6E")(t);
+}
+
+
+
+
+function showChevronTooltip(event, d) {
+  const g = ensureChevronTooltip();
+  const [x, y] = d3.pointer(event, d3.select("#zoom-group").node());
+
+  const pct = (d._pct || 0);
+  const pctLabel = Math.round(pct * 100);
+  const flowSigned = +((d.flow ?? d.flow_signed) || 0);
+  const mwLabel  = Math.round(Math.abs(flowSigned));
+  const signChar = (flowSigned > 0) ? "+" : (flowSigned < 0 ? "−" : "0");
+
+  const label = `${pctLabel}% • ${signChar}${mwLabel} MW`;
+  const padX = 8;
+
+  const fillColor = getChevronColor(pct);
+
+  const text = g.select("text").text(label);
+  const w = text.node().getComputedTextLength() + padX * 2;
+
+  g.select("rect")
+    .attr("width", w)
+    .attr("fill", fillColor)
+    .attr("stroke", "#111")
+    .attr("stroke-width", 0.5)
+    .attr("opacity", 0.95);
+
+  g.attr("transform", `translate(${x + 12}, ${y - 18})`)
+   .style("display", "block");
+}
+
+
+function hideChevronTooltip() {
+  d3.select("#chev-tooltip").style("display", "none");
+}
+
+
 function map(value, inMin, inMax, outMin, outMax) {
   return outMin + ((value - inMin) / (inMax - inMin)) * (outMax - outMin);
 }
@@ -1469,64 +1571,130 @@ function getHighestLoadPctAtSubmit(lines = [], scen = window.currentScenarioData
 }
 
     // ===== Chevrons =====
+    function isBusId(x){ return typeof x === "string" && x.startsWith("Bus"); }
+function isBusBusLine(line){ return isBusId(line.source) && isBusId(line.target); }
+
 
 // Draws a fresh chevron layer from enriched line data
 function drawChevrons(lines, nodes, mode) {
-  // Remove old layer
+  // --- remove & recreate layer (kept only here to avoid flicker) ---
   d3.select("#chevron-layer").remove();
- const chevronGroup = d3.select("#zoom-group")
-   .insert("g", ".map-gen-group")        // keep chevrons *below* generators
-   .attr("id", "chevron-layer")
-   // apply fade immediately if power focus is active
-   .style("opacity", isPowerFocus() ? 0.2 : 1);
+  const chevronGroup = d3.select("#zoom-group")
+    .insert("g", ".map-gen-group") // keep chevrons *below* generators
+    .attr("id", "chevron-layer")
+    .style("opacity", isPowerFocus() ? 0.2 : 1);
 
-  const isLinesMode = mode === "lines";
+  const isLinesMode = (mode === "lines");
 
-  lines.forEach(line => {
-    const fromId = line.source, toId = line.target;
-    if (!fromId || !toId) return;
+  // --- local fallbacks so this is paste-safe -----------------------
+  const ZERO = (window.ZERO_MW ?? 0.1); // treat near-zero as zero (MW)
+  const circlePathFn = (typeof circlePath === "function")
+    ? circlePath
+    : (r) => {
+        const rr = Math.max(2, r);
+        return `
+          M ${-rr},0
+          a ${rr},${rr} 0 1,0 ${rr*2},0
+          a ${rr},${rr} 0 1,0 ${-rr*2},0
+          Z
+        `;
+      };
 
-    const from = nodes.find(n => n.id === fromId);
-    const to   = nodes.find(n => n.id === toId);
-    if (!from || !to || from.type !== "bus" || to.type !== "bus") return;
+  // --- helpers -----------------------------------------------------
+  function fallbackMidAndAngle(line) {
+    const from = nodes.find(n => n.id === line.source && n.type === "bus");
+    const to   = nodes.find(n => n.id === line.target && n.type === "bus");
+    if (!from || !to) return { midX: 0, midY: 0, angleDeg: 0, ok: false };
+    let angleDeg = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI;
+    if ((line.flow_signed ?? 0) < 0) angleDeg += 180; // flip on negative flow
+    return { midX: (from.x + to.x) / 2, midY: (from.y + to.y) / 2, angleDeg, ok: true };
+  }
 
+  function pathMidAndAngle(line) {
     const pathEl = document.getElementById(line.id);
-    if (!pathEl || !pathEl.getTotalLength) return;
-
-    const totalLen = pathEl.getTotalLength();
-    const A = pathEl.getPointAtLength(totalLen * 0.45);
-    const B = pathEl.getPointAtLength(totalLen * 0.55);
-
+    if (!pathEl || typeof pathEl.getTotalLength !== "function") {
+      return fallbackMidAndAngle(line);
+    }
+    const L  = pathEl.getTotalLength();
+    const A  = pathEl.getPointAtLength(Math.max(0, L * 0.45));
+    const B  = pathEl.getPointAtLength(Math.min(L, L * 0.55));
+    const mid= pathEl.getPointAtLength(L * 0.50);
     let angleDeg = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI;
-    // flip only when flow is negative
-    if (line.flow < 0) angleDeg += 180;
-    const midX = (A.x + B.x) / 2;
-    const midY = (A.y + B.y) / 2;
+    if ((line.flow_signed ?? 0) < 0) angleDeg += 180; // flip on negative flow
+    return { midX: mid.x, midY: mid.y, angleDeg, ok: true };
+  }
 
-    const loadPct = (line.rate_a > 0) ? (Math.abs(line.flow) / line.rate_a) : 0;
-    const color = getLoadColor ? getLoadColor(loadPct) : d3.interpolateYlOrRd(Math.max(0, Math.min(1, loadPct)));
+  function getMidAndAngle(line) {
+    const r = pathMidAndAngle(line);
+    return r.ok ? r : fallbackMidAndAngle(line);
+  }
 
-    // Slight size boost in Lines mode
-    const scale = isLinesMode ? (1 + 0.6 * Math.max(0, loadPct)) : 1;
-    const base = 10;
-    const size = Math.max(8, base * scale);
+  function defaultChevronPath(size) {
+    // simple triangle; 'size' roughly equals width
+    const h = Math.max(6, size * 0.6);
+    const w = Math.max(8, size);
+    return `M0,${-h/2} L${w},0 L0,${h/2} Z`;
+  }
 
-    chevronGroup.append("path")
-  .datum(line)
-  .attr("class", "chevron")
-  .attr("id", `chev-${line.id}`)
-  .attr("d", chevronPath ? chevronPath(size) : defaultChevronPath(size))
-  .attr("fill", color)
-  .attr("stroke", "#111")
-  .attr("stroke-width", 0.4)
-  .attr("data-x", midX)
-  .attr("data-y", midY)
-  .attr("transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`)
-.attr("data-base-transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`);
+  // --- data join (Bus↔Bus only) -----------------------------------
+  const sel = chevronGroup.selectAll("path.chevron")
+    .data(lines.filter(isBusBusLine), d => d.id);
 
+  // ENTER
+  const enter = sel.enter().append("path")
+    .attr("class", "chevron")
+    .attr("id", d => `chev-${d.id}`)
+    .attr("stroke", "#111")
+    .attr("stroke-width", 0.4)
+    .style("pointer-events", "auto")
+    .on("mouseenter", (event, d) => showChevronTooltip(event, d))
+    .on("mousemove",  (event, d) => showChevronTooltip(event, d))
+    .on("mouseleave", hideChevronTooltip);
 
-  });
+  // UPDATE + ENTER
+  enter.merge(sel)
+    .each(function(line) {
+      // utilization based on magnitude only
+      const flowSigned = +((line.flow ?? line.flow_signed) || 0);
+      const loadPct = (line.rate_a > 0) ? (Math.abs(flowSigned) / line.rate_a) : 0;
+      const color   = getChevronColor(loadPct);
+
+      // size: slightly larger in "lines" mode
+      const base  = 10;
+      const scale = isLinesMode ? (1 + 0.6 * Math.max(0, loadPct)) : 1;
+      const size  = Math.max(8, base * scale);
+
+      const { midX, midY, angleDeg } = getMidAndAngle(line);
+
+      // zero-flow → draw a circle; otherwise a chevron
+      const isZero = (Math.abs(flowSigned) < ZERO) || (loadPct === 0);
+      const pathD = isZero
+        ? circlePathFn(size * 0.45)
+        : (typeof chevronPath === "function") ? chevronPath(size) : defaultChevronPath(size);
+
+      // subtle opacity for tiny flows (optional)
+      const op = loadPct < 0.05 ? 0.2 : loadPct < 0.15 ? 0.6 : 1.0;
+
+      d3.select(this)
+      .datum(line)
+      .attr("d", pathD)
+      .attr("fill", color)
+      .attr("opacity", 1) // ← constant; no more low-load fading
+      .attr("data-x", midX)
+      .attr("data-y", midY)
+      .attr("data-shape", isZero ? "circle" : "chevron")
+      .attr("transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`)
+      .attr("data-base-transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`);
+
+      // optional: store pct for debugging
+      this.setAttribute("data-pct", loadPct.toFixed(3));
+    });
+
+  // EXIT
+  sel.exit().remove();
 }
+
+
 
 function updateLinesCard(/* liveLines not needed anymore */) {
   const countEl = document.getElementById("overview-lines");
@@ -1573,51 +1741,114 @@ function updateLinesCard(/* liveLines not needed anymore */) {
     });
   }
 
-  // Mini chevron (same as you already have)
-  function miniChevron(color, sizePx){
-    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    svg.setAttribute("width", sizePx);
-    svg.setAttribute("height", sizePx);
-    svg.setAttribute("viewBox", "-12 -12 24 24");
-    svg.style.transform = "translateY(-5px)";
-    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-    g.setAttribute("transform", "rotate(90)");
-    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
-    path.setAttribute("d", chevronPath(6));
-    path.setAttribute("fill", color);
-    path.setAttribute("stroke", "#111");
-    path.setAttribute("stroke-width", "0.4");
-    g.appendChild(path);
-    svg.appendChild(g);
-    return svg;
+// Centered chevron path (fallback if map's chevronPath isn't available)
+function miniChevronPathCentered(s) {
+  const L = s * 2, W = s * 1.2;           // fuller shoulders
+  const hL = L / 2, hW = W / 2;
+  return `M ${-hL},${-hW}
+          L ${ hL},0
+          L ${-hL},${ hW}
+          L ${-hL*0.5},0
+          Z`;
+}
+
+// Mini chevron SVG — centered, sign-aware, visibly wider, 0-flow = circle
+function miniChevron(color, sizePx, dirSign = 1, flowAbs = 1, zeroThresh = 0.1) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", sizePx);
+  svg.setAttribute("height", sizePx);
+  svg.setAttribute("viewBox", "-12 -12 24 24");
+  svg.style.display = "block";
+
+  // Outer group handles direction (rotate keeps center stable)
+  const gRot = document.createElementNS(NS, "g");
+  const angle = dirSign < 0 ? 270 : 90; // vertical arrow
+  gRot.setAttribute("transform", `rotate(${angle})`);
+
+  // Inner group recenters & widens the glyph
+  const gCtr = document.createElementNS(NS, "g");
+
+  // WIDEN factor — 1.5x width (this guarantees a visible change)
+  const WIDEN = 1.5;
+
+  // Build path: prefer map's chevronPath so shape matches map chevrons
+  const s = 6; // base scale for mini
+  const d = (typeof chevronPath === "function")
+    ? chevronPath(s)                 // same geometry as map chevrons
+    : miniChevronPathCentered(s);    // fallback centered shape
+
+  const path = document.createElementNS(NS, "path");
+
+  if (Math.abs(flowAbs) < (zeroThresh || 0.1)) {
+    // Zero-load: draw centered circle
+    path.setAttribute("d", "M -4,0 a 4,4 0 1,0 8,0 a 4,4 0 1,0 -8,0 Z");
+  } else {
+    path.setAttribute("d", d);
   }
 
-  // Card builders
-  const buildCard = (line, isRich) => {
-    const prevPct = previousLineLoads[line.id] ?? line._pct;
-    const delta   = (line._pct - prevPct) * 100;
-    const dir     = Math.abs(delta) < 0.5 ? "neutral" : (delta > 0 ? "up" : "down");
-    const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
-    const accent  = getLoadColor(line._pct);
-    const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
+  path.setAttribute("fill", color);
+  path.setAttribute("stroke", "#111");
+  path.setAttribute("stroke-width", "0.6"); // a tad bolder for mini size
 
-    const card = document.createElement("div");
-    card.className = `line-card${isRich ? "" : " top-card"}`;
-    card.style.setProperty("--accent", accent);
-    card.style.borderColor = accent;
-    card.style.borderWidth = isRich ? "3px" : "1.5px";
-    card.style.borderStyle = "solid";
-    card.setAttribute("data-line-id", line.id);
-    card.innerHTML = `
-      <div class="left"></div>
-      <div class="right">
-        <div class="load">${loadTxt}</div>
-        <div class="delta ${dir}">${deltaLabel}</div>
-      </div>`;
-    card.querySelector(".left").appendChild(miniChevron(accent, isRich ? 16 : 14));
-    card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
-    return card;
-  };
+  // Center the glyph around (0,0) and widen it:
+  // Translate left by half its length (assume path runs left→right from 0),
+  // then scale X to widen visually.
+  //
+  // For map chevrons produced by chevronPath(s), the tip is to the right.
+  // We normalize by shifting -s (approx half-length) then widen.
+  gCtr.setAttribute("transform", `translate(${-s}, 0) scale(${WIDEN}, 1)`);
+
+  gCtr.appendChild(path);
+  gRot.appendChild(gCtr);
+  svg.appendChild(gRot);
+  return svg;
+}
+
+
+  // Card builders
+const buildCard = (line, isRich) => {
+  const prevPct = previousLineLoads[line.id] ?? line._pct;
+  const delta   = (line._pct - prevPct) * 100;
+
+  // delta direction (for the little ▲ ▼ label)
+  const dir = Math.abs(delta) < 0.5 ? "neutral" : (delta > 0 ? "up" : "down");
+  const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
+
+  // line direction (for the mini chevron) — signed flow we stored in lineMetrics
+  const dirSign = Math.sign(line.flow || 0);
+
+  const accent  = getChevronColor(line._pct);
+  const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
+
+  const card = document.createElement("div");
+  card.className = `line-card${isRich ? "" : " top-card"}`;
+  card.style.setProperty("--accent", accent);
+  card.style.borderColor = accent;
+  card.style.borderWidth = isRich ? "3px" : "1.5px";
+  card.style.borderStyle = "solid";
+  card.setAttribute("data-line-id", line.id);
+  card.innerHTML = `
+    <div class="left"></div>
+    <div class="right">
+      <div class="load">${loadTxt}</div>
+      <div class="delta ${dir}">${deltaLabel}</div>
+    </div>`;
+
+  
+  const flowAbs = Math.abs(line.flow || 0);
+
+  card.querySelector(".left").appendChild(
+    miniChevron(getChevronColor(line._pct), isRich ? 16 : 14, dirSign, flowAbs)
+  );
+
+
+  // clicking the card pings the map chevron
+  card.addEventListener("click", (e) => { e.stopPropagation(); pingChevron(line.id); });
+
+  return card;
+};
+
 
   const buildPlaceholder = (isRich) => {
     const ph = document.createElement("div");
@@ -1656,18 +1887,33 @@ function pingChevron(lineId){
   const chev = d3.select(`#chev-${CSS.escape(lineId)}`);
   if (chev.empty()) return;
 
-  // Base transform (translate+rotate only; avoid compounding scales)
+  chev.raise();  // ← bring above peers
+
   const baseT = chev.attr("data-base-transform")
              || (chev.attr("transform") || "").replace(/\s*scale\([^)]+\)/g, "");
   chev.attr("data-base-transform", baseT);
 
-  // Anti-spam
   if (chev.attr("data-animating") === "1") return;
   chev.attr("data-animating", "1");
 
-  // Gentle pop: 300% at a slower pace
-  const MAX_SCALE = 3.0;
+  // Add/position a one-shot halo
+  const layer = d3.select("#chevron-layer");
+  const [x, y] = [ +chev.attr("data-x") || 0, +chev.attr("data-y") || 0 ];
+  const halo = layer.append("circle")
+    .attr("cx", x).attr("cy", y)
+    .attr("r", 0)
+    .attr("fill", "none")
+    .attr("stroke", "#ffd166")
+    .attr("stroke-width", 2)
+    .attr("opacity", 0.9)
+    .lower();
 
+  halo.transition().duration(450).ease(d3.easeCubicOut)
+      .attr("r", 34)
+      .attr("opacity", 0)
+      .remove();
+
+  const MAX_SCALE = 3.0;
   chev.interrupt()
       .attr("transform", `${baseT} scale(1)`)
       .transition().duration(250).ease(d3.easeCubicOut)
@@ -1675,6 +1921,21 @@ function pingChevron(lineId){
       .transition().duration(350).ease(d3.easeCubicIn)
         .attr("transform", `${baseT} scale(1)`)
         .on("end", () => chev.attr("data-animating", null));
+}
+
+// Treat near-zero as zero for display
+const ZERO_MW = 0.1; // tweak if needed
+
+function circlePath(r){
+  // Circle as a path so we can keep a single data-join on <path>
+  const rr = Math.max(2, r);
+  // Approximate circle with 4 arcs (good enough, transform-safe)
+  return `
+    M ${-rr},0
+    a ${rr},${rr} 0 1,0 ${rr*2},0
+    a ${rr},${rr} 0 1,0 ${-rr*2},0
+    Z
+  `;
 }
 
 
@@ -1692,47 +1953,41 @@ function chevronPath(scale) {
 }
 
 function refreshChevrons(liveLines, currentMapMode){
-  // 1) enrich with live flow
+  // Only Bus↔Bus lines from full_lines.json
+  const busBusStatic = staticLines.filter(isBusBusLine);
+
+  // 1) sign-aware live index (same as before)
   const liveIdx = new Map();
   for (const l of (liveLines || [])) {
-    liveIdx.set(`Bus${l.from_bus}|Bus${l.to_bus}`, l);
-    liveIdx.set(`Bus${l.to_bus}|Bus${l.from_bus}`, l);
+    const signed = +l.flow_signed || 0;
+    const rate   = +l.rate_a || 1;
+    // forward and reverse keys
+    liveIdx.set(`Bus${l.from_bus}|Bus${l.to_bus}`, { flow_signed: signed,  rate_a: rate });
+    liveIdx.set(`Bus${l.to_bus}|Bus${l.from_bus}`, { flow_signed: -signed, rate_a: rate });
   }
-  const enriched = staticLines.map(s => {
-    const live = liveIdx.get(`${s.source}|${s.target}`);
-    const flow = live?.flow ?? 0;
-    const rate = live?.rate_a ?? 1;
-    const pct  = rate > 0 ? Math.abs(flow) / rate : 0;
-    return { ...s, flow, rate_a: rate, _pct: pct };
+
+  // 2) enrich ONLY Bus↔Bus lines
+  const enriched = busBusStatic.map(s => {
+    const live = liveIdx.get(`${s.source}|${s.target}`) || { flow_signed: 0, rate_a: 1 };
+    const fs   = live.flow_signed;
+    const rate = live.rate_a;
+    const pct  = rate > 0 ? Math.abs(fs) / rate : 0;
+    return { ...s, flow: fs, flow_signed: fs, rate_a: rate, _pct: pct };
   });
 
-  // 2) update shared metrics (used by the Lines card)
+  // 3) metrics + redraw (unchanged)
   lineMetrics.clear();
   for (const L of enriched) lineMetrics.set(L.id, { pct: L._pct, flow: L.flow, rate_a: L.rate_a });
 
-  // 3) split by disabled
   const S = window.disabledLineSet || new Set();
   const enabled  = enriched.filter(L => !S.has(L.id));
   const disabled = enriched.filter(L =>  S.has(L.id));
 
-  // 4) rebuild layer
-  d3.select("#chevron-layer").remove();
-  d3.select("#zoom-group")
-    .insert("g", ".map-gen-group")
-    .attr("id", "chevron-layer")
-    .style("opacity", isPowerFocus() ? 0.2 : 1);
-
-  // 5) draw enabled chevrons (your existing routine)
+  // let drawChevrons own layer creation; just call it
   drawChevrons(enabled, staticNodes, currentMapMode);
-
-  // 6) draw ❌ for disabled corridors (now as #chev-<id> groups)
   drawDisabledMarkersMap(disabled);
-
-  // 7) (optional) stamp pct for debug/consistency
-  enriched.forEach(L => {
-    d3.select(`#chev-${CSS.escape(L.id)}`).attr("data-pct", L._pct);
-  });
 }
+
 
 function formatMoney(n){ return `$${Math.round(n).toLocaleString()}`; }
 function formatCO2(n){ return `${Math.round(n).toLocaleString()} tCO₂`; }

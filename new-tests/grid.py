@@ -182,23 +182,31 @@ class Branch:
         a, b = int(self.from_bus), int(self.to_bus)
         lo, hi = (a, b) if a <= b else (b, a)
         fallback_id = f"Line_Bus{lo}_Bus{hi}"
-        ui_id = getattr(self, "ui_id", None) or fallback_id
+        ui_id = getattr(self, "ui_id", None)
+        line_id = ui_id if ui_id else fallback_id
+
+        rate_eff = self.effective_cap()
 
         return {
-            "id": ui_id,
+            "id": line_id,
             "from_bus": a,
             "to_bus": b,
-            "flow_mw": float(self.flow),              # magnitude
-            "flow_signed_mw": float(self.flow_signed),# signed
-            "dir_sign": 1 if self.direction >= 0 else -1,
+
+            # === Flow & Direction ===
+            "flow": float(self.flow),                  # magnitude (backward-compat)
+            "flow_signed": float(self.flow_signed),    # signed MW for direction
+            "dir_sign": 1 if self.direction >= 0 else -1,  # +1: from→to, -1: to→from
             "dir": "from_to" if self.direction >= 0 else "to_from",
+
+            # === Ratings ===
             "rate_base": float(self.rate_base),
-            "rate_a": float(self.effective_cap()),
+            "rate_a": float(rate_eff),
+
+            # === Flags ===
             "unavailable": bool(self.unavailable),
             "overloaded": bool(self.overloaded),
         }
 
-    
 def scale_bus_loads(case, multipliers):
     """
     multipliers: dict {bus_number: scale}  (applies to both Pd and Qd)
@@ -569,12 +577,6 @@ class Grid:
 
 
     def update_branch_flows(self, pf_branch_matrix):
-        """
-        Copy PF results into Branch objects, then:
-        - attach a UI id if we have one
-        - zero flow for any PF branch that has no corresponding UI line
-        - compute 'overloaded' against the effective cap (limit_pct × m_line × rate_base)
-        """
         F_BUS, T_BUS, PF = 0, 1, 13
 
         for i, br in enumerate(self.branches):
@@ -587,18 +589,22 @@ class Grid:
                 # Attach UI id for API output
                 setattr(br, "ui_id", ui_id if ui_id else None)
 
-                # Flow from PF
+                # Flow from PF (SIGNED)
                 flow_val = float(pf_branch_matrix[i, PF])
+                br.flow_signed = flow_val
+                br.flow = abs(flow_val)                     # magnitude for % utilization
+                br.direction = 1 if flow_val >= 0 else -1   # +1: from→to, -1: to→from
 
                 # If this pair is not present in the UI, zero it to avoid mismatches
                 if (lo, hi) not in self._ui_pairs:
                     br.flow = 0.0
+                    br.flow_signed = 0.0
+                    br.direction = 0
                     setattr(br, "ui_mismatch", True)
                     br.overloaded = False
                 else:
-                    br.flow = abs(flow_val)
                     setattr(br, "ui_mismatch", False)
-                    # ✅ overloaded vs effective cap
+                    # Overload against effective cap
                     try:
                         br.overloaded = br.flow > br.effective_cap()
                     except Exception:
@@ -607,8 +613,11 @@ class Grid:
             except Exception as e:
                 print(f"⚠️ update_branch_flows row {i} error: {e}")
                 br.flow = 0.0
+                br.flow_signed = 0.0
+                br.direction = 0
                 setattr(br, "ui_mismatch", True)
                 br.overloaded = False
+
 
 
 
