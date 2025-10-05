@@ -1291,7 +1291,7 @@ function showChevronTooltip(event, d) {
   const mwLabel  = Math.round(Math.abs(flowSigned));
   const signChar = (flowSigned > 0) ? "+" : (flowSigned < 0 ? "−" : "0");
 
-  const label = `${pctLabel}% • ${signChar}${mwLabel} MW`;
+  const label = `${pctLabel}% • (${signChar}${mwLabel} MW)`;
   const padX = 8;
 
   const fillColor = getChevronColor(pct);
