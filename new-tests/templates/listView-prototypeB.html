@@ -301,6 +301,50 @@
 .pill.bad  { background:#fde8e8; color:#9b1c1c; }   /* red (>=100%) */
 .pill.hidden { display:none; }
 </style>
+<style id="results-overlay-styles">
+/* === Results overlay (light theme) — copied from MapView === */
+.results-box {
+  min-width: 480px;
+  max-width: 640px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px 24px;
+  color: #222;
+  font-family: 'Figtree', system-ui, sans-serif;
+  border: 1px solid #e0e0e0;
+}
+.results-title {
+  margin: 0 0 12px 0;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #222;
+}
+.results-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 8px; overflow: hidden; }
+.results-table thead th {
+  text-align: left; font-size: 0.85rem; font-weight: 600; color: #444;
+  background: #f5f5f5; padding: 10px 12px; border-bottom: 1px solid #e0e0e0;
+}
+.results-table tbody td {
+  padding: 12px; background: #fafafa; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
+  font-size: 0.95rem; color: #333;
+}
+.results-table tbody tr:last-child td { border-bottom: none; }
+.results-table tbody td:last-child { border-right: none; }
+.results-key { font-weight: 500; }
+.results-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #111; }
+/* Results overlay button visibility fix */
+.results-close{
+  color:#111 !important;            /* <-- make text visible on white */
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+  font:600 0.95rem/1.2 "Figtree",system-ui,sans-serif;
+}
+.results-close:hover{ background:#f5f5f5; }
+</style>
 
 
 </head>
@@ -2967,7 +3011,100 @@ window.debugEval = function(){
   });
   console.groupEnd();
 };
+// Helpers local to ListView
+function _lv_now(){ return performance.now(); }
+function _lv_fmt(ms){
+  const s = Math.max(0, Math.round(ms/1000));
+  const m = Math.floor(s/60), r = s % 60;
+  return `${m}:${String(r).padStart(2,'0')}`;
+}
+function _lv_num(v){ return Number.isFinite(+v) ? +v : 0; }
 
+function _lv_disabledLineSet(scen){
+  // Prefer a shared set if present; else derive from scenario.disabled_lines
+  if (window.disabledLineSet instanceof Set) return window.disabledLineSet;
+  const s = new Set();
+  (scen?.disabled_lines || []).forEach(id => s.add(String(id)));
+  return s;
+}
+
+function lvComputeSubmitStats(){
+  const gens  = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
+  const lines = Array.isArray(window.currentLines)      ? window.currentLines      : [];
+  const scen  = window.currentScenarioData || {};
+
+  // Totals
+  let totalCost = 0, totalEmissions = 0;
+  for (const g of gens){
+    const pg  = _lv_num(g?.pg);
+    totalCost      += pg * _lv_num(g?.cost_per_mw);
+    totalEmissions += pg * _lv_num(g?.emissions_per_mw);
+  }
+
+  // Highest load % across enabled lines
+  const disabled = _lv_disabledLineSet(scen);
+  let highestLoadPct = 0;
+  for (const L of lines){
+    if (!L) continue;
+    const id = String(L.id ?? `Line_Bus${L.from_bus}_Bus${L.to_bus}`);
+    if (disabled.has(id)) continue;
+    const rate = _lv_num(L.rate_a ?? L.rateA);
+    const flow = Math.abs(_lv_num(L.flow));
+    const pct  = rate > 0 ? (flow / rate) * 100 : 0;
+    if (Number.isFinite(pct) && pct > highestLoadPct) highestLoadPct = pct;
+  }
+
+  const startedAt = window.lvScenarioStartedAt || window.mvScenarioStartedAt || window.scenarioStartedAt || _lv_now();
+  const elapsedMs = Math.max(0, _lv_now() - startedAt);
+
+  return { elapsedMs, highestLoadPct, totalCost, totalEmissions };
+}
+
+// Paste-in replacement for ListView
+function showResultOverlay() {
+  const { elapsedMs, highestLoadPct, totalCost, totalEmissions } = lvComputeSubmitStats();
+
+  const overlay = document.createElement("div");
+  overlay.id = "result-overlay";
+  Object.assign(overlay.style, {
+    position:"fixed", top:"0", left:"0", width:"100vw", height:"100vh",
+    background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center",
+    justifyContent:"center", zIndex:"999"
+  });
+
+  const box = document.createElement("div");
+  box.className = "results-box";  // same classes as MapView
+  box.innerHTML = `
+    <h2 class="results-title">Summary</h2>
+    <table class="results-table">
+      <thead>
+        <tr><th class="results-key">Metric</th><th class="results-val">Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="results-key">Time to complete</td><td class="results-val">${_lv_fmt(elapsedMs)}</td></tr>
+        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${Math.round(highestLoadPct)}%</td></tr>
+        <tr><td class="results-key">Total cost</td><td class="results-val">$${Math.round(totalCost).toLocaleString()}</td></tr>
+        <tr><td class="results-key">Total emissions</td><td class="results-val">${Math.round(totalEmissions).toLocaleString()} tCO₂</td></tr>
+      </tbody>
+    </table>
+    <button type="button" class="results-close" id="close-overlay">Close</button>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.getElementById("close-overlay").addEventListener("click", close);
+  const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
+  document.addEventListener("keydown", onKey);
+
+  // Advance the runner only after the overlay is dismissed
+  document.getElementById("close-overlay").addEventListener("click", () => {
+    try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
+  });
+}
+try { window.showResultOverlay = showResultOverlay; } catch {}
 
 </script>
 <!-- === Runner bridge (paste into both ListView B and MapView B) === -->
