@@ -1,7 +1,7 @@
 {
     "scenario_id": "clean_north_power",
     "title": "Clean North Power",
-    "target_mw": 7000,
+    "target_mw": 3000,
     "emissions_limit": 10000,
     "cost_limit": 20000,
     "line_limit_pct": 0.04,

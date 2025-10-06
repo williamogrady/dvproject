@@ -1544,8 +1544,9 @@ function renderOverview(gens, scenarioData = {}, lines = []) {
 
 
   console.log("calling renderOverview");
+  await loadCanonicalDirections();          // ✅ ensure case118 AB is loaded
   setupTaskSection(currentScenarioData);
-  updateMapGeneratorsFromScenario(); // Make sure this is called too
+  updateMapGeneratorsFromScenario();
   renderOverview(currentGenerators, currentScenarioData || {}, currentLines);
 
 }
@@ -1672,7 +1673,19 @@ function drawChevrons(lines, nodes, mode) {
       const scale = isLinesMode ? (1 + 0.6 * Math.max(0, loadPct)) : 1;
       const size  = Math.max(8, base * scale);
 
-      const { midX, midY, angleDeg } = getMidAndAngle(line);
+      // Canonical base (AB) + sign flip
+      let midX, midY, angleDeg;
+      {
+        const [A,B] = Array.isArray(line._AB)
+          ? line._AB
+          : [ +line.source.replace('Bus',''), +line.target.replace('Bus','') ];
+
+        const base = baseAngleAB(A, B) || { midX:0, midY:0, deg:0 };
+        midX = base.midX; midY = base.midY;
+        angleDeg = base.deg + ((line.flow_signed ?? 0) < 0 ? 180 : 0);
+      }
+
+      const _T = `translate(${midX}, ${midY}) rotate(${angleDeg})`;
 
       // zero-flow → draw a circle; otherwise a chevron
       const isZero = (Math.abs(flowSigned) < ZERO) || (loadPct === 0);
@@ -1691,8 +1704,8 @@ function drawChevrons(lines, nodes, mode) {
       .attr("data-x", midX)
       .attr("data-y", midY)
       .attr("data-shape", isZero ? "circle" : "chevron")
-      .attr("transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`)
-      .attr("data-base-transform", `translate(${midX}, ${midY}) rotate(${angleDeg})`);
+      .attr("transform", _T)
+      .attr("data-base-transform", _T);
 
       // optional: store pct for debugging
       this.setAttribute("data-pct", loadPct.toFixed(3));
@@ -1824,7 +1837,7 @@ const buildCard = (line, isRich) => {
   const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
 
   // line direction (for the mini chevron) — signed flow we stored in lineMetrics
-  const dirSign = Math.sign(line.flow || 0);
+  const dirSign = Math.sign(line.flow_signed ?? line.flow ?? 0);
 
   const accent  = getChevronColor(line._pct);
   const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
@@ -1888,6 +1901,32 @@ const buildCard = (line, isRich) => {
   // Reset scrollers
   rowRich.scrollLeft = 0;
   rowTop.scrollLeft  = 0;
+}
+
+function angleFromCanonAndFlow(line) {
+  const a0 = +line.from_bus, b0 = +line.to_bus;
+  const lo = Math.min(a0, b0), hi = Math.max(a0, b0);
+  const canon = (window.__canonDir && window.__canonDir.get(`${lo}|${hi}`)) || [a0, b0];
+  const [A, B] = canon; // electrical AB = fbus→tbus
+
+  const base = baseAngleAB(A, B);
+  if (!base) return null;
+
+  const signed = +(line.flow_signed ?? line.flow ?? 0);
+  const angle = base.deg + (signed < 0 ? 180 : 0);
+
+  return { angle, midX: base.midX, midY: base.midY };
+}
+
+// In your refreshChevrons loop, for each line object `L`:
+function applyChevronForLine(selection, L) {
+  const info = angleFromCanonAndFlow(L);
+  if (!info) return;
+
+  const t = `translate(${info.midX}, ${info.midY}) rotate(${info.angle})`;
+  selection
+    .attr("transform", t)
+    .attr("data-base-transform", t);
 }
 
 
@@ -1960,6 +1999,42 @@ function chevronPath(scale) {
   `;
 }
 
+// === Canonical case118 directions + geometry base ===
+async function loadCanonicalDirections(){
+  if (window.__canonDir) return window.__canonDir;
+  try {
+    const r = await fetch('/api/branch-directions');
+    const { branches = [] } = await r.json();
+    const m = new Map();
+    for (const { fbus, tbus } of branches) {
+      const lo = Math.min(fbus, tbus), hi = Math.max(fbus, tbus);
+      m.set(`${lo}|${hi}`, [fbus, tbus]); // electrical AB = fbus→tbus
+    }
+    window.__canonDir = m;
+    return m;
+  } catch (e){
+    console.warn('Failed to load canonical directions', e);
+    window.__canonDir = new Map();
+    return window.__canonDir;
+  }
+}
+
+function baseAngleAB(A, B){
+  const idAB = `Line_Bus${A}_Bus${B}`;
+  const idBA = `Line_Bus${B}_Bus${A}`;
+  const path = document.getElementById(idAB) || document.getElementById(idBA);
+  if (!path || !path.getTotalLength) return null;
+
+  const L   = path.getTotalLength();
+  const P1  = path.getPointAtLength(L * 0.45);
+  const P2  = path.getPointAtLength(L * 0.55);
+  const mid = path.getPointAtLength(L * 0.50);
+
+  let deg = Math.atan2(P2.y - P1.y, P2.x - P1.x) * 180 / Math.PI;
+  if (!document.getElementById(idAB)) deg += 180; // only BA path? invert once to represent AB
+  return { midX: mid.x, midY: mid.y, deg };
+}
+
 function refreshChevrons(liveLines, currentMapMode){
   // Only Bus↔Bus lines from full_lines.json
   const busBusStatic = staticLines.filter(isBusBusLine);
@@ -1976,12 +2051,20 @@ function refreshChevrons(liveLines, currentMapMode){
 
   // 2) enrich ONLY Bus↔Bus lines
   const enriched = busBusStatic.map(s => {
-    const live = liveIdx.get(`${s.source}|${s.target}`) || { flow_signed: 0, rate_a: 1 };
-    const fs   = live.flow_signed;
-    const rate = live.rate_a;
-    const pct  = rate > 0 ? Math.abs(fs) / rate : 0;
-    return { ...s, flow: fs, flow_signed: fs, rate_a: rate, _pct: pct };
-  });
+  const a = +s.source.replace('Bus','');
+  const b = +s.target.replace('Bus','');
+  const key   = `${Math.min(a,b)}|${Math.max(a,b)}`;
+  const canon = (window.__canonDir && window.__canonDir.get(key)) || [a,b];
+  const [A,B] = canon;
+
+  // Live flow SIGNED in the AB frame (fbus→tbus)
+  const live = liveIdx.get(`Bus${A}|Bus${B}`) || { flow_signed: 0, rate_a: (+s.rate_a || 1) };
+  const fs   = +live.flow_signed || 0;
+  const rate = +live.rate_a || (+s.rate_a || 1);
+  const pct  = rate > 0 ? Math.abs(fs) / rate : 0;
+
+  return { ...s, flow: fs, flow_signed: fs, rate_a: rate, _pct: pct, _AB: [A,B] };
+});
 
   // 3) metrics + redraw (unchanged)
   lineMetrics.clear();

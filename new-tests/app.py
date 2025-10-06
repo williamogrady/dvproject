@@ -328,12 +328,39 @@ def get_status():
         'scenario_met': scenario_met
     })
 
+# === EXPORT CASE118 BRANCH DIRECTIONS =====================
+@app.route("/api/branch-directions")
+def api_branch_directions():
+    """
+    Returns the canonical electrical from→to directions
+    (fbus→tbus) from the MATPOWER case118 dataset.
+    Each entry gives the bus numbers and index.
+    """
+    try:
+        from pypower.api import case118
+        case = case118()
+        branch = case['branch']
+        fbus_col, tbus_col = 0, 1  # MATPOWER standard
 
+        data = []
+        for i in range(branch.shape[0]):
+            fbus = int(branch[i, fbus_col])
+            tbus = int(branch[i, tbus_col])
+            # create both a strict id and a UI-friendly key
+            data.append({
+                "index": i,
+                "fbus": fbus,
+                "tbus": tbus,
+                "id": f"Line_Bus{fbus}_Bus{tbus}",
+                "unordered_key": f"{min(fbus,tbus)}|{max(fbus,tbus)}"
+            })
 
-
-
-
-
+        return jsonify({"branches": data})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+# ==========================================================
 
 
 if __name__ == '__main__':
