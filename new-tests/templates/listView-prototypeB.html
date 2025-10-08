@@ -990,6 +990,12 @@ function _loadColor(pct){
   return '#43a047';                // green
 }
 
+// Inversion helper: invert everywhere EXCEPT Bus68–Bus69
+function shouldInvertChevronPair(a, b){
+  const lo = Math.min(+a, +b), hi = Math.max(+a, +b);
+  return !(lo === 68 && hi === 69);
+}
+
 // Mini chevron that matches MapView's shape, is perfectly centered, and supports zero-flow
 function _buildChevron(accent, dir, sizePx = 22, flowAbs = 1, zeroThreshMW = 0.1){
   const ns  = 'http://www.w3.org/2000/svg';
@@ -1435,7 +1441,10 @@ const norm = (linesIn || [])
     return {
       id,
       pct: pct01 * 100,
-      dirArrow: flow >= 0 ? 1 : -1,
+      // invert sign globally except Bus68–Bus69
+      dirArrow: (shouldInvertChevronPair(L.from_bus ?? L.from ?? L.i ?? L.bus1,
+                                        L.to_bus   ?? L.to   ?? L.j ?? L.bus2)
+                ? -1 : 1) * (flow >= 0 ? 1 : -1),
       flowAbs: Math.abs(flow),              // <-- add this
       _prev01: prev,
       _deltaPts: deltaPts,
@@ -1747,8 +1756,13 @@ function renderMapLineLoads(lines) {
         if (!base) return;
 
         // Signed flow in AB frame; negative flips 180° to B→A
+        // Signed flow in AB frame; negative flips 180° to B→A
         const fs = +(line.flow_signed ?? line.flow ?? 0);
-        const angle = base.deg + (fs < 0 ? 180 : 0);
+
+          // Global inversion (except Bus68–Bus69)
+        const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
+
+        const angle = base.deg + (fs < 0 ? 180 : 0) + invertExtra;
 
         const midX = base.midX, midY = base.midY;
 

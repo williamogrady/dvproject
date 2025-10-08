@@ -1180,6 +1180,13 @@ function appliedSet(){
     : new Set(activeFilters);
 }
 
+// Inversion helper: invert everywhere EXCEPT Bus68–Bus69
+function shouldInvertChevronPair(a, b){
+  const lo = Math.min(+a, +b), hi = Math.max(+a, +b);
+  return !(lo === 68 && hi === 69);
+}
+
+
 // Collapsed dice pips: ON => white dots for current, black for remaining
 // OFF => all capacity dots black
 function drawDicePipsCollapsed(containerSel, size, currentMW, maxMW, isOn){
@@ -1673,7 +1680,7 @@ function drawChevrons(lines, nodes, mode) {
       const scale = isLinesMode ? (1 + 0.6 * Math.max(0, loadPct)) : 1;
       const size  = Math.max(8, base * scale);
 
-      // Canonical base (AB) + sign flip
+      // Canonical base (AB) + sign flip + global inversion (except Bus68–Bus69)
       let midX, midY, angleDeg;
       {
         const [A,B] = Array.isArray(line._AB)
@@ -1682,7 +1689,9 @@ function drawChevrons(lines, nodes, mode) {
 
         const base = baseAngleAB(A, B) || { midX:0, midY:0, deg:0 };
         midX = base.midX; midY = base.midY;
-        angleDeg = base.deg + ((line.flow_signed ?? 0) < 0 ? 180 : 0);
+
+        const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
+        angleDeg = base.deg + ((line.flow_signed ?? 0) < 0 ? 180 : 0) + invertExtra;
       }
 
       const _T = `translate(${midX}, ${midY}) rotate(${angleDeg})`;
@@ -1837,7 +1846,10 @@ const buildCard = (line, isRich) => {
   const deltaLabel = dir === "neutral" ? "– 0%" : `${dir === "up" ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}%`;
 
   // line direction (for the mini chevron) — signed flow we stored in lineMetrics
-  const dirSign = Math.sign(line.flow_signed ?? line.flow ?? 0);
+  const _a = line.from_bus ?? (line.source && +line.source.replace('Bus',''));
+  const _b = line.to_bus   ?? (line.target && +line.target.replace('Bus',''));
+  const inv = shouldInvertChevronPair(_a, _b) ? -1 : 1;
+  const dirSign = inv * Math.sign(line.flow_signed ?? line.flow ?? 0);
 
   const accent  = getChevronColor(line._pct);
   const loadTxt = `${(line._pct * 100).toFixed(0)}%`;
