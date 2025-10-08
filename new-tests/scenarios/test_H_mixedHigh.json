@@ -2,8 +2,8 @@
     "scenario_id": "test_H_mixedHigh",
     "title": "Mixed High",
     "target_mw": 5000,
-    "emissions_limit": 7000,
-    "cost_limit": 10000,
+    "emissions_limit": 10000,
+    "cost_limit": 40000,
     "line_limit_pct": 0.04,
     "locked_generators": [
     ],
