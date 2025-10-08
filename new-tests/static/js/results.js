@@ -66,53 +66,26 @@
     return;
   }
 
-  // ===== Extract steps (per-task) =====
 // ===== Extract steps (per-task) =====
 const views     = data.logs.filter(l => l.type === 'view' && l.end && l.start);
 const labels    = views.map((_, i) => String(i + 1));
 const secondsOf = v => Math.max(0, Math.round((v.end - v.start) / 1000));
 const durations = views.map(secondsOf);
 
-// Minimal step objects for CSV + summary (strict completion)
+// Minimal step objects for CSV + summary (simple completion rule)
 const steps = views.map((v, i) => {
   const snap    = v.snapshot || {};
-  const state   = snap.state  || {};
-  const totals  = snap.totals || {};
   const reason  = String(v.reason || '').toLowerCase();
 
-  const didSubmit = (reason === 'done' || reason === 'submitted' || reason === 'complete');
+  // Treat any submission as a completed task on the summary page
+  const didSubmit =
+    reason === 'done' ||
+    reason === 'submitted' ||
+    reason === 'complete' ||
+    reason === 'overlayclosed' ||     // overlay was shown & dismissed
+    reason === 'submit(fallback)';    // legacy
 
-  // Prefer a precomputed overall flag from the runner
-  let meetsOverall = (typeof v.overall === 'boolean') ? v.overall
-                   : (typeof snap?.meets?.overall === 'boolean') ? snap.meets.overall
-                   : null;
-
-  // If runner didn't provide it, compute from goals if available; else default false
-  if (meetsOverall === null) {
-    const goalsMap = data.goalsByScenario || {};
-    const g = snap.goals || goalsMap[v.scenarioId || v.scenario] || null;
-    if (g) {
-      const tol = Number.isFinite(g.target_tolerance) ? g.target_tolerance : 0.05;
-      const power     = Number(totals.power);
-      const cost      = Number(totals.cost);
-      const emissions = Number(totals.emissions);
-      const overloads = Number(state.overloaded_count);
-
-      const checks = [];
-      if (Number.isFinite(g.target_mw))       checks.push(Number.isFinite(power)     && power >= g.target_mw*(1 - tol) && power <= g.target_mw*(1 + tol));
-      if (Number.isFinite(g.max_cost))        checks.push(Number.isFinite(cost)      && cost <= g.max_cost);
-      if (Number.isFinite(g.max_emissions))   checks.push(Number.isFinite(emissions) && emissions <= g.max_emissions);
-      if (Number.isFinite(overloads)) {
-        if (Number.isFinite(g.max_overloads)) checks.push(overloads <= g.max_overloads);
-        else                                  checks.push(overloads === 0);
-      }
-      meetsOverall = checks.length ? checks.every(Boolean) : false; // strict default
-    } else {
-      meetsOverall = false; // no goals → don't award completion
-    }
-  }
-
-  const completed = didSubmit && meetsOverall;
+  const completed = !!didSubmit;
 
   return {
     index: i + 1,
@@ -123,7 +96,8 @@ const steps = views.map((v, i) => {
 });
 
 
-  const completedCount = steps.filter(s => s.completed).length;
+const completedCount = steps.filter(s => s.completed).length;
+
 
   // ===== UI: bigger, centered layout =====
   panel.innerHTML = `

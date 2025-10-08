@@ -3215,7 +3215,6 @@ function showResultOverlay() {
 try { window.showResultOverlay = showResultOverlay; } catch {}
 
 </script>
-<!-- === Runner bridge (paste into both ListView B and MapView B) === -->
 <style>
   /* Hide admin chrome while embedded in the runner */
   .runner-mode #row-4,
@@ -3223,7 +3222,6 @@ try { window.showResultOverlay = showResultOverlay; } catch {}
   .runner-mode #reset-button,
   .runner-mode #admin-panel,
   .runner-mode .floating-panel,
-  .runner-mode .map-btn,
   .runner-mode #map-filters-toggle,
   .runner-mode #map-legend-toggle { display:none !important; }
 </style>
@@ -3233,127 +3231,126 @@ try { window.showResultOverlay = showResultOverlay; } catch {}
   const RUNNER_MODE = params.get('runner') === '1';
   if (!RUNNER_MODE) return;
 
-  // Shared getters that always return the right shapes
-  function getGens() {
-    const g = window.currentGenerators;
-    return Array.isArray(g) ? g : [];
-  }
-  function getLines() {
+  const nz = n => Number(n || 0);
+  function getGens(){ const g = window.currentGenerators; return Array.isArray(g) ? g : []; }
+  function getLines(){
     const L = window.currentLines;
     if (Array.isArray(L)) return L;
     if (!L) return [];
     return (typeof L === 'object' && !('length' in L)) ? Object.values(L) : Array.from(L);
   }
-  function getScenario() { return window.currentScenarioData || {}; }
+  function getScenario(){ return window.currentScenarioData || {}; }
 
-  // Minimal fallback computation (works for ListView data model)
-  function computeFallbackState() {
+  // Fallback for when the page doesn't return normalized eval state
+  function computeFallbackState(){
     const gens = getGens(), lines = getLines(), scen = getScenario();
-    const nz = n => Number(n || 0);
     const totals = {
       power:     gens.reduce((s,g)=>s+nz(g.pg), 0),
       cost:      gens.reduce((s,g)=>s+nz(g.pg)*nz(g.cost_per_mw), 0),
       emissions: gens.reduce((s,g)=>s+nz(g.pg)*nz(g.emissions_per_mw), 0),
     };
-    const targetMW = nz(scen.target_mw);
-    const targetCost = (scen.cost_limit != null) ? nz(scen.cost_limit) : null;
-    const targetEmissions  = (scen.emissions_limit != null) ? nz(scen.emissions_limit) : null;
-    const overloadedCount = lines.filter(l => {
+    const goals = {
+      target_mw:        Number.isFinite(nz(scen.target_mw))       ? nz(scen.target_mw)       : null,
+      max_cost:         (scen.cost_limit != null)                  ? nz(scen.cost_limit)      : null,
+      max_emissions:    (scen.emissions_limit != null)             ? nz(scen.emissions_limit) : null,
+      max_overloads:    (scen.max_overloads != null)               ? nz(scen.max_overloads)   : 0,
+      target_tolerance: Number.isFinite(nz(scen.target_tolerance)) ? nz(scen.target_tolerance): 0.05
+    };
+    const overloaded_count = getLines().filter(l => {
       const r = nz(l.rate_a ?? l.rateA), f = Math.abs(nz(l.flow));
       return r > 0 && f > r;
     }).length;
-    const meetsPower       = targetMW > 0 ? (totals.power >= targetMW*0.95 && totals.power <= targetMW*1.05) : true;
-    const withinCost       = (targetCost == null) ? true : totals.cost <= targetCost;
-    const withinEmissions  = (targetEmissions  == null) ? true : totals.emissions <= targetEmissions;
-    const noOverloads      = overloadedCount === 0;
-    return { totals, targetMW, targetCost, targetEmissions, overloadedCount,
-             meetsPower, withinCost, withinEmissions, noOverloads,
-             allMet: meetsPower && withinCost && withinEmissions && noOverloads };
+    const meets = {
+      power:     goals.target_mw != null ?
+                 (totals.power >= goals.target_mw*(1 - goals.target_tolerance) &&
+                  totals.power <= goals.target_mw*(1 + goals.target_tolerance)) : true,
+      cost:      goals.max_cost != null      ? totals.cost      <= goals.max_cost      : true,
+      emissions: goals.max_emissions != null ? totals.emissions <= goals.max_emissions : true,
+      overloads: overloaded_count <= (goals.max_overloads ?? 0)
+    };
+    meets.overall = Boolean(meets.power && meets.cost && meets.emissions && meets.overloads);
+
+    return {
+      scenarioId: getScenario().scenario_id || getScenario().id || null,
+      totals,
+      state: { overloaded_count },
+      meta: { gens: gens.length, lines: lines.length, ts: Date.now() },
+      meets,
+      goals
+    };
   }
 
-  // Run eval safely regardless of which view we’re in
-  function computeEvalStateSafe(useOriginal=false) {
-    const f = useOriginal ? window.__origEvaluateScenarioState : window.evaluateScenarioState;
-    const gens = getGens(), lines = getLines(), scen = getScenario();
-
-    if (typeof f !== 'function') return computeFallbackState();
-
+  function computeEvalStateSafe(){
     try {
-      // Detect arity (ListView: 3 args; MapView: 2 args)
-      if (f.length >= 3) return f(gens, lines, scen);
-      if (f.length === 2) return f(scen, lines);
-      // If signature is unknown, try both safely
-      try { return f(gens, lines, scen); } catch {}
-      try { return f(scen, lines); } catch {}
+      if (typeof window.__origEvaluateScenarioState === 'function') {
+        return window.__origEvaluateScenarioState(getGens(), getLines(), getScenario());
+      }
+      if (typeof window.evaluateScenarioState === 'function') {
+        return window.evaluateScenarioState(getGens(), getLines(), getScenario());
+      }
     } catch (e) {
-      console.warn('[RunnerBridge] eval failed, falling back:', e);
+      console.warn('[RunnerBridge] eval failed; using fallback', e);
     }
     return computeFallbackState();
   }
 
-  // Post state to the runner (parent)
-  function postToRunner(precomputed) {
-    const state = precomputed || computeEvalStateSafe(/*useOriginal=*/true);
+  function normalize(res){
+    if (res && typeof res === 'object' && res.totals && (res.meets || res.goals)) {
+      return {
+        scenarioId: res.scenarioId ?? (getScenario().scenario_id || getScenario().id || null),
+        totals: res.totals ?? null,
+        state:  res.state  ?? null,
+        meta:   res.meta   ?? { ts: Date.now() },
+        meets:  res.meets  ?? null,
+        goals:  res.goals  ?? null
+      };
+    }
+    return computeFallbackState();
+  }
+
+  function postToRunner(precomputed){
+    const snap = normalize(precomputed || computeEvalStateSafe());
     const payload = {
       type: 'dv:state',
-      view: (window.renderGenerators ? 'list' : 'map'), // heuristic
-      scenarioId: (getScenario().scenario_id || null),
-      state,
-      meta: {
-        gens: getGens().length,
-        lines: getLines().length,
-        ts: Date.now()
-      }
+      view: 'list',
+      scenarioId: snap.scenarioId,
+      totals: snap.totals,
+      state:  snap.state,
+      meta:   snap.meta,
+      meets:  snap.meets,
+      goals:  snap.goals
     };
     try { window.parent && window.parent.postMessage(payload, '*'); }
     catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
   }
 
-  // Monkey-patch evaluateScenarioState ONCE to avoid recursion
+  // Patch WITHOUT recursion (fix the `.args` bug)
   if (typeof window.evaluateScenarioState === 'function' && !window.__origEvaluateScenarioState) {
     window.__origEvaluateScenarioState = window.evaluateScenarioState;
     window.evaluateScenarioState = function patchedEvaluateScenarioState(...args) {
       const result = window.__origEvaluateScenarioState.apply(this, args);
-      // Use the *original* result to notify (no re-entry)
       postToRunner(result);
       return result;
     };
   }
-
-  // Also patch applyScenarioUI so runner gets updates when UI is applied with a precomputed state
   if (typeof window.applyScenarioUI === 'function' && !window.__origApplyScenarioUI) {
     window.__origApplyScenarioUI = window.applyScenarioUI;
     window.applyScenarioUI = function patchedApplyScenarioUI(state) {
       const ret = window.__origApplyScenarioUI.call(this, state);
-      postToRunner(state); // state already computed by the page
+      postToRunner(state && typeof state === 'object' ? state : computeEvalStateSafe());
       return ret;
     };
   }
 
-  // First beacon once the page has its globals
-  window.addEventListener('load', () => {
-    // If we didn't patch anything (no eval function), still send a snapshot
-    postToRunner(/*precomputed*/ computeEvalStateSafe());
+  // Reply to the runner’s explicit request
+  window.addEventListener('message', (e) => {
+    if ((e.data || {}).type === 'runner:requestState') postToRunner(computeEvalStateSafe());
   });
 
+  // First beacon
+  window.addEventListener('load', () => postToRunner(computeEvalStateSafe()));
 })();
-
-  (function(){
-    const btn = document.getElementById('lv-legend-toggle');
-    const panel = document.getElementById('lv-legend-panel');
-    if(!btn || !panel) return;
-
-    const open = () => { panel.hidden = false; btn.hidden = true; };
-    const close = () => { panel.hidden = true; btn.hidden = false; };
-
-    btn.addEventListener('click', open);
-    panel.addEventListener('click', close);
-    document.addEventListener('keydown', (e) => {
-      if(e.key === 'Escape' && !panel.hidden) close();
-    });
-  })();
 </script>
-
 
 
 </body>

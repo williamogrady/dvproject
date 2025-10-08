@@ -5,44 +5,135 @@
   'use strict';
 
   // ---------- Base UI ----------
-  document.body.innerHTML = `
-    <style>
-      :root { color-scheme: dark; }
-      html, body { margin:0; height:100%; background:#0b1220; color:#eef2ff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-      #runner-root { position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr; }
-      .top { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,.05); border-bottom:1px solid rgba(255,255,255,.08); }
-      .title { font-weight:800; letter-spacing:.2px; display:flex; align-items:center; gap:8px; }
-      .progress { font-size:12px; opacity:.8; background:#1f2937; padding:6px 10px; border-radius:999px; }
-      #timer { font-variant-numeric:tabular-nums; font-weight:900; }
-      .stage { position:relative; overflow:hidden; background:#0f172a; }
-      #stage { position:absolute; inset:0; width:100%; height:100%; border:0; opacity:0; transition:opacity .3s ease; background:#0b1220; }
-      #stage.visible { opacity:1; }
-      .veil { position:absolute; inset:0; display:grid; place-items:center; background:rgba(8,12,22,.9); z-index:3; }
-      .panel { max-width:760px; text-align:center; padding:12px; }
-      .panel h1 { margin:0 0 10px; font-size:28px; }
-      .panel p { margin:0 0 12px; opacity:.9; }
-      .btn { background:#22c55e; color:#052e16; border:0; border-radius:10px; padding:10px 16px; font-weight:900; cursor:pointer; }
-      .btn[disabled] { opacity:.6; cursor:not-allowed; }
-      select, input[type="text"] { min-width:260px; padding:10px; border-radius:10px; background:#0b1220; color:#eef2ff; border:1px solid rgba(255,255,255,.2); }
-      code { background:#111827; padding:2px 6px; border-radius:6px; }
-    </style>
-    <div id="runner-root">
-      <div class="top">
-        <div class="title">User Test <span class="progress" id="progress">0 / 0</span></div>
-        <div id="timer">--:--</div>
-      </div>
-      <div class="stage">
-        <iframe id="stage" referrerpolicy="no-referrer"></iframe>
-        <div class="veil" id="veil">
-          <div class="panel" id="panel">
-            <!-- Filled below depending on whether a plan is present -->
-          </div>
+ // ---------- Base UI ----------
+document.body.innerHTML = `
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin:0; height:100%; background:#0b1220; color:#eef2ff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    #runner-root { position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr; }
+    .top {
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items:center; gap:10px;
+      padding:10px 14px; background:rgba(255,255,255,.05); border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .title { font-weight:800; letter-spacing:.2px; display:flex; align-items:center; gap:8px; }
+    .progress { font-size:12px; opacity:.8; background:#1f2937; padding:6px 10px; border-radius:999px; }
+    #timer { justify-self:end; font-variant-numeric:tabular-nums; font-weight:900; }
+
+    /* Pills */
+    .pillbar { justify-self:center; display:flex; gap:8px; align-items:center; }
+    .pill {
+      min-width:26px; height:26px; padding:0 8px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:999px; font-weight:700; font-size:13px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      color:#cbd5e1; opacity:.8;
+      transition: transform .08s ease, background .15s ease, color .15s ease, opacity .15s ease, border-color .15s ease;
+    }
+    .pill--current { background:#ffffff; color:#0b1220; border-color:#ffffff; opacity:1; transform: translateY(-1px); }
+    .pill--todo    { background: rgba(255,255,255,.03); color:#94a3b8; opacity:.55; }
+    .pill--pass    { background:#16a34a; color:#052e16; border-color: rgba(22,163,74,.8); opacity:1; }
+    .pill--fail    { background:#ef4444; color:#fff; border-color: rgba(239,68,68,.85); opacity:1; }
+
+    .stage { position:relative; overflow:hidden; background:#0f172a; }
+    #stage { position:absolute; inset:0; width:100%; height:100%; border:0; opacity:0; transition:opacity .3s ease; background:#0b1220; }
+    #stage.visible { opacity:1; }
+    .veil { position:absolute; inset:0; display:grid; place-items:center; background:rgba(8,12,22,.9); z-index:3; }
+    .panel { max-width:760px; text-align:center; padding:12px; }
+    .panel h1 { margin:0 0 10px; font-size:28px; }
+    .panel p { margin:0 0 12px; opacity:.9; }
+    .btn { background:#22c55e; color:#052e16; border:0; border-radius:10px; padding:10px 16px; font-weight:900; cursor:pointer; }
+    .btn[disabled] { opacity:.6; cursor:not-allowed; }
+    select, input[type="text"] { min-width:260px; padding:10px; border-radius:10px; background:#0b1220; color:#eef2ff; border:1px solid rgba(255,255,255,.2); }
+    code { background:#111827; padding:2px 6px; border-radius:6px; }
+  </style>
+  <div id="runner-root">
+    <div class="top">
+      <div class="title">User Test <span class="progress" id="progress">0 / 0</span></div>
+      <div id="pillbar" class="pillbar"></div>
+      <div id="timer">--:--</div>
+    </div>
+    <div class="stage">
+      <iframe id="stage" referrerpolicy="no-referrer"></iframe>
+      <div class="veil" id="veil">
+        <div class="panel" id="panel">
+          <!-- Filled below depending on whether a plan is present -->
         </div>
       </div>
     </div>
-  `;
+  </div>
+`;
+
 
   // ---------- Helpers: sequences & parsing ----------
+
+  // ----- Pills -----
+const pillbarEl = document.getElementById('pillbar');
+let viewIndexToPill = []; // maps 1-based view position -> pill element
+
+function buildPills(total) {
+  pillbarEl.innerHTML = '';
+  viewIndexToPill = [];
+  for (let i = 1; i <= total; i++) {
+    const span = document.createElement('span');
+    span.className = 'pill pill--todo';
+    span.textContent = String(i);
+    pillbarEl.appendChild(span);
+    viewIndexToPill[i] = span;
+  }
+}
+
+function setPillState(pos, kind) {
+  const el = viewIndexToPill[pos];
+  if (!el) return;
+  el.classList.remove('pill--todo','pill--current','pill--pass','pill--fail');
+  el.classList.add(
+    kind === 'current' ? 'pill--current' :
+    kind === 'pass'    ? 'pill--pass'    :
+    kind === 'fail'    ? 'pill--fail'    : 'pill--todo'
+  );
+}
+
+// ----- Participant helpers -----
+function getParticipantId() {
+  try { return sessionStorage.getItem('dv_participant_id') || null; } catch { return null; }
+}
+function setParticipantId(v) {
+  try { if (v == null || v === '') sessionStorage.removeItem('dv_participant_id');
+        else sessionStorage.setItem('dv_participant_id', String(v)); } catch {}
+}
+function parsePid(v) {
+  const n = Number(String(v).trim());
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+
+function clearCurrentPill(pos) {
+  const el = viewIndexToPill[pos];
+  if (!el) return;
+  el.classList.remove('pill--current');
+  if (!el.classList.contains('pill--pass') && !el.classList.contains('pill--fail')) {
+    el.classList.add('pill--todo');
+  }
+}
+
+// Decide outcome for the current step based on lastState + reason
+function decideOutcome(lastState, reason) {
+  const r = String(reason || '').toLowerCase();
+
+  // Your rule: opening/dismissing the submit overlay counts as a success.
+  if (r === 'overlayclosed') return 'pass';
+
+  // Also count explicit submit reasons as success (some views send 'submitted', 'done', or 'complete')
+  if (r === 'submitted' || r === 'done' || r === 'complete' || r === 'submit(fallback)') {
+    return 'pass';
+  }
+
+  // Everything else (timeouts, navigations) is a fail.
+  return 'fail';
+}
   function expandSeries(scriptObj) {
     const out = [];
     for (const item of (scriptObj?.series || [])) {
@@ -190,27 +281,35 @@ async function loadSequenceByName(name) {
     btn.addEventListener('click', clear);
   }
 
-  // ---------- Messages from views ----------
-  window.addEventListener('message', (e) => {
-    const msg = e.data || {};
-    // Live snapshot (views may send either)
-    if (msg.type === 'runner:state' || msg.type === 'dv:state') {
-      lastState = msg;
-    }
-    // Prefer advancing on overlay close (user saw the in-view results)
-    if (msg.type === 'runner:overlayClosed') {
-      if (overlayWait) { clearTimeout(overlayWait); overlayWait = null; }
-      finishStep('overlayClosed');
-    }
-    // Fallback: some views may still fire on submit click; wait briefly for overlay then advance.
-    if (msg.type === 'runner:submitClicked') {
-      if (overlayWait) clearTimeout(overlayWait);
-      overlayWait = setTimeout(() => {
-        overlayWait = null;
-        finishStep('submit(fallback)');
-      }, 3000);
-    }
-  });
+// ---------- Messages from views ----------
+function requestFinalState() {
+  try { stage.contentWindow?.postMessage({ type: 'runner:requestState' }, '*'); } catch {}
+}
+window.addEventListener('message', (e) => {
+  const msg = e.data || {};
+
+  // Live snapshot (views may send either)
+  if (msg.type === 'runner:state' || msg.type === 'dv:state') {
+    lastState = msg;
+  }
+
+  // Prefer advancing on overlay close (user saw the in-view results)
+  if (msg.type === 'runner:overlayClosed') {
+    if (overlayWait) { clearTimeout(overlayWait); overlayWait = null; }
+    requestFinalState();                              // NEW: nudge for freshest state
+    setTimeout(() => finishStep('submitted'), 250);   // NEW: wait a beat
+  }
+
+  // Fallback: some views fire on submit click; wait briefly for overlay then advance.
+  if (msg.type === 'runner:submitClicked') {
+    if (overlayWait) clearTimeout(overlayWait);
+    overlayWait = setTimeout(() => {
+      overlayWait = null;
+      requestFinalState();                            // NEW
+      setTimeout(() => finishStep('submitted'), 250); // NEW
+    }, 3000);
+  }
+});
 
   // ---------- Flow control ----------
   function start() { next(); }
@@ -231,6 +330,7 @@ async function loadSequenceByName(name) {
       // Increment progress over view steps
       viewPos += 1;
       progressEl.textContent = `${viewPos} / ${totalViewSteps}`;
+      setPillState(viewPos, 'current'); // NEW
 
       const base = step.view === 'list' ? '/listB' : '/mapB';
       const url  = `${base}?runner=1&scenario=${encodeURIComponent(step.scenarioId)}`;
@@ -262,111 +362,154 @@ async function loadSequenceByName(name) {
     next();
   }
 
-  function finishStep(reason) {
-    if (finishing) return;  // debounce
-    finishing = true;
+function finishStep(reason) {
+  if (finishing) return;  // debounce
+  finishing = true;
 
-    stopTimer();
+  stopTimer();
 
-    const entry = logs[logs.length - 1];
-    if (entry && entry.type === 'view' && !entry.end) {
-      entry.end = Date.now();
-      entry.reason = reason;
-      if (lastState) {
-        entry.snapshot = {
-          scenarioId: lastState.scenarioId ?? entry.scenarioId,
-          totals:     lastState.totals ?? null,
-          state:      lastState.state ?? null,
-          meta:       lastState.meta ?? null
-        };
-      }
+  const entry = logs[logs.length - 1];
+  if (entry && entry.type === 'view' && !entry.end) {
+    entry.end = Date.now();
+    entry.reason = reason;
+    if (lastState) {
+      entry.snapshot = {
+        scenarioId: lastState.scenarioId ?? entry.scenarioId,
+        totals:     lastState.totals ?? null,
+        state:      lastState.state ?? null,
+        meta:       lastState.meta ?? null
+      };
+    }
+    // Prefer explicit overall from the view if present
+    if (lastState?.meets && typeof lastState.meets.overall === 'boolean') {
+      entry.overall = !!lastState.meets.overall;
     }
 
-    setTimeout(() => { finishing = false; next(); }, 0);
+    // NEW: color the current pill
+    const outcome = decideOutcome(lastState, reason); // 'pass'|'fail'
+    clearCurrentPill(viewPos);
+    setPillState(viewPos, outcome);
   }
 
-  function finishAll() {
-    const payload = { finishedAt: Date.now(), flow: steps, logs };
-    try { sessionStorage.setItem('dv_last_results', JSON.stringify(payload)); } catch {}
-    location.href = '/results';
-  }
+  setTimeout(() => { finishing = false; next(); }, 0);
+}
+
+
+
+function finishAll() {
+  const qs = new URLSearchParams(location.search);
+  const sequenceId = qs.get('sequence') || null;
+
+  const payload = {
+    finishedAt: Date.now(),
+    flow: steps,
+    logs,
+    runner: {
+      participant_id: parsePid(getParticipantId()) || null,
+      sequence: sequenceId
+    }
+  };
+  try { sessionStorage.setItem('dv_last_results', JSON.stringify(payload)); } catch {}
+  location.href = '/results';
+}
+
+
 
   // ---------- Start screen(s) ----------
   async function init() {
     if (!hasPlanParams) {
-      // Sequence picker UI
-      panel.innerHTML = `
-        <h1>Choose a sequence</h1>
-        <p style="opacity:.9;margin:0 0 12px">Pick a predefined plan to run.</p>
-        <div style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
-          <select id="seq-select">
-            <option value="">— Select a sequence —</option>
-          </select>
-          <button id="seq-start" class="btn" disabled>Start</button>
-        </div>
-        <div id="seq-msg" style="opacity:.8;font-size:13px"></div>
-      `;
+  // Sequence picker UI
+  panel.innerHTML = `
+    <h1>Choose a sequence</h1>
+    <p style="opacity:.9;margin:0 0 12px">Pick a predefined plan to run.</p>
 
-      const sel = document.getElementById('seq-select');
-      const go  = document.getElementById('seq-start');
-      const msg = document.getElementById('seq-msg');
+    <div style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
+      <select id="seq-select">
+        <option value="">— Select a sequence —</option>
+      </select>
 
-      // Populate from /sequences/index.json or /api/sequences
-   // Populate strictly from /api/sequences
-let items = [];
-try {
-  const r = await fetch('/api/sequences');
-  if (r.ok) {
-    const j = await r.json();
-    items = Array.isArray(j) ? j : (j.sequences || []);
-  }
-} catch {}
+      <div style="display:flex;align-items:center;gap:8px">
+        <label for="participant-id" style="opacity:.85">Participant #</label>
+        <input id="participant-id" type="number" min="1" step="1" inputmode="numeric" placeholder="optional"
+               style="width:110px;padding:10px;border-radius:10px;background:#0b1220;color:#eef2ff;border:1px solid rgba(255,255,255,.2)"/>
+      </div>
 
-if (Array.isArray(items) && items.length) {
-  items.forEach(it => {
-    const id = typeof it === 'string' ? it : it.id;
-    const label = (typeof it === 'object' && it.label) ? it.label : id;
-    if (!id) return;
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = label;
-    sel.appendChild(opt);
+      <button id="seq-start" class="btn" disabled>Start</button>
+    </div>
+
+    <div id="seq-msg" style="opacity:.8;font-size:13px"></div>
+  `;
+
+  const sel     = document.getElementById('seq-select');
+  const go      = document.getElementById('seq-start');
+  const msg     = document.getElementById('seq-msg');
+  const pidInput= document.getElementById('participant-id');
+
+  // Prefill participant if we have it (optional)
+  const savedPid = getParticipantId();
+  if (savedPid) pidInput.value = savedPid;
+
+  // Populate strictly from /api/sequences
+  (async () => {
+    let items = [];
+    try {
+      const r = await fetch('/api/sequences', { cache: 'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        items = Array.isArray(j) ? j : (j.sequences || []);
+      }
+    } catch {}
+
+    if (Array.isArray(items) && items.length) {
+      items.forEach(it => {
+        const id    = typeof it === 'string' ? it : it.id;
+        const label = (typeof it === 'object' && it.label) ? it.label : id;
+        if (!id) return;
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = label;
+        sel.appendChild(opt);
+      });
+      msg.textContent = 'Choose a plan from the list.';
+    } else {
+      // Fallback to manual input if directory is empty
+      sel.outerHTML = `
+        <input id="seq-input" type="text" placeholder="Type a sequence id (e.g., x-y-z)"
+               style="min-width:260px;padding:10px;border-radius:10px;background:#0b1220;color:#eef2ff;border:1px solid rgba(255,255,255,.2)"/>`;
+      msg.textContent = 'No sequences found. Enter a filename (without .json).';
+    }
+
+    // Hook up enabling logic (sequence required; participant optional)
+    const input = document.getElementById('seq-input'); // may exist after fallback
+    const getChosen = () => (input ? input.value.trim() : sel.value.trim());
+    const updateStartEnabled = () => { go.disabled = !getChosen(); };
+
+    (input || sel).addEventListener('input', updateStartEnabled);
+    (input || sel).addEventListener('change', updateStartEnabled);
+    updateStartEnabled();
+  })();
+
+  // Start: save optional participant, then reload with ?sequence=
+  go.addEventListener('click', () => {
+    const input = document.getElementById('seq-input');
+    const chosen = (input ? input.value : sel.value).trim();
+    if (!chosen) return;
+
+    // Participant is optional; store only if valid integer, else clear
+    const n = parsePid(pidInput.value);
+    if (n) setParticipantId(n); else setParticipantId(null);
+
+    const p = new URLSearchParams(location.search);
+    p.set('sequence', chosen);
+    location.search = p.toString(); // reload with the selected plan
   });
-  msg.textContent = 'Choose a plan from the list.';
-} else {
-  // Fallback to manual input if directory is empty
-  sel.outerHTML = `
-    <input id="seq-input" type="text" placeholder="Type a sequence id (e.g., x-y-z)" 
-           style="min-width:260px;padding:10px;border-radius:10px;background:#0b1220;color:#eef2ff;border:1px solid rgba(255,255,255,.2)"/>`;
-  msg.textContent = 'No sequences found. Enter a filename (without .json).';
+
+  // Progress is meaningless until a plan is picked
+  progressEl.textContent = `0 / 0`;
+  timerEl.textContent    = `--:--`;
+  return;
 }
 
-
-      const input = document.getElementById('seq-input');
-      function enable(ok) { go.disabled = !ok; }
-
-      (sel || input).addEventListener('input', () => {
-        const v = (sel ? sel.value : input.value).trim();
-        enable(!!v);
-      });
-      (sel || input).addEventListener('change', () => {
-        const v = (sel ? sel.value : input.value).trim();
-        enable(!!v);
-      });
-
-      go.addEventListener('click', () => {
-        const chosen = (sel ? sel.value : input.value).trim();
-        if (!chosen) return;
-        const p = new URLSearchParams(location.search);
-        p.set('sequence', chosen);
-        location.search = p.toString(); // reload with the selected plan
-      });
-
-      // Progress is meaningless until a plan is picked
-      progressEl.textContent = `0 / 0`;
-      timerEl.textContent = `--:--`;
-      return;
-    }
 
     // Plan provided -> standard start screen
     panel.innerHTML = `
@@ -394,7 +537,7 @@ if (Array.isArray(items) && items.length) {
     totalViewSteps = steps.filter(s => s.type === 'view').length;
     viewPos = 0;
     progressEl.textContent = `0 / ${totalViewSteps}`;
-    console.log('[Runner] steps =', steps);
+    buildPills(totalViewSteps); // NEW: create pills for each view step
 
     startBtn.addEventListener('click', () => { veil.remove(); start(); }, { once:true });
   }
@@ -404,3 +547,4 @@ if (Array.isArray(items) && items.length) {
     panel.innerHTML = `<h1>Init failed</h1><p style="opacity:.85">${String(err.message || err)}</p>`;
   });
 })();
+
