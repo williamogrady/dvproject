@@ -13,161 +13,249 @@
     document.body.innerHTML = '<pre>Results panel not found.</pre>';
     return;
   }
+
+  // ===== Shared inline styles (bigger, centered) =====
+  const S = {
+    shell: `
+      max-width: 960px; margin: 0 auto; text-align: center;
+      padding: 36px 20px 40px;
+    `,
+    h1: `
+      margin: 0 0 18px; font-size: 40px; line-height: 1.2;
+      letter-spacing: .2px;
+    `,
+    subrow: `
+      display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 18px;
+    `,
+    pill: `
+      background: #0f172a; color: #e2e8f0;
+      padding: 12px 18px; border-radius: 999px;
+      font-size: 18px;
+    `,
+    chartSection: `margin: 20px 0 28px;`,
+    chartTitle: `margin: 0 0 10px; font-size: 22px;`,
+    chartWrap: `width: 100%; max-width: 900px; margin: 0 auto; position: relative;`,
+    hint: `opacity:.75; font-size: 16px; margin-top: 10px;`,
+    actions: `
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+      margin-top: 18px; justify-content: center;
+    `,
+    btn: `
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #334155; color: #e2e8f0; text-decoration: none;
+      padding: 14px 22px; border-radius: 14px; font-size: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      transition: transform .06s ease;
+    `,
+    btnHover: `:hover{ transform: translateY(-1px); }`,
+    msg: `margin-top: 12px; min-height: 1.6em; opacity:.9; text-align:center; font-size:16px;`,
+  };
+
+  // ===== No results state =====
   if (!data || !Array.isArray(data.logs)) {
     panel.innerHTML = `
-      <h1>No results</h1>
-      <p style="opacity:.85">We couldn't find a completed run in this browser session.</p>
-      <div style="margin-top:12px;display:flex;gap:10px;justify-content:center">
-        <a class="btn" href="/test" style="background:#334155;color:#e2e8f0;text-decoration:none;padding:10px 14px;border-radius:10px">Run a test</a>
-        <a class="btn" href="/"      style="background:#334155;color:#e2e8f0;text-decoration:none;padding:10px 14px;border-radius:10px">Home</a>
+      <div style="${S.shell}">
+        <h1 style="${S.h1}">Results</h1>
+        <p style="opacity:.85; font-size:18px">We couldn't find a completed run in this browser session.</p>
+        <div id="actions" style="${S.actions}">
+          <a href="/test" class="btn" style="${S.btn}">Try Again</a>
+          <a href="/"      class="btn" style="${S.btn}">Go Home</a>
+        </div>
       </div>`;
     return;
   }
 
-  // ============ Extract per-task views ============
-  const views = data.logs.filter(l => l.type === 'view' && l.end && l.start);
-  const labels = views.map((v, i) => `${i+1}`);
-  const seconds = v => Math.max(0, Math.round((v.end - v.start) / 1000));
-  const durations = views.map(seconds);
+  // ===== Extract steps (per-task) =====
+// ===== Extract steps (per-task) =====
+const views     = data.logs.filter(l => l.type === 'view' && l.end && l.start);
+const labels    = views.map((_, i) => String(i + 1));
+const secondsOf = v => Math.max(0, Math.round((v.end - v.start) / 1000));
+const durations = views.map(secondsOf);
 
-  // Optional goal decoding (for researcher layer only)
-  const goalsMap = data.goalsByScenario || {};
-  const safeNum = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+// Minimal step objects for CSV + summary (strict completion)
+const steps = views.map((v, i) => {
+  const snap    = v.snapshot || {};
+  const state   = snap.state  || {};
+  const totals  = snap.totals || {};
+  const reason  = String(v.reason || '').toLowerCase();
 
-  const steps = views.map((v, i) => {
-    const snap   = v.snapshot || {};
-    const totals = snap.totals || {};
-    const state  = snap.state  || {};
-    const g      = snap.goals || goalsMap[v.scenarioId] || {};
-    const tol    = Number.isFinite(g.target_tolerance) ? g.target_tolerance : 0.05;
+  const didSubmit = (reason === 'done' || reason === 'submitted' || reason === 'complete');
 
-    const power     = safeNum(totals.power);
-    const cost      = safeNum(totals.cost);
-    const emissions = safeNum(totals.emissions);
-    const overloads = safeNum(state.overloaded_count);
+  // Prefer a precomputed overall flag from the runner
+  let meetsOverall = (typeof v.overall === 'boolean') ? v.overall
+                   : (typeof snap?.meets?.overall === 'boolean') ? snap.meets.overall
+                   : null;
 
-    const hasTarget   = Number.isFinite(g.target_mw);
-    const meetsPower  = hasTarget ? (power >= g.target_mw*(1 - tol) && power <= g.target_mw*(1 + tol)) : null;
-    const hasCostCap  = Number.isFinite(g.max_cost);
-    const meetsCost   = hasCostCap ? (cost <= g.max_cost) : null;
-    const hasEmiCap   = Number.isFinite(g.max_emissions);
-    const meetsEmis   = hasEmiCap ? (emissions <= g.max_emissions) : null;
-    const hasOverCap  = Number.isFinite(g.max_overloads);
-    const meetsLines  = hasOverCap ? (overloads <= g.max_overloads) : (overloads === 0);
+  // If runner didn't provide it, compute from goals if available; else default false
+  if (meetsOverall === null) {
+    const goalsMap = data.goalsByScenario || {};
+    const g = snap.goals || goalsMap[v.scenarioId || v.scenario] || null;
+    if (g) {
+      const tol = Number.isFinite(g.target_tolerance) ? g.target_tolerance : 0.05;
+      const power     = Number(totals.power);
+      const cost      = Number(totals.cost);
+      const emissions = Number(totals.emissions);
+      const overloads = Number(state.overloaded_count);
 
-    const checks = [meetsPower, meetsCost, meetsEmis, meetsLines].filter(v => v !== null);
-    const overall = checks.length ? checks.every(Boolean) : (overloads === 0);
+      const checks = [];
+      if (Number.isFinite(g.target_mw))       checks.push(Number.isFinite(power)     && power >= g.target_mw*(1 - tol) && power <= g.target_mw*(1 + tol));
+      if (Number.isFinite(g.max_cost))        checks.push(Number.isFinite(cost)      && cost <= g.max_cost);
+      if (Number.isFinite(g.max_emissions))   checks.push(Number.isFinite(emissions) && emissions <= g.max_emissions);
+      if (Number.isFinite(overloads)) {
+        if (Number.isFinite(g.max_overloads)) checks.push(overloads <= g.max_overloads);
+        else                                  checks.push(overloads === 0);
+      }
+      meetsOverall = checks.length ? checks.every(Boolean) : false; // strict default
+    } else {
+      meetsOverall = false; // no goals → don't award completion
+    }
+  }
 
-    return {
-      index: i+1,
-      view: (v.view || '').toUpperCase(),
-      scenarioId: v.scenarioId || '',
-      reason: v.reason || 'done',
-      secs: durations[i],
-      power, cost, emissions, overloads,
-      goals: {
-        target_mw: g.target_mw ?? null,
-        target_tolerance: tol,
-        max_cost: g.max_cost ?? null,
-        max_emissions: g.max_emissions ?? null,
-        max_overloads: g.max_overloads ?? null
-      },
-      meetsPower, meetsCost, meetsEmis, meetsLines, overall
-    };
-  });
+  const completed = didSubmit && meetsOverall;
 
-  const completedCount = steps.filter(s => s.overall).length;
-  const totalTasks = steps.length;
+  return {
+    index: i + 1,
+    scenarioId: v.scenarioId || v.scenario || '',
+    secs: secondsOf(v),
+    completed
+  };
+});
 
-  // ============ Build minimal user summary ============
+
+  const completedCount = steps.filter(s => s.completed).length;
+
+  // ===== UI: bigger, centered layout =====
   panel.innerHTML = `
-    <h1 style="margin:0 0 8px">Results</h1>
+    <div style="${S.shell}">
+      <h1 style="${S.h1}">Results</h1>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      <div class="pill" style="background:#1f2937;padding:8px 12px;border-radius:999px">
-        ✅ Tasks completed: <b>${completedCount}</b> / <b>${totalTasks}</b>
+      <div style="${S.subrow}">
+        <div class="pill" style="${S.pill}">
+          ✅ Tasks completed: <b>${completedCount}</b> / <b>${steps.length}</b>
+        </div>
       </div>
-    </div>
 
-    <div style="margin:8px 0 4px">
-      <h3 style="margin:0 0 6px">Time per task</h3>
-      <canvas id="chart-time-line" height="180" style="width:100%"></canvas>
-      <div style="opacity:.7;font-size:.9rem;margin-top:4px">Lower is faster</div>
-    </div>
-
-    <details id="research" style="margin-top:16px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px">
-      <summary style="cursor:pointer;list-style:none">
-        <span class="pill" style="background:#1f2937;padding:6px 10px;border-radius:999px">Research export</span>
-        <span class="muted" style="opacity:.75;margin-left:8px">Save / JSON / CSV (raw optional)</span>
-      </summary>
-
-      <div id="actions" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px">
-        <label style="display:flex;align-items:center;gap:8px;background:#111827;padding:8px 12px;border-radius:10px">
-          <input id="save-toggle" type="checkbox"> Save to server
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:#111827;padding:8px 12px;border-radius:10px">
-          <input id="include-snapshots" type="checkbox" checked> Include raw snapshots
-        </label>
-        <button id="btn-save" class="btn" style="background:#22c55e;color:#052e16">Save</button>
-        <button id="btn-download" class="btn" style="background:#334155;color:#e2e8f0">Download JSON</button>
-        <button id="btn-csv" class="btn" style="background:#334155;color:#e2e8f0">Export CSV</button>
-        <a href="/test" class="btn" style="background:#334155;color:#e2e8f0;text-decoration:none">Run another test</a>
-        <a href="/"      class="btn" style="background:#334155;color:#e2e8f0;text-decoration:none">Home</a>
+      <div id="chart-section" style="${S.chartSection}">
+        <h3 style="${S.chartTitle}">Time per task</h3>
+        <div id="chart-wrap" style="${S.chartWrap}">
+          <canvas id="chart-time-line" height="260" style="display:block; width:100%"></canvas>
+        </div>
+        <div style="${S.hint}">Lower is faster</div>
       </div>
-      <div id="msg" style="margin-top:8px;min-height:1.2em;opacity:.9"></div>
-    </details>
+
+      <div id="actions" style="${S.actions}">
+        <button id="btn-csv" class="btn" style="${S.btn}">Export data to CSV</button>
+        <a href="/test" class="btn" style="${S.btn}">Try Again</a>
+        <a href="/"      class="btn" style="${S.btn}">Go Home</a>
+      </div>
+
+      <div id="msg" style="${S.msg}"></div>
+    </div>
   `;
 
-  // ============ Render the time-per-task LINE chart ============
-  drawLine(document.getElementById('chart-time-line'), labels, durations, {
-    yLabel: 'seconds'
-  });
+ // ===== Chart: stable sizing (no warp) =====
+const $canvas = document.getElementById('chart-time-line');
+const $wrap   = document.getElementById('chart-wrap');
 
-  // ============ Wire research actions ============
-  const $save   = document.getElementById('btn-save');
-  const $dl     = document.getElementById('btn-download');
-  const $csv    = document.getElementById('btn-csv');
-  const cbSave  = document.getElementById('save-toggle');
-  const cbSnap  = document.getElementById('include-snapshots');
-  const $msg    = document.getElementById('msg');
+let isAnimating = true;        // block redraws during the reveal
+let lastW = 0;
 
-  $save?.addEventListener('click', async () => {
-    const payload = buildPayloadForSave(steps, sum(durations), data, { includeSnapshots: cbSnap.checked });
-    if (cbSave.checked) {
-      try {
-        const res = await fetch('/api/results', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ save: true, run: payload })
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const j = await res.json().catch(() => ({}));
-        $msg.textContent = j.message || 'Saved to server.';
-      } catch (e) {
-        $msg.textContent = 'Save failed. Check server logs.';
-        console.error('Save failed', e);
-      }
-    } else {
-      $msg.textContent = '“Save to server” is off. Use Download/CSV to store locally.';
+// one animated draw on first layout
+drawLine($canvas, $wrap, labels, durations, {
+  yLabel: 'time',
+  yFormat: 'mm:ss',
+  animate: true,
+  onDone: () => { isAnimating = false; }
+});
+
+// Tooltip once; it uses geometry stored on canvas by drawLine()
+attachLineTooltip($canvas, $wrap, { yFormat: 'mm:ss' });
+
+function redrawIfNeeded() {
+  if (isAnimating) return;     // don't redraw mid-animation
+  const w = Math.floor($wrap?.clientWidth || 0);
+  if (!w || w === lastW) return;
+  lastW = w;
+  drawLine($canvas, $wrap, labels, durations, { yLabel: 'time', yFormat: 'mm:ss', animate: false });
+}
+
+if ('ResizeObserver' in window) {
+  let roPending = false;
+  const ro = new ResizeObserver(() => {
+    if (!roPending) {
+      roPending = true;
+      requestAnimationFrame(() => { roPending = false; redrawIfNeeded(); });
     }
   });
-
-  $dl?.addEventListener('click', () => {
-    const payload = buildPayloadForSave(steps, sum(durations), data, { includeSnapshots: cbSnap.checked });
-    downloadBlob(JSON.stringify(payload, null, 2), `dv-results_${tsSlug(new Date())}.json`, 'application/json');
+  ro.observe($wrap);
+} else {
+  let roPending = false;
+  window.addEventListener('resize', () => {
+    if (!roPending) {
+      roPending = true;
+      requestAnimationFrame(() => { roPending = false; redrawIfNeeded(); });
+    }
   });
+}
+
+  // ===== CSV export (instant) =====
+  const $csv = document.getElementById('btn-csv');
+  const $msg = document.getElementById('msg');
 
   $csv?.addEventListener('click', () => {
-    const csv = buildCSV(steps);
+    const payload = buildPayloadMinimal(steps, data);
+    const csv     = buildCSVMinimal(payload);
     downloadBlob(csv, `dv-results_${tsSlug(new Date())}.csv`, 'text/csv');
+    $msg.textContent = 'CSV downloaded.';
   });
 
-  // ============ Helpers ============
-  function sum(a){ return a.reduce((s,x)=>s+x,0); }
-  function avg(a){ return a.length ? sum(a)/a.length : 0; }
-  function tsSlug(d){ const pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`; }
+  // =================== Helpers ===================
 
-  function downloadBlob(text, name, type){
+  // Minimal payload per final schema:
+  // run: { participant_id, sequence: "A"|"B"|"C"|"D" }
+  // steps: [ { scenario, seconds, completed } ]
+  function buildPayloadMinimal(stepArr, srcData) {
+    const participant_id =
+      srcData.participant_id ||
+      srcData.runner?.participant_id ||
+      srcData.plan?.participant_id ||
+      "anon";
+
+    let sequence =
+      srcData.sequence ||
+      srcData.runner?.sequence ||
+      srcData.plan?.sequence ||
+      null;
+
+    if (typeof sequence === 'number') sequence = ['A','B','C','D'][sequence] || null;
+
+    return {
+      participant_id,
+      sequence, // "A" | "B" | "C" | "D" (or null if missing)
+      steps: stepArr.map(s => ({
+        scenario: s.scenarioId || s.scenario || '',
+        seconds: Math.max(0, Math.round(Number(s.secs) || 0)),
+        completed: !!s.completed
+      }))
+    };
+  }
+
+  function buildCSVMinimal(payload) {
+    const header = ['participant_id','sequence','scenario','seconds','completed'];
+    const rows = payload.steps.map(st => ([
+      csvSafe(payload.participant_id),
+      csvSafe(payload.sequence),
+      csvSafe(st.scenario),
+      String(st.seconds),
+      st.completed ? '1' : '0'
+    ]));
+    return [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    function csvSafe(v){ return (v == null) ? '' : String(v).replace(/"/g,'""'); }
+  }
+
+  function downloadBlob(text, name, type) {
     const blob = new Blob([text], { type });
     const a = document.createElement('a');
     a.download = name;
@@ -176,127 +264,239 @@
     URL.revokeObjectURL(a.href);
   }
 
-  function buildPayloadForSave(steps, totalSeconds, src, { includeSnapshots }){
-    const hint = src.plan || {};
-    return {
-      savedAt: new Date().toISOString(),
-      plan: {
-        steps: src.flow || [],
-        sequence: hint.sequence || null,
-        query: hint.query || null
-      },
-      summary: {
-        views: steps.length,
-        totalSeconds
-      },
-      steps: steps.map(s => ({
-        index: s.index,
-        view: s.view,
-        scenarioId: s.scenarioId,
-        seconds: s.secs,
-        reason: s.reason,
-        totals: { power: s.power, cost: s.cost, emissions: s.emissions },
-        overloaded: s.overloads,
-        goals: s.goals,
-        meets: {
-          power: s.meetsPower,
-          cost: s.meetsCost,
-          emissions: s.meetsEmis,
-          lines: s.meetsLines,
-          overall: s.overall
-        }
-      })),
-      raw: includeSnapshots ? src : undefined
-    };
+  function tsSlug(d){
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+  }
+// Format seconds as mm:ss
+function fmtMMSS(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+}
+
+// Draw the line chart; stores geometry on canvas for tooltip
+function drawLine(canvas, container, labels, values, { yLabel, yFormat = 'seconds', animate = false, onDone } = {}) {
+  if (!canvas || !container || !labels?.length || !values?.length) return;
+
+  const dpr  = window.devicePixelRatio || 1;
+  const cssW = Math.floor(container.clientWidth || container.getBoundingClientRect().width || 0);
+  if (cssW <= 0) return;
+
+  const Hcss = canvas.height; // fixed via the height attribute
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(Hcss * dpr);
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const max = Math.max(1, ...values);
+  const min = 0;
+  const left = 50, right = 14, top = 16, bottom = 38;
+  const w = cssW - left - right, h = Hcss - top - bottom;
+
+  function yFormatLabel(sec) {
+    return (yFormat === 'mm:ss') ? fmtMMSS(sec) : String(sec);
   }
 
-  function buildCSV(steps){
-    // flat, analysis-friendly
-    const header = [
-      'index','view','scenarioId','seconds','reason',
-      'power','cost','emissions','overloads',
-      'goal_target_mw','goal_target_tolerance','goal_max_cost','goal_max_emissions','goal_max_overloads',
-      'meets_power','meets_cost','meets_emissions','meets_lines','overall'
-    ];
-    const rows = steps.map(s => ([
-      s.index, s.view, s.scenarioId, s.secs, s.reason,
-      s.power, s.cost, s.emissions, s.overloads,
-      nz(s.goals.target_mw), nz(s.goals.target_tolerance), nz(s.goals.max_cost), nz(s.goals.max_emissions), nz(s.goals.max_overloads),
-      tf(s.meetsPower), tf(s.meetsCost), tf(s.meetsEmis), tf(s.meetsLines), tf(s.overall)
-    ]));
-    return [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+  function drawAxes() {
+    ctx.clearRect(0, 0, cssW, Hcss);
 
-    function nz(v){ return (v==null || Number.isNaN(v)) ? '' : String(v); }
-    function tf(v){ return v==null ? '' : (v ? '1' : '0'); }
-  }
-
-  // Lightweight LINE chart (Canvas2D)
-  function drawLine(canvas, labels, values, { yLabel } = {}){
-    if (!canvas || !labels.length || !values.length) return;
-    const dpr = window.devicePixelRatio || 1;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.clientWidth || canvas.parentElement.clientWidth || 600;
-    const H = canvas.height;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    ctx.scale(dpr, dpr);
-
-    const max = Math.max(1, ...values);
-    const min = 0;
-    const left = 40, right = 10, top = 10, bottom = 28;
-    const w = W - left - right, h = H - top - bottom;
-
-    // axes
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    // baseline
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.fillRect(left, top + h, w, 1);
 
     // y ticks
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = '14px system-ui, sans-serif';
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     const ticks = 4;
-    for (let i=0;i<=ticks;i++){
+    for (let i = 0; i <= ticks; i++) {
       const y = top + h - (h * i / ticks);
-      const val = Math.round((min + (max-min) * i / ticks));
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(left, y, w, i===0?1:0.5);
-      ctx.fillStyle = 'rgba(255,255,255,0.65)';
-      ctx.fillText(String(val), left - 6, y);
+      const secVal = (min + (max - min) * i / ticks);
+      const label = yFormatLabel(secVal);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(left, y, w, i === 0 ? 1 : 0.5);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(label, left - 8, y);
     }
+    if (yLabel) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(yLabel, left, top - 6);
+    }
+  }
 
-    // line
-    ctx.strokeStyle = 'rgba(99,102,241,0.95)'; // indigo-ish
-    ctx.lineWidth = 2;
+  // Precompute points
+  const pts = labels.map((_, i) => {
+    const x = left + (w * (labels.length <= 1 ? 0 : i / (labels.length - 1)));
+    const v = values[i];
+    const y = top + h - ((v - min) / (max - min || 1)) * h;
+    return [x, y];
+  });
+
+  function drawFull() {
+    // full line + markers + x labels (once)
+    ctx.strokeStyle = 'rgba(99,102,241,0.98)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    for (let i=0;i<labels.length;i++){
-      const x = left + (w * i / (labels.length - 1 || 1));
-      const v = values[i];
-      const y = top + h - ((v - min) / (max - min || 1)) * h;
+    for (let i = 0; i < pts.length; i++) {
+      const [x, y] = pts[i];
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    // markers
-    ctx.fillStyle = 'rgba(99,102,241,0.95)';
-    for (let i=0;i<labels.length;i++){
-      const x = left + (w * i / (labels.length - 1 || 1));
-      const v = values[i];
-      const y = top + h - ((v - min) / (max - min || 1)) * h;
-      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
-    }
+    ctx.fillStyle = 'rgba(99,102,241,0.98)';
+    for (const [x, y] of pts) { ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); }
 
     // x labels (sparse)
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    for (let i=0;i<labels.length;i++){
-      const x = left + (w * i / (labels.length - 1 || 1));
-      if (labels.length <= 12 || i % Math.ceil(labels.length/12) === 0){
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.fillText(labels[i], x, top + h + 4);
+    for (let i = 0; i < labels.length; i++) {
+      const [x] = pts[i];
+      if (labels.length <= 12 || i % Math.ceil(labels.length / 12) === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(labels[i], x, top + h + 8);
       }
     }
+  }
 
-    if (yLabel){
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.fillText(yLabel, left, top - 2);
+  if (!animate) {
+    drawAxes();
+    drawFull();
+    // store geometry for tooltip lookups
+    canvas.__dv = { labels, values, pts, box: { left, top, w, h }, yFormat };
+    if (typeof onDone === 'function') onDone();
+    return;
+  }
+
+  // Animated reveal (no duplicate draw after)
+  let t0 = null;
+  const totalLen = (() => {
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const dx = pts[i][0] - pts[i-1][0];
+      const dy = pts[i][1] - pts[i-1][1];
+      len += Math.hypot(dx, dy);
+    }
+    return Math.max(1, len);
+  })();
+
+  function frame(now) {
+    if (t0 == null) t0 = now;
+    const p = Math.min(1, (now - t0) / 900); // ≈0.9s reveal
+
+    drawAxes();
+
+    // draw partial line up to p
+    ctx.strokeStyle = 'rgba(99,102,241,0.98)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+
+    let acc = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i-1];
+      const [x1, y1] = pts[i];
+      const seg = Math.hypot(x1 - x0, y1 - y0);
+      if (acc + seg <= totalLen * p) {
+        ctx.lineTo(x1, y1);
+        acc += seg;
+      } else {
+        const r = (totalLen * p - acc) / seg;
+        const xi = x0 + (x1 - x0) * r;
+        const yi = y0 + (y1 - y0) * r;
+        ctx.lineTo(xi, yi);
+        acc = totalLen * p;
+        break;
+      }
+    }
+    ctx.stroke();
+
+    if (p < 1) requestAnimationFrame(frame);
+    else {
+      drawAxes();
+      drawFull();
+      canvas.__dv = { labels, values, pts, box: { left, top, w, h }, yFormat };
+      if (typeof onDone === 'function') onDone();
     }
   }
+
+  requestAnimationFrame(frame);
+}
+
+// Tooltip: DOM element over canvas, nearest-point lookup
+function attachLineTooltip(canvas, container, { yFormat = 'seconds' } = {}) {
+  // Create tooltip dom
+  const tip = document.createElement('div');
+  Object.assign(tip.style, {
+    position: 'absolute',
+    zIndex: 10,
+    pointerEvents: 'none',
+    padding: '6px 8px',
+    borderRadius: '8px',
+    background: 'rgba(17,24,39,.95)',
+    color: '#e5e7eb',
+    font: '13px system-ui, sans-serif',
+    boxShadow: '0 4px 16px rgba(0,0,0,.35)',
+    transform: 'translate(-50%, -120%)',
+    display: 'none'
+  });
+  container.style.position = container.style.position || 'relative';
+  container.appendChild(tip);
+
+  function fmtY(sec) {
+    return (yFormat === 'mm:ss') ? fmtMMSS(sec) : String(Math.round(sec));
+  }
+
+  function nearestPt(mx, my, pts) {
+    let best = { i: -1, d2: Infinity };
+    for (let i = 0; i < pts.length; i++) {
+      const [x, y] = pts[i];
+      const dx = mx - x, dy = my - y;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < best.d2) best = { i, d2 };
+    }
+    return best;
+  }
+
+  function onMove(e) {
+    const g = canvas.__dv;
+    if (!g) return;
+
+    const rect = container.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // outside plot area?
+    const { left, top, w, h } = g.box;
+    if (mx < left || mx > left + w || my < top || my > top + h) {
+      tip.style.display = 'none';
+      return;
+    }
+
+    // find nearest point
+    const { i, d2 } = nearestPt(mx, my, g.pts || []);
+    if (i < 0 || d2 > 25*25) { // 25px radius threshold
+      tip.style.display = 'none';
+      return;
+    }
+
+    const [px, py] = g.pts[i];
+    const label = g.labels[i];
+    const val   = g.values[i];
+
+    tip.innerHTML = `<b>Task ${label}</b><br>${fmtY(val)}`;
+    tip.style.left = `${px}px`;
+    tip.style.top  = `${py}px`;
+    tip.style.display = 'block';
+  }
+
+  function onLeave() {
+    tip.style.display = 'none';
+  }
+
+  container.addEventListener('mousemove', onMove);
+  container.addEventListener('mouseleave', onLeave);
+}
+
 })();

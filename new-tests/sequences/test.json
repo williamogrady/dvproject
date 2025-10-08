@@ -1,7 +1,7 @@
 {
   "series": [
-    { "view": "map", "scenarios": ["test_A_stabilityLow"], "seconds": 300 },
+    { "view": "map", "scenarios": ["test_A_stabilityLow"], "seconds": 2 },
     { "break": { "seconds": 10, "note": "Next: same task in ListView" } },
-    { "view": "list",  "scenarios": ["test_B_stabilityHigh"], "seconds": 300 }
+    { "view": "list",  "scenarios": ["test_B_stabilityHigh"], "seconds": 2 }
   ]
 }
