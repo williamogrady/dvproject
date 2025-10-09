@@ -3372,6 +3372,38 @@ try { window.showResultOverlay = showResultOverlay; } catch {}
   window.addEventListener('load', () => postToRunner(computeEvalStateSafe()));
 })();
 </script>
+<script>
+  // Lightweight legend toggle for MapView (no deps)
+  (function () {
+    const btn   = document.getElementById('lv-legend-toggle');
+    const panel = document.getElementById('lv-legend-panel');
+    if (!btn || !panel) return;
+
+    // Open/close with the button
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (panel.hasAttribute('hidden')) {
+        panel.removeAttribute('hidden');
+      } else {
+        panel.setAttribute('hidden', '');
+      }
+    });
+
+    // Clicking the panel itself closes it (per caption)
+    panel.addEventListener('click', () => panel.setAttribute('hidden', ''));
+
+    // Click-away to close
+    document.addEventListener('click', (e) => {
+      const inside = panel.contains(e.target) || btn.contains(e.target);
+      if (!inside) panel.setAttribute('hidden', '');
+    });
+
+    // Escape key closes
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') panel.setAttribute('hidden', '');
+    });
+  })();
+</script>
 
 
 </body>
