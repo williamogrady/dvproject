@@ -356,6 +356,11 @@
   100% { background: transparent; }
 }
 
+.generator-card.flash-highlight {
+  box-shadow: 0 0 0 4px #3b82f6;
+  transition: box-shadow 0.6s ease-out;
+}
+
 
 </style>
 
@@ -839,35 +844,6 @@ function afterGeneratorAdded(gen){
 }
 
 
-function jumpToGenerator(bus){
-  const sel = [
-    `#gen-card-${bus}`,
-    `.generator-card[data-gen-bus="${bus}"]`,
-    `.generator-card[data-gen-id="Gen${bus}"]`
-  ].join(', ');
-
-  const el = document.querySelector(sel);
-  if (!el) return;
-
-  // If card is inside a scrollable list, scroll that; else fallback to viewport
-  const scroller = findScrollableAncestor(el);
-  if (scroller) {
-    const er = el.getBoundingClientRect();
-    const sr = scroller.getBoundingClientRect();
-    const delta = (er.top - sr.top) - (sr.height/2 - er.height/2);
-    scroller.scrollBy({ top: delta, behavior: 'smooth' });
-  } else {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  // Brief highlight
-  el.classList.remove('flash-highlight'); void el.offsetWidth;
-  el.classList.add('flash-highlight');
-
-  // Also mark it selected so map/card styles sync
-  const genId = `Gen${bus}`;
-  setSelectedGen(genId);
-}
 
 
 
@@ -1105,6 +1081,27 @@ function setHoveredGen(id){
   applyCardHoverSelect();
   updateMapGeneratorsFromScenario(); // you already have this
 }
+
+function debugJumpToGenerator(genId) {
+  console.log(`🟦 Clicked ${genId}`);
+
+  const cardActive = document.querySelector(`#active-generators .generator-card[data-gen-id="${genId}"]`);
+  const cardInactive = document.querySelector(`#inactive-generators .generator-card[data-gen-id="${genId}"]`);
+
+  if (cardActive) {
+    console.log(`✅ ${genId} found in ACTIVE list.`);
+    cardActive.scrollIntoView({ behavior: "smooth", block: "center" });
+    cardActive.classList.add("selected");
+  } else if (cardInactive) {
+    console.log(`🟨 ${genId} found in INACTIVE list.`);
+    cardInactive.scrollIntoView({ behavior: "smooth", block: "center" });
+    cardInactive.classList.add("selected");
+  } else {
+    console.warn(`❌ ${genId} not found in any list.`);
+  }
+}
+
+
 function setSelectedGen(id){
   window.selectedGeneratorId = id;
   applyCardHoverSelect();
@@ -1861,10 +1858,93 @@ function getChevronColor(pct01) {
 function getLoadColor(pct01) { return getChevronColor(pct01); }
 
 
-function normalizeGenId(v){
-  const s = String(v);
-  const m = s.match(/\d+/);
-  return m ? `Gen${m[0]}` : s;
+// Normalize "4" → "Gen4", "Gen4" → "Gen4"
+function normalizeGenId(ref) {
+  const s = String(ref);
+  return /^Gen\d+$/i.test(s) ? s : `Gen${s.replace(/^Gen/i, "")}`;
+}
+
+
+// Jump + highlight + (optionally) select
+function jumpToGenerator(ref, opts = {}) {
+  const { select = true, flash = true, debug = true } = opts;
+  const genId = normalizeGenId(ref);
+
+  if (debug) console.log(`🟦 clicked ${genId}.`);
+
+  // Look for the card in active/inactive lists
+  const sel = `.generator-card[data-gen-id="${genId}"]`;
+  const activeWrap   = document.getElementById("active-generators");
+  const inactiveWrap = document.getElementById("inactive-generators");
+
+  const cardActive   = activeWrap   ? activeWrap.querySelector(sel)   : null;
+  const cardInactive = inactiveWrap ? inactiveWrap.querySelector(sel) : null;
+
+  let card = null;
+  if (cardActive) {
+    if (debug) console.log(`✅ ${genId} is in ACTIVE list. Highlighting / jumping to ${genId}.`);
+    card = cardActive;
+  } else if (cardInactive) {
+    if (debug) console.log(`🟨 ${genId} is in INACTIVE list. Highlighting / jumping to ${genId}.`);
+    card = cardInactive;
+  } else {
+    if (debug) console.warn(`❌ ${genId} not found in active or inactive lists. Trying fallbacks...`);
+    // Fallbacks: older attributes/selectors you might still have around
+    const bus = Number(String(ref).replace(/^\D+/, "")); // extract digits
+    const fallbackSel = [
+      `.generator-card[data-gen-bus="${bus}"]`,
+      `#gen-card-${bus}`,
+      sel
+    ].join(", ");
+    card = document.querySelector(fallbackSel);
+    if (!card) {
+      console.warn(`❌ ${genId} still not found. Check data-gen-id, list container IDs, or render timing.`);
+      return;
+    } else if (debug) {
+      console.log(`🟪 ${genId} found via fallback selector. (Consider standardizing data-gen-id="${genId}")`);
+    }
+  }
+
+  // Scroll the owning container if it’s scrollable, else use viewport
+  const scroller = findScrollableAncestor(card);
+  if (scroller) {
+    const er = card.getBoundingClientRect();
+    const sr = scroller.getBoundingClientRect();
+    const delta = (er.top - sr.top) - (sr.height / 2 - er.height / 2);
+    scroller.scrollBy({ top: delta, behavior: "smooth" });
+  } else {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // Flash effect
+  // Flash effect that fades away after 5 s
+  if (flash) {
+    card.classList.remove("flash-highlight"); void card.offsetWidth;
+    card.classList.add("flash-highlight");
+
+    // Remove the class again after 5 seconds
+    setTimeout(() => {
+      card.classList.remove("flash-highlight");
+    }, 5000);
+  }
+
+
+  // Keep global selection & map halo in sync
+  if (select && typeof setSelectedGen === "function") {
+    setSelectedGen(genId);
+  }
+}
+
+// Tiny helper to find the right scrollable parent
+function findScrollableAncestor(el) {
+  let n = el?.parentElement;
+  while (n) {
+    const style = getComputedStyle(n);
+    const oy = style.overflowY;
+    if (/(auto|scroll)/.test(oy) && n.scrollHeight > n.clientHeight) return n;
+    n = n.parentElement;
+  }
+  return null;
 }
 
 function buildScenarioSets(scen = {}){
@@ -2269,11 +2349,6 @@ card.appendChild(right);
     card.classList.add("selected");
   }
 
-    card.addEventListener("click", () => {
-  selectedGeneratorId = genId;
-  updateMapGeneratorsFromScenario();  // update stroke styling
-});
-
 card.addEventListener("mouseenter", () => {
   hoveredGeneratorId = `Gen${gen.bus}`;
   updateMapGeneratorsFromScenario();     // show halo
@@ -2435,13 +2510,25 @@ genGroups.append("rect")
   .attr("rx",10).attr("ry",10);
 
 // Click a generator tile on the mini-map → jump to its card
-genGroups.selectAll("rect.map-gen.gen-card")
-  .style("cursor", "pointer")
+genGroups
+  .style("cursor", "pointer")               // clickable even if “disabled”
   .on("click", function (event, d) {
-    const bus = +d.bus;
-    if (!Number.isFinite(bus)) return;
-    jumpToGenerator(bus);
+    const genId = d?.id ? d.id : `Gen${d.bus}`;
+
+    // Is the disabled overlay visible?
+    const isDisabledVisible =
+      d3.select(this).select("image.map-gen-disabled").style("display") !== "none";
+
+    if (isDisabledVisible) {
+      console.log(`🔒 ${genId} is DISABLED — jumping to its card anyway.`);
+    } else {
+      console.log(`🖱️ Clicked ${genId} on map.`);
+    }
+
+    // Always allow jump/highlight, even if disabled
+    jumpToGenerator(genId, { debug: true, flash: true, select: true });
   });
+
 
 
 genGroups.append("text")
@@ -2960,19 +3047,11 @@ window.addEventListener('DOMContentLoaded', () => {
   .addEventListener("click", (e) => {
     const card = e.target.closest(".generator-card");
     if (!card) return;
-
     const genId = card.dataset.genId;
     if (!genId) return;
-
-    // mark selection in memory + UI
-    selectedGeneratorId = genId;
-    document.querySelectorAll(".generator-card.selected")
-      .forEach(el => el.classList.remove("selected"));
-    card.classList.add("selected");
-
-    // update the map (halo + stroke)
-    updateMapGeneratorsFromScenario();
-  }, true); // capture = true to run even if inner widgets stop propagation
+    setSelectedGen(genId);          // ✅ single source of truth
+    pingGenerator(genId);           // optional: keeps parity with card clicks
+  }, true);
 
   // --- Toggle behavior (like Admin)
   const filtersBtn = document.getElementById('map-filters-toggle');
