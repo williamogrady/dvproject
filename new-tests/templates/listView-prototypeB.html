@@ -993,7 +993,14 @@ function _loadColor(pct){
 // Inversion helper: invert everywhere EXCEPT Bus68–Bus69
 function shouldInvertChevronPair(a, b){
   const lo = Math.min(+a, +b), hi = Math.max(+a, +b);
-  return !(lo === 68 && hi === 69);
+  // Exempt these pairs from inversion (normal direction)
+  const exceptions = [
+    [5,8],
+    [65, 66],
+    [68, 69],   // North corridor special
+    [26, 30], [105, 107]    // Your new exception
+  ];
+  return !exceptions.some(([x, y]) => lo === x && hi === y);
 }
 
 // Mini chevron that matches MapView's shape, is perfectly centered, and supports zero-flow
