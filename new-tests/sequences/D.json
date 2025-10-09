@@ -1,0 +1,24 @@
+{
+  "series": [
+    { "view": "list", "scenarios": ["test_B_stabilityHigh"], "seconds": 300 },
+    { "break": { "seconds": 30, "note": "Next: Task 2 in List View" } },
+    { "view": "list",  "scenarios": ["test_D_balanceHigh"], "seconds": 300 },
+    { "break": { "seconds": 30, "note": "Next: Task 3 in List View" } },
+
+    { "view": "list", "scenarios": ["test_E_budgetLow"], "seconds": 300 },
+    { "break": { "seconds": 30, "note": "Next: Last Task in List View" } },
+    { "view": "list",  "scenarios": ["test_G_mixedLow"], "seconds": 300 },
+    { "break": { "seconds": 1000, "note": "Next: Change to Map View" } },
+
+    { "view": "map",  "scenarios": ["test_A_stabilityLow"], "seconds": 300 },
+    { "break": { "seconds": 30, "note": "Next: Task 2 in Map View" } },
+    { "view": "map",  "scenarios": ["test_C_balanceLow"], "seconds": 300 },
+    { "break": { "seconds": 30, "note": "Next: Task 3 in Map View" } },
+
+    { "view": "map",  "scenarios": ["test_F_budgetHigh"], "seconds": 300 },
+    { "break": { "seconds": 30, "note": "Next: Last Task in Map View" } },
+    { "view": "map",  "scenarios": ["test_H_mixedHigh"], "seconds": 300 },
+    { "break": { "seconds": 60, "note": "Next: Results" } }
+
+  ]
+}
