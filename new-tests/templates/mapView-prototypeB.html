@@ -379,10 +379,48 @@
 }
 
 .task-submit-row {
-  margin-top: 0.5rem;
+   margin-top: 0.5rem;
+   display: flex;
+   justify-content: space-between; /* score on the left, submit on the right */
+   align-items: center;
+ }
+
+ /* Score counter (non-interactive) */
+ #score-counter {
+  background-color: #ccc;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  user-select: none;
+  cursor: default;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 100px;
+  line-height: 1.1;
 }
+
+#score-counter.ready {
+  background-color: #4CAF50;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+#score-counter .score-main {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#score-counter .score-sub {
+  align-self:  center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+
 
 #submit-button {
   padding: 0.35rem 0.8rem;
@@ -897,6 +935,37 @@
 .pill.hidden { display:none; }
 
 
+/* Top row inside results: time + score side-by-side */
+.results-toprow {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* time | score */
+  gap: 12px;
+  margin: 6px 0 14px 0;
+  align-items: center;
+}
+.results-toprow .k {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 2px;
+}
+.results-toprow .v {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111;
+}
+.results-toprow .score .v.score-green {
+  color: #2e7d32;               /* strong green emphasis */
+  font-weight: 800;
+}
+.results-toprow .score .v .x2 {
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin: 0 4px;
+}
+.results-toprow .score .v .strong {
+  font-weight: 900;
+}
 
 
 </style>
@@ -3130,16 +3199,6 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
                 Meet target power${scenario.target_mw != null ? ` (${scenario.target_mw} MW)` : ""}
               </li>
               <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
-              ${hasBudget ? `
-              <li id="budget-check">
-                <input type="checkbox" disabled id="check-budget" />
-                Stay within budget
-              </li>` : ``}
-              ${hasEmis ? `
-              <li id="emissions-check">
-                <input type="checkbox" disabled id="check-emissions" />
-                Keep emissions below cap
-              </li>` : ``}
             </ul>
           </div>
 
@@ -3154,8 +3213,9 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
           </div>
         </div>
 
-        <!-- SUBMIT BUTTON -->
-        <div class="task-submit-row">
+        <!-- SCORE (left) + SUBMIT (right) -->
+          <div class="task-submit-row">
+            <div id="score-counter" aria-hidden="true">Score: —</div>
           <button id="submit-button" disabled>Submit Solution</button>
         </div>
       </div>
@@ -3195,71 +3255,116 @@ function evaluateScenarioState(scenario, lines) {
   const allowedOverloads = Number(scen.allowed_overloads ?? 0);
   const meetsLines = overloads <= allowedOverloads;
 
-  // Budget / Emissions caps
-  const withinCost      = (costCap == null) ? true : (Number.isFinite(costCap) && totalC <= costCap);
-  const withinEmissions = (emiCap  == null) ? true : (Number.isFinite(emiCap)  && totalE <= emiCap);
+  // Score (based on budget; may be doubled by emissions)
+  // --- Score (never negative). Only defined if a cost cap exists.
+  // Base = (cost_cap - total_cost) when under/equal; otherwise 0.
+  // Double only if an emissions cap exists AND totalE <= emiCap AND baseScore > 0.
+  const hasCostCap = Number.isFinite(Number(costCap));
+  const hasEmiCap  = Number.isFinite(Number(emiCap));
+
+  let baseScore = null;
+  if (hasCostCap) {
+    if (totalC <= costCap) {
+      baseScore = (costCap - totalC);   // positive or zero
+    } else {
+      baseScore = 0;                     // over budget → score floors at 0 (not negative)
+    }
+  }
+
+  const emiOk   = hasEmiCap && (totalE <= emiCap);
+  const doubled = !!(emiOk && baseScore != null && baseScore > 0);
+  const score   = (baseScore == null) ? null : (doubled ? baseScore * 2 : baseScore);
+
+
 
   // --- Update checkboxes
   const cPower  = document.getElementById("check-power");
   const cLines  = document.getElementById("check-lines");
-  const cBudget = document.getElementById("check-budget");
-  const cEmis   = document.getElementById("check-emissions");
+
 
   if (cPower)  cPower.checked = meetsPower;
   if (cLines)  cLines.checked = meetsLines;
 
-  if (cBudget) {
-    cBudget.closest("li").style.display = (costCap != null) ? "" : "none";
-    cBudget.checked = (costCap != null) && withinCost;
-  }
-  if (cEmis) {
-    cEmis.closest("li").style.display = (emiCap != null) ? "" : "none";
-    cEmis.checked = (emiCap != null) && withinEmissions;
-  }
 
   // --- Enable/disable Submit based on ALL requirements
-  const allMet = meetsPower && meetsLines && withinCost && withinEmissions;
+  const allMet = meetsPower && meetsLines;
   const btn = document.getElementById("submit-button");
   if (btn) { btn.classList.toggle("active", allMet); btn.disabled = !allMet; }
+
+  // Paint the new big Score counter layout
+const scEl = document.getElementById("score-counter");
+if (scEl) {
+  if (baseScore == null) {
+    scEl.innerHTML = `<div class="score-main">Score: —</div>`;
+  } else if (doubled) {
+    scEl.innerHTML = `
+      <div class="score-main">Score: ${Math.round(score).toLocaleString()}</div>
+      <div class="score-sub">(${Math.round(baseScore).toLocaleString()} ×2)</div>
+    `;
+  } else {
+    scEl.innerHTML = `<div class="score-main">Score: ${Math.round(score).toLocaleString()}</div>`;
+  }
+  scEl.classList.toggle("ready", meetsPower && meetsLines);
+}
+
 
   // Optional: debug snapshot
   console.log("[submit-stats] eval",
     { totalP, target: scen.target_mw, meetsPower,
       overloads, allowedOverloads, meetsLines,
-      totalC, costCap, withinCost,
-      totalE, emiCap, withinEmissions });
+    totalC, costCap, baseScore, score, doubled,
+    totalE, emiCap, allMet });
 }
 
 function computeSubmitStats() {
-  // When the scenario loads we set this in loadScenario()
-  // (see: window.lvScenarioStartedAt = performance.now();)
   const startedAt = window.lvScenarioStartedAt || performance.now();
   const now = performance.now();
   const elapsedMs = Math.max(0, now - startedAt);
 
-  // Format "m:ss" using the existing helper in this file
   const timeFormatted = typeof formatDuration === "function"
     ? formatDuration(elapsedMs)
     : `${Math.floor(elapsedMs/60000)}:${String(Math.floor((elapsedMs/1000)%60)).padStart(2,'0')}`;
 
-  // Highest line load at submit (ignores disabled lines)
   const highestLoadPct = (typeof getHighestLoadPctAtSubmit === "function")
     ? getHighestLoadPctAtSubmit(window.currentLines || [], window.currentScenarioData || {})
     : 0;
 
-  // Totals maintained elsewhere in MapView
-  const totalCost = Number(window.totalCost || 0);
-  const totalEmissions = Number(window.totalEmissions || 0);
+  const scen = window.currentScenarioData || {};
+  const totals = {
+    cost:      Number(window.totalCost || 0),
+    emissions: Number(window.totalEmissions || 0)
+  };
+  const caps = {
+    cost:      (scen.cost_limit != null) ? Number(scen.cost_limit) : null,
+    emissions: (scen.emissions_limit != null) ? Number(scen.emissions_limit) : null
+  };
 
-  return { timeFormatted, elapsedMs, highestLoadPct, totalCost, totalEmissions };
+  // Score rules: if no cost cap → score = null (not applicable)
+  // else base = max(costCap - cost, 0); doubled iff emissions cap exists AND emissions <= cap AND base > 0
+  let baseScore = null, doubled = false, finalScore = null;
+  if (Number.isFinite(caps.cost)) {
+    baseScore = (totals.cost <= caps.cost) ? (caps.cost - totals.cost) : 0;
+    const emiOk = Number.isFinite(caps.emissions) && (totals.emissions <= caps.emissions);
+    doubled = !!(emiOk && baseScore > 0);
+    finalScore = doubled ? baseScore * 2 : baseScore;
+  }
+
+  return {
+    timeFormatted, elapsedMs, highestLoadPct,
+    totalCost: totals.cost, totalEmissions: totals.emissions,
+    costCap: caps.cost, emisCap: caps.emissions,
+    baseScore, doubled, finalScore
+  };
 }
 
 
-function showResultOverlay() {
-  // Fresh snapshot at submit (no stale globals)
-  const { timeFormatted, elapsedMs, highestLoadPct, totalCost, totalEmissions } = computeSubmitStats();
 
-  // Overlay shell
+function showResultOverlay() {
+  const {
+    timeFormatted, highestLoadPct, totalCost, totalEmissions,
+    baseScore, doubled, finalScore
+  } = computeSubmitStats();
+
   const overlay = document.createElement("div");
   overlay.id = "result-overlay";
   Object.assign(overlay.style, {
@@ -3268,18 +3373,34 @@ function showResultOverlay() {
     justifyContent:"center", zIndex:"999"
   });
 
-  // Panel (uses your existing .results-* styles in MapView)
+  // Build the header row (time + score)
+  const scoreLabel = (baseScore == null)
+    ? "—"
+    : (doubled
+        ? `${Math.round(baseScore).toLocaleString()} <span class="x2">×2</span> = <span class="strong">${Math.round(finalScore).toLocaleString()}</span>`
+        : `<span class="strong">${Math.round(finalScore).toLocaleString()}</span>`);
+
   const box = document.createElement("div");
   box.className = "results-box";
   box.innerHTML = `
     <h2 class="results-title">Summary</h2>
+
+    <div class="results-toprow">
+      <div class="time">
+        <div class="k">Time</div>
+        <div class="v">${timeFormatted}</div>
+      </div>
+      <div class="score">
+        <div class="k">Score</div>
+        <div class="v score-green">${scoreLabel}</div>
+      </div>
+    </div>
+
     <table class="results-table">
       <thead>
         <tr><th class="results-key">Metric</th><th class="results-val">Value</th></tr>
       </thead>
       <tbody>
-        <tr><td class="results-key">Time to complete</td>
-            <td class="results-val">${timeFormatted}</td></tr>
         <tr><td class="results-key">Highest load at submit</td>
             <td class="results-val">${Math.round(highestLoadPct)}%</td></tr>
         <tr><td class="results-key">Total cost</td>
@@ -3288,6 +3409,7 @@ function showResultOverlay() {
             <td class="results-val">${Math.round(totalEmissions).toLocaleString()} tCO₂</td></tr>
       </tbody>
     </table>
+
     <button type="button" class="results-close" id="close-overlay">Close</button>
   `;
 
@@ -3300,12 +3422,13 @@ function showResultOverlay() {
   const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
   document.addEventListener("keydown", onKey);
 
-  // Notify the runner (if embedded) after dismissal
+  // Notify runner after dismissal (kept)
   document.getElementById("close-overlay").addEventListener("click", () => {
     try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
   });
 }
 try { window.showResultOverlay = showResultOverlay; } catch {}
+
 
 
 
@@ -3386,12 +3509,10 @@ if (linesCard) {
       return r > 0 && f > r;
     }).length;
     const meetsPower       = targetMW > 0 ? (totals.power >= targetMW*0.95 && totals.power <= targetMW*1.05) : true;
-    const withinCost       = (targetCost == null) ? true : totals.cost <= targetCost;
-    const withinEmissions  = (targetEmissions  == null) ? true : totals.emissions <= targetEmissions;
     const noOverloads      = overloadedCount === 0;
     return { totals, targetMW, targetCost, targetEmissions, overloadedCount,
-             meetsPower, withinCost, withinEmissions, noOverloads,
-             allMet: meetsPower && withinCost && withinEmissions && noOverloads };
+             meetsPower, noOverloads,
+             allMet: meetsPower && noOverloads };
   }
 
   // Run eval safely regardless of which view we’re in

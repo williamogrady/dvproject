@@ -374,10 +374,15 @@ function finishStep(reason) {
     entry.reason = reason;
     if (lastState) {
       entry.snapshot = {
-        scenarioId: lastState.scenarioId ?? entry.scenarioId,
-        totals:     lastState.totals ?? null,
-        state:      lastState.state ?? null,
-        meta:       lastState.meta ?? null
+        scenarioId:     lastState.scenarioId ?? entry.scenarioId,
+        totals:         lastState.totals ?? null,
+        state:          lastState.state ?? null,
+        meta:           lastState.meta ?? null,
+
+        // Scores (emit these from the view in dv:state)
+        score:          (lastState.score ?? null),
+        score_base:     (lastState.score_base ?? null),
+        score_doubled:  (lastState.score_doubled ?? false)
       };
     }
     // Prefer explicit overall from the view if present

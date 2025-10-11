@@ -303,6 +303,7 @@
 </style>
 <style id="results-overlay-styles">
 /* === Results overlay (light theme) — copied from MapView === */
+/* Top row inside results: time + score side-by-side */
 .results-box {
   min-width: 480px;
   max-width: 640px;
@@ -314,36 +315,96 @@
   font-family: 'Figtree', system-ui, sans-serif;
   border: 1px solid #e0e0e0;
 }
+
 .results-title {
   margin: 0 0 12px 0;
   font-weight: 700;
   font-size: 1.2rem;
   color: #222;
 }
-.results-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 8px; overflow: hidden; }
+
+.results-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .results-table thead th {
-  text-align: left; font-size: 0.85rem; font-weight: 600; color: #444;
-  background: #f5f5f5; padding: 10px 12px; border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  background: #f5f5f5;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e0e0e0;
 }
+
 .results-table tbody td {
-  padding: 12px; background: #fafafa; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
-  font-size: 0.95rem; color: #333;
+  padding: 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  font-size: 0.95rem;
+  color: #333;
 }
-.results-table tbody tr:last-child td { border-bottom: none; }
-.results-table tbody td:last-child { border-right: none; }
-.results-key { font-weight: 500; }
-.results-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #111; }
-/* Results overlay button visibility fix */
-.results-close{
-  color:#111 !important;            /* <-- make text visible on white */
-  background:#fff;
-  border:1px solid #ddd;
-  border-radius:10px;
-  padding:8px 12px;
-  cursor:pointer;
-  font:600 0.95rem/1.2 "Figtree",system-ui,sans-serif;
+
+.results-table tbody tr:last-child td {
+  border-bottom: none;
 }
-.results-close:hover{ background:#f5f5f5; }
+.results-table tbody td:last-child {
+  border-right: none;
+}
+
+.results-close {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  background: #f5f5f5;
+  color: #222;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.results-close:hover {
+  background: #e8e8e8;
+}
+
+/* Top row inside results: time + score side-by-side */
+.results-toprow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 6px 0 14px 0;
+  align-items: center;
+}
+.results-toprow .k {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 2px;
+}
+.results-toprow .v {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111;
+}
+.results-toprow .score .v.score-green {
+  color: #2e7d32;
+  font-weight: 800;
+}
+.results-toprow .score .v .x2 {
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin: 0 4px;
+}
+.results-toprow .score .v .strong {
+  font-weight: 900;
+}
+
 
 /* Jump highlight */
 .flash-highlight {
@@ -687,7 +748,8 @@ function buildDisabledLineSetFromScenario(scen = {}) {
       out.add(s);
     }
   });
-  window.disabledLineSet = out;
+    window.disabledLineSet = out;
+  return out;               // ← add this line
 }
 
 // --- Always exclude these
@@ -895,13 +957,23 @@ async function loadScenario(scenarioId){
     currentGenerators   = (data.generators || []).filter(g => g.bus !== 1);
   const lines         = data.lines || data.powerflow?.lines || [];
   window.currentLines = lines;
+  
+  // Start timer
+  window.lvScenarioStartedAt = performance.now(); // start timer for this scenario
 
-// 1) Build task card first
-setupTaskSection(currentScenarioData);
-
-// 2) Ensure scenario sets are valid BEFORE any rendering
+// 1) Ensure scenario sets are valid BEFORE any rendering
 currentScenarioData = sanitizeScenarioSets(currentScenarioData);
-buildDisabledLineSetFromScenario(currentScenarioData);  // <-- add this
+
+// 2) Build and store the disabled line set (global), like MapView
+window.disabledLineSet = buildDisabledLineSetFromScenario(currentScenarioData) || new Set();
+
+// 3) Publish globals used by score/overlay helpers (parity with MapView)
+window.currentScenarioData = currentScenarioData;
+window.currentGenerators   = currentGenerators;
+window.currentLines        = lines;
+
+// 4) Build task card AFTER globals exist
+setupTaskSection(currentScenarioData);
 
 // then your existing render calls:
 renderGenerators(currentGenerators);
@@ -1113,57 +1185,103 @@ function setSelectedGen(id){
 
 
 // --- NEW: pure state computation (no DOM here) ---
-function evaluateScenarioState(gens = [], linesIn = [], scenario = {}){
-  const lines = normalizeLines(linesIn);
-
+function evaluateScenarioState(gens = [], lines = [], scenario = {}) {
+  // Totals (cost/emissions)
   const totals = {
-    power:     gens.reduce((s,g) => s + nz(g.pg), 0),
-    cost:      gens.reduce((s,g) => s + nz(g.pg) * nz(g.cost_per_mw), 0),
-    emissions: gens.reduce((s,g) => s + nz(g.pg) * nz(g.emissions_per_mw), 0),
+    power: (gens||[]).reduce((s,g)=> s + (+g.pg||0), 0),
+    cost:  (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.cost_per_mw||0), 0),
+    emissions: (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.emissions_per_mw||0), 0),
   };
 
-  const targetMW = nz(scenario.target_mw);
-  const targetCost  = (scenario.cost_limit != null) ? nz(scenario.cost_limit) : null;
-  const targetEmissions   = (scenario.emissions_limit != null) ? nz(scenario.emissions_limit) : null;
+  // Targets / caps
+  const targetMW   = +(scenario.target_mw ?? scenario.targetMW ?? NaN);
+  const targetCost = (scenario.cost_limit      != null) ? +scenario.cost_limit      : null;
+  const targetEmi  = (scenario.emissions_limit != null) ? +scenario.emissions_limit : null;
 
-  const overloadedCount = lines.filter(l => {
-    const rate = nz(l.rate_a ?? l.rateA);
-    const flow = Math.abs(nz(l.flow));
-    return rate > 0 && flow > rate;
-  }).length;
+  // Meet target power? (±5%)
+  const meetsPower = Number.isFinite(targetMW)
+    ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05)
+    : true;
 
-  const meetsPower = (targetMW > 0) ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05) : true;
-  const withinCost      = (targetCost == null) ? true : totals.cost      <= targetCost;
-  const withinEmissions = (targetEmissions  == null) ? true : totals.emissions <= targetEmissions;
-  const noOverloads     = overloadedCount === 0;
+  // No line overloads? (skip disabled)
+  const disabled = (window.disabledLineSet instanceof Set)
+    ? window.disabledLineSet
+    : (typeof buildDisabledLineSetFromScenario === 'function'
+        ? buildDisabledLineSetFromScenario(scenario)
+        : new Set());
+  const allowedOverloads = +(scenario.allowed_overloads ?? 0);
+  let overloads = 0;
+  for (const L of (lines||[])) {
+    if (!L) continue;
+    const id = String(L.id ?? (typeof _lineId === 'function' ? _lineId(L) : `${L.from_bus}-${L.to_bus}`));
+    if (disabled.has(id)) continue;
+    const rate = +(L.rate_a ?? L.rateA ?? 0);
+    const flow = Math.abs(+L.flow || 0);
+    if (rate > 0 && flow > rate) overloads++;
+  }
+  const noOverloads = overloads <= allowedOverloads;
 
+  // Return a compact state object used by applyScenarioUI
   return {
-    totals, targetMW, targetCost, targetEmissions, overloadedCount,
-    meetsPower, withinCost, withinEmissions, noOverloads,
-    allMet: meetsPower && withinCost && withinEmissions && noOverloads
+    meetsPower,
+    noOverloads,
+    totals,
+    targetCost,
+    targetEmissions: targetEmi
   };
 }
+
 
 // --- NEW: apply the computed state to checkboxes/buttons (DOM only) ---
 function applyScenarioUI(state){
-  const cPower  = document.getElementById("check-power");
-  const cLines  = document.getElementById("check-lines");
-  const cBudget = document.getElementById("check-budget");
-  if (cPower)  cPower.checked  = !!state.meetsPower;
-  if (cLines)  cLines.checked  = !!state.noOverloads;
-  if (cBudget){
-    cBudget.closest("li").style.display = (state.targetCost != null) ? "" : "none";
-    cBudget.checked = (state.targetCost != null) && !!state.withinCost;
-  }
+  // Checkboxes (requirements only)
+  const cPower = document.getElementById("check-power");
+  const cLines = document.getElementById("check-lines");
+  if (cPower) cPower.checked = !!state.meetsPower;
+  if (cLines) cLines.checked = !!state.noOverloads;
+
+  // Submit enablement is ONLY power+lines now
+  const ready = !!(state.meetsPower && state.noOverloads);
   const submitBtn = document.getElementById("submit-button");
   if (submitBtn){
-    submitBtn.disabled = !state.allMet;
-    submitBtn.classList.toggle("active", state.allMet);
+    submitBtn.disabled = !ready;
+    submitBtn.classList.toggle("active", ready);
   }
-  const ctrlSubmit = document.querySelector("#row-4 .submit-button");
-  if (ctrlSubmit) ctrlSubmit.disabled = !state.allMet;
-}
 
+  // Score chip (non-interactive)
+  const scEl = document.getElementById("score-counter");
+  if (scEl && state && state.totals){
+    const hasCostCap = Number.isFinite(+state.targetCost);
+    const hasEmiCap  = Number.isFinite(+state.targetEmissions);
+
+    let baseScore = null;
+    if (hasCostCap) {
+      baseScore = (state.totals.cost <= state.targetCost)
+        ? (state.targetCost - state.totals.cost)
+        : 0;  // never negative
+    }
+
+    const emiOk  = hasEmiCap && (state.totals.emissions <= state.targetEmissions);
+    const doubled = !!(emiOk && baseScore != null && baseScore > 0);
+    const final  = (baseScore == null) ? null : (doubled ? baseScore * 2 : baseScore);
+
+    if (final == null){
+      scEl.innerHTML = `<div class="score-main">Score: —</div>`;
+    } else if (doubled){
+      scEl.innerHTML = `
+        <div class="score-main">Score: ${Math.round(final).toLocaleString()}</div>
+        <div class="score-sub">(${Math.round(baseScore).toLocaleString()} ×2)</div>
+      `;
+    } else {
+      scEl.innerHTML = `<div class="score-main">Score: ${Math.round(final).toLocaleString()}</div>`;
+    }
+    scEl.classList.toggle("ready", ready);
+  }
+
+  // (If you still have a duplicate submit somewhere:)
+  const ctrlSubmit = document.querySelector("#row-4 .submit-button");
+  if (ctrlSubmit) ctrlSubmit.disabled = !ready;
+}
 
 // 100 MW per block; tidy, responsive grid; no click states
 // MapView-identical blocks, with inline fills so "goal" always shows.
@@ -1363,6 +1481,10 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
   // COST / EMISSIONS
   const totalCost = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.cost_per_mw||0), 0);
   const totalEmis = (gens||[]).reduce((s,g)=> s + (+g.pg||0) * (+g.emissions_per_mw||0), 0);
+    // Publish totals to globals so overlays/other components can read them
+  window.totalPower     = (gens||[]).reduce((s,g)=> s + (+g.pg||0), 0);
+  window.totalCost      = totalCost;
+  window.totalEmissions = totalEmis;
   // Structured values + pills (mirrors MapView)
   const costLimit = (scenario.cost_limit != null) ? Number(scenario.cost_limit) : null;
   const emisLimit = (scenario.emissions_limit != null) ? Number(scenario.emissions_limit) : null;
@@ -2666,8 +2788,6 @@ function setupTaskSection(scenario){
   Meet target power${scenario.target_mw != null ? ` (${scenario.target_mw} MW)` : ""}
 </li>
               <li><input type="checkbox" disabled id="check-lines" /> No line overloads</li>
-              ${hasBudget ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within budget</li>` : ``}
-              ${hasEmis ? `<li id="budget-check"><input type="checkbox" disabled id="check-budget" /> Stay within emissions cap</li>` : ``}
             </ul>
           </div>
 
@@ -2682,12 +2802,16 @@ function setupTaskSection(scenario){
           </div>
         </div>
 
-        <div class="task-actions">
-          <button id="submit-button" disabled>Submit Solution</button>
+        <!-- SCORE (left) + SUBMIT (right) -->
+      <div class="task-submit-row">
+        <div id="score-counter" aria-hidden="true">
+          <div class="score-main">Score: —</div>
         </div>
+        <button id="submit-button" disabled>Submit Solution</button>
       </div>
     </div>
-  `;
+  </div>
+`;
 
   // Wire submit
   const submitBtn = document.getElementById("submit-button");
@@ -2702,40 +2826,6 @@ function setupTaskSection(scenario){
   // Apply current state to the just-built UI
   const state = evaluateScenarioState(window.currentGenerators || [], window.currentLines || [], scenario);
   applyScenarioUI(state);
-}
-
-
-
-function showResultOverlay() {
-  const overlay = document.createElement("div");
-  overlay.id = "result-overlay";
-  Object.assign(overlay.style, {
-    position:"fixed", top:"0", left:"0", width:"100vw", height:"100vh",
-    background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center",
-    justifyContent:"center", zIndex:"999"
-  });
-
-  const box = document.createElement("div");
-  box.className = "results-box";
-  box.innerHTML = `
-    <h2 class="results-title">✅ Scenario Complete</h2>
-    <div class="results-summary">
-      <p><strong>⚡ Power:</strong> ${Math.round(totalPower)} MW</p>
-      <p><strong>💲 Cost:</strong> $${Math.round(totalCost)}</p>
-      <p><strong>🫧 Emissions:</strong> ${Math.round(totalEmissions)} tCO₂</p>
-    </div>
-    <button type="button" class="results-close" id="close-overlay">Close</button>
-  `;
-
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-  // in mapView-prototypeB.html (and/or mapView.js) inside showResultOverlay()
-document.getElementById("close-overlay").addEventListener("click", () => {
-  overlay.remove();
-  // NEW: advance the runner only after the overlay is dismissed
-  try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
-});
-
 }
 
 
@@ -3236,41 +3326,89 @@ function _lv_disabledLineSet(scen){
   return s;
 }
 
-function lvComputeSubmitStats(){
+function computeSubmitStats(){
   const gens  = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
   const lines = Array.isArray(window.currentLines)      ? window.currentLines      : [];
   const scen  = window.currentScenarioData || {};
 
-  // Totals
+  // --- Time
+  const startedAt = window.lvScenarioStartedAt || performance.now();
+  const now = performance.now();
+  const elapsedMs = Math.max(0, now - startedAt);
+  const timeFormatted = (typeof formatDuration === "function")
+    ? formatDuration(elapsedMs)
+    : `${Math.floor(elapsedMs/60000)}:${String(Math.floor((elapsedMs/1000)%60)).padStart(2,'0')}`;
+
+  // --- Totals from generators
   let totalCost = 0, totalEmissions = 0;
   for (const g of gens){
-    const pg  = _lv_num(g?.pg);
-    totalCost      += pg * _lv_num(g?.cost_per_mw);
-    totalEmissions += pg * _lv_num(g?.emissions_per_mw);
+    const pg = Number(g?.pg) || 0;
+    totalCost      += pg * (Number(g?.cost_per_mw)        || 0);
+    totalEmissions += pg * (Number(g?.emissions_per_mw)   || 0);
   }
 
-  // Highest load % across enabled lines
-  const disabled = _lv_disabledLineSet(scen);
-  let highestLoadPct = 0;
+  // --- Highest load % across enabled lines (skip disabled)
+  const disabled =
+    (window.disabledLineSet instanceof Set)
+      ? window.disabledLineSet
+      : (typeof buildDisabledLineSetFromScenario === 'function'
+          ? buildDisabledLineSetFromScenario(scen)
+          : new Set());
+
+// --- Highest load % across enabled lines (skip disabled, reuse shared helper if present)
+let highestLoadPct = 0;
+if (typeof getHighestLoadPctAtSubmit === "function") {
+  highestLoadPct = getHighestLoadPctAtSubmit(lines, scen);
+} else {
+  const disabled =
+    (window.disabledLineSet instanceof Set)
+      ? window.disabledLineSet
+      : (typeof buildDisabledLineSetFromScenario === 'function'
+          ? buildDisabledLineSetFromScenario(scen)
+          : new Set());
   for (const L of lines){
     if (!L) continue;
-    const id = String(L.id ?? `Line_Bus${L.from_bus}_Bus${L.to_bus}`);
+    const id = (L.id) ? String(L.id)
+                      : (typeof _lineId === 'function' ? _lineId(L) : `${L.from_bus}-${L.to_bus}`);
     if (disabled.has(id)) continue;
-    const rate = _lv_num(L.rate_a ?? L.rateA);
-    const flow = Math.abs(_lv_num(L.flow));
+    const rate = Number(L.rate_a ?? L.rateA) || 0;
+    const flow = Math.abs(Number(L.flow) || 0);
     const pct  = rate > 0 ? (flow / rate) * 100 : 0;
     if (Number.isFinite(pct) && pct > highestLoadPct) highestLoadPct = pct;
   }
-
-  const startedAt = window.lvScenarioStartedAt || window.mvScenarioStartedAt || window.scenarioStartedAt || _lv_now();
-  const elapsedMs = Math.max(0, _lv_now() - startedAt);
-
-  return { elapsedMs, highestLoadPct, totalCost, totalEmissions };
 }
 
-// Paste-in replacement for ListView
+  // --- Caps
+  const costCap = (scen.cost_limit       != null) ? Number(scen.cost_limit)       : null;
+  const emisCap = (scen.emissions_limit  != null) ? Number(scen.emissions_limit)  : null;
+
+  // --- Score rules:
+  // base = max(costCap - totalCost, 0) if a costCap exists; doubled if emisCap exists AND emissions <= emisCap AND base>0
+  let baseScore = null, doubled = false, finalScore = null;
+  if (Number.isFinite(costCap)) {
+    baseScore = Math.max(costCap - totalCost, 0);
+    const emiOk = Number.isFinite(emisCap) && (totalEmissions <= emisCap);
+    doubled = !!(emiOk && baseScore > 0);
+    finalScore = doubled ? baseScore * 2 : baseScore;
+  }
+
+  return {
+    timeFormatted, elapsedMs, highestLoadPct,
+    totalCost, totalEmissions,
+    costCap, emisCap,
+    baseScore, doubled, finalScore
+  };
+}
 function showResultOverlay() {
-  const { elapsedMs, highestLoadPct, totalCost, totalEmissions } = lvComputeSubmitStats();
+  const {
+    timeFormatted,
+    highestLoadPct,
+    totalCost,
+    totalEmissions,
+    baseScore,
+    doubled,
+    finalScore
+  } = computeSubmitStats();
 
   const overlay = document.createElement("div");
   overlay.id = "result-overlay";
@@ -3280,21 +3418,42 @@ function showResultOverlay() {
     justifyContent:"center", zIndex:"999"
   });
 
+  const scoreLabel = (baseScore == null)
+    ? "—"
+    : (doubled
+        ? `${Math.round(baseScore).toLocaleString()} <span class="x2">×2</span> = <span class="strong">${Math.round(finalScore).toLocaleString()}</span>`
+        : `<span class="strong">${Math.round(finalScore).toLocaleString()}</span>`);
+
   const box = document.createElement("div");
-  box.className = "results-box";  // same classes as MapView
+  box.className = "results-box";
   box.innerHTML = `
     <h2 class="results-title">Summary</h2>
+
+    <div class="results-toprow">
+      <div class="time">
+        <div class="k">Time</div>
+        <div class="v">${timeFormatted}</div>
+      </div>
+      <div class="score">
+        <div class="k">Score</div>
+        <div class="v score-green">${scoreLabel}</div>
+      </div>
+    </div>
+
     <table class="results-table">
       <thead>
         <tr><th class="results-key">Metric</th><th class="results-val">Value</th></tr>
       </thead>
       <tbody>
-        <tr><td class="results-key">Time to complete</td><td class="results-val">${_lv_fmt(elapsedMs)}</td></tr>
-        <tr><td class="results-key">Highest load at submit</td><td class="results-val">${Math.round(highestLoadPct)}%</td></tr>
-        <tr><td class="results-key">Total cost</td><td class="results-val">$${Math.round(totalCost).toLocaleString()}</td></tr>
-        <tr><td class="results-key">Total emissions</td><td class="results-val">${Math.round(totalEmissions).toLocaleString()} tCO₂</td></tr>
+        <tr><td class="results-key">Highest load at submit</td>
+            <td class="results-val">${Math.round(highestLoadPct)}%</td></tr>
+        <tr><td class="results-key">Total cost</td>
+            <td class="results-val">$${Math.round(totalCost).toLocaleString()}</td></tr>
+        <tr><td class="results-key">Total emissions</td>
+            <td class="results-val">${Math.round(totalEmissions).toLocaleString()} tCO₂</td></tr>
       </tbody>
     </table>
+
     <button type="button" class="results-close" id="close-overlay">Close</button>
   `;
 
@@ -3307,12 +3466,15 @@ function showResultOverlay() {
   const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
   document.addEventListener("keydown", onKey);
 
-  // Advance the runner only after the overlay is dismissed
   document.getElementById("close-overlay").addEventListener("click", () => {
     try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
   });
 }
 try { window.showResultOverlay = showResultOverlay; } catch {}
+
+
+
+
 
 </script>
 <style>

@@ -269,7 +269,44 @@ button:hover{ filter: brightness(0.98); }
 #row-1 #task-requirements{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.3rem; }
 #row-1 #task-requirements li{ font-weight:700; font-size:.7rem; display:flex; align-items:center; gap:.3rem; }
 #row-1 #task-constraints div{ font-weight:700; font-size:.75rem; color:#333; margin:.2rem 0; }
-#row-1 .task-submit-row{ margin-top:.5rem; display:flex; justify-content:flex-end; }
+#row-1 .task-submit-row{
+  margin-top: .5rem;
+  display: flex;
+  justify-content: space-between; /* score on left, submit on right */
+  align-items: center;
+  gap: 10px;
+}
+/* Score counter (non-interactive) */
+#score-counter{
+  background-color:#ccc;
+  color:#fff;
+  border-radius:6px;
+  padding:0.35rem 0.7rem;
+  user-select:none;
+  cursor:default;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  min-width:100px;
+  line-height:1.1;
+}
+#score-counter.ready{
+  background-color:#4CAF50;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25);
+}
+#score-counter .score-main{
+  font-size:0.95rem;
+  font-weight:800;
+  line-height:1;
+}
+#score-counter .score-sub{
+  font-size:0.68rem;
+  font-weight:700;
+  opacity:0.9;
+  margin-top:1px;
+}
+
 #row-1 #submit-button{ padding:.35rem .8rem; border-radius:6px; background:#ccc; color:#fff; font-weight:700; border:none; font-size:.75rem; cursor:not-allowed; transition:background-color .2s; }
 #row-1 #submit-button.active{ background:#4caf50; color:#fff; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.2); }
 #row-1 #submit-button:disabled{ background:#ccc; color:#666; box-shadow:none; cursor:not-allowed; }
@@ -794,45 +831,4 @@ button:hover{ filter: brightness(0.98); }
 }
 .added-toast.on{ opacity:.92; transform:translateY(0); }
 
-/* ----------------------------------------
-   RESULTS (ported from MapView B)
----------------------------------------- */
-.results-box {
-  background: white;
-  color: #222;
-  padding: 2rem 2.5rem;
-  border-radius: 12px;
-  font-family: "Figtree", sans-serif;
-  text-align: center;
-  width: 320px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-}
 
-.results-title {
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
-  font-weight: bold;
-  color: #1a1a1a;
-}
-
-.results-summary p {
-  margin: 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.results-close {
-  margin-top: 1.5rem;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  font-family: "Figtree", sans-serif;
-}
-
-.results-close:hover {
-  background: #45a049;
-}
