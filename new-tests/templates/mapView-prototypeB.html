@@ -1055,8 +1055,8 @@
 
 const UI = { SHOW_ADMIN: false }; // set true if you want local controls
 const FILTER_KEYS = { power: 'power', cost: 'cost', emissions: 'emissions' };
-  console.log("[CHECK] window.d3 =", window.d3);
-console.log("[CHECK] typeof window.d3.scaleLinear =", typeof window.d3.scaleLinear);
+  //console.log("[CHECK] window.d3 =", window.d3);
+//console.log("[CHECK] typeof window.d3.scaleLinear =", typeof window.d3.scaleLinear);
 
   const d3ref = window.d3;
 if (!d3ref) {
@@ -1067,17 +1067,17 @@ if (!d3ref) {
 // Use d3ref instead of bare d3 if you want to be explicit:
 // const svg = d3ref.select("#map");
 // === BOOT BANNER ===
-console.log("%c[BOOT] app module starting", "background:#222;color:#0f0;padding:2px 6px");
-console.log("[BOOT] document.readyState:", document.readyState);
-console.log("[BOOT] window.d3 present?", !!window.d3, "version:", window.d3 && window.d3.version);
+//console.log("%c[BOOT] app module starting", "background:#222;color:#0f0;padding:2px 6px");
+//console.log("[BOOT] document.readyState:", document.readyState);
+//console.log("[BOOT] window.d3 present?", !!window.d3, "version:", window.d3 && window.d3.version);
 
 // Flag how many times this module executes
 window.__APP_BOOT_COUNT__ = (window.__APP_BOOT_COUNT__ || 0) + 1;
-console.log("[BOOT] __APP_BOOT_COUNT__ =", window.__APP_BOOT_COUNT__);
+//console.log("[BOOT] __APP_BOOT_COUNT__ =", window.__APP_BOOT_COUNT__);
 
 // Show all <script> tags in document order
 [...document.scripts].forEach((s,i) => {
-  console.log(`[SCRIPTS] #${i}`, s.src || "(inline)", "type=", s.type || "classic", "defer=", !!s.defer);
+  //console.log(`[SCRIPTS] #${i}`, s.src || "(inline)", "type=", s.type || "classic", "defer=", !!s.defer);
 });
 
 // Give this inline script a name in stack traces:
@@ -1490,7 +1490,7 @@ function buildDisabledLineSet(scen = {}){
 
 
 async function fetchAllScenarios() {
-  console.log("fetchAllScenarios");
+  //console.log("fetchAllScenarios");
   const res = await fetch("/api/scenarios");
   const data = await res.json();
   availableScenarios = data || [];
@@ -1539,7 +1539,7 @@ function renderOverview(gens, scenarioData = {}, lines = []) {
   window.totalCost      = totalCost;
   window.totalEmissions = totalEmissions;
 
-  console.log("in renderOverview with totalPower:", totalPower);
+  //console.log("in renderOverview with totalPower:", totalPower);
 
   // --- overloaded count (ignore disabled lines)
   const disabled = window.disabledLineSet || new Set();
@@ -1603,14 +1603,14 @@ function renderOverview(gens, scenarioData = {}, lines = []) {
   evaluateScenarioState(scen, lines);
 
   if (Array.isArray(lines) && lines.length) {
-    console.log("🔁 Refreshing chevrons with updated line data");
+    //console.log("🔁 Refreshing chevrons with updated line data");
     if (typeof refreshChevrons === "function") refreshChevrons(lines, window.currentMapMode);
     if (typeof updateLinesCard === "function") updateLinesCard(lines);
   }
 }
 
  async function loadScenario(scenarioId) {
-  console.log("loadScenario")
+  console.log("loadScenario", scenarioId)
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
   currentScenarioId = scenarioId;
@@ -1626,7 +1626,7 @@ function renderOverview(gens, scenarioData = {}, lines = []) {
   window.currentLines        = currentLines;
 
 
-  console.log("calling renderOverview");
+  //console.log("calling renderOverview");
   await loadCanonicalDirections();          // ✅ ensure case118 AB is loaded
   setupTaskSection(currentScenarioData);
   updateMapGeneratorsFromScenario();
@@ -1641,8 +1641,19 @@ function formatDuration(ms){
   return `${m}:${String(r).padStart(2,'0')}`;
 }
 
+// Normalize to the canonical lo→hi id used by disabledLineSet
+function _lineId(L){
+  if (L?.id != null) return String(L.id);
+  const a = Number(L.from_bus ?? L.from ?? L.i ?? L.bus1 ?? NaN);
+  const b = Number(L.to_bus   ?? L.to   ?? L.j ?? L.bus2 ?? NaN);
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    const lo = Math.min(a,b), hi = Math.max(a,b);
+    return `Line_Bus${lo}_Bus${hi}`;
+  }
+  return `${a}-${b}`;
+}
+
 function getHighestLoadPctAtSubmit(lines = [], scen = window.currentScenarioData){
-  // Build/reuse the disabled line set so we don’t include turned-off lines
   const S = (window.disabledLineSet instanceof Set)
     ? window.disabledLineSet
     : (typeof buildDisabledLineSetFromScenario === 'function'
@@ -1652,15 +1663,17 @@ function getHighestLoadPctAtSubmit(lines = [], scen = window.currentScenarioData
   let max = 0;
   for (const L of (lines || [])){
     if (!L) continue;
-    // normalize id like in listView (_lineId) so it matches S entries
-    const id = (L.id) ? String(L.id) : _lineId(L);
-    if (S.has(id)) continue; // skip disabled
+    // force normalized id so it matches how S is built
+    const id = _lineId(L);
+    if (S.has(id)) continue;
     const rate = +(L.rate_a ?? L.rateA ?? 0);
-    const pct  = rate > 0 ? Math.abs(+L.flow || 0) / rate * 100 : 0;
+    const flow = Math.abs(+(L.flow ?? 0));
+    const pct  = rate > 0 ? (flow / rate) * 100 : 0;
     if (Number.isFinite(pct) && pct > max) max = pct;
   }
   return max;
 }
+
 
     // ===== Chevrons =====
     function isBusId(x){ return typeof x === "string" && x.startsWith("Bus"); }
@@ -2317,7 +2330,7 @@ function wireToggle(key, elId, statusId){
   el.addEventListener("click", (ev) => {
     ev.preventDefault(); ev.stopPropagation();
     const next = !activeFilters.has(key);
-    console.log(`[TOGGLE] ${key}: ${!next} → ${next}`);
+    //console.log(`[TOGGLE] ${key}: ${!next} → ${next}`);
     setState(next);
     safeUpdate();
   }, { passive: false });
@@ -2340,7 +2353,9 @@ function safeUpdate(){
 
 ["scale-power","scale-cost","scale-emissions"].forEach(id => {
   const el = document.getElementById(id);
-  if (el) console.log("[TOGGLE WIRED?]", id, el.dataset.wired);
+  if (el) 
+    return;
+  //console.log("[TOGGLE WIRED?]", id, el.dataset.wired);
 });
 
 
@@ -2354,7 +2369,7 @@ window.__HELPERS__ = window.__HELPERS__ || {};
     }
     window.__HELPERS__[n] = true;
   });
-console.log("[HELPERS] Registered once.");
+//console.log("[HELPERS] Registered once.");
 
 
 // Draw pips by capacity (max) and fill by current (pg).
@@ -2861,7 +2876,7 @@ function includesGen(arr, gen){
 // ===== Single-mode dice view: size = power; cost = fill; emissions = hatch; pips clickable =====
 function updateMapGeneratorsFromScenario() {
   window.__UPDATER_CALLS__ = (window.__UPDATER_CALLS__ || 0) + 1;
-  console.log(`[UPDATER] (dice+blocks) #${window.__UPDATER_CALLS__}`);
+  //console.log(`[UPDATER] (dice+blocks) #${window.__UPDATER_CALLS__}`);
 
   const gens = Array.isArray(currentGenerators) ? currentGenerators : [];
   const costColor  = makeCostColorScale(gens);
@@ -3223,9 +3238,40 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
   `;
 
   document.getElementById("submit-button").addEventListener("click", () => {
-  if (document.getElementById("submit-button").disabled) return;
+  const btn = document.getElementById("submit-button");
+  if (!btn || btn.disabled) return;
+
+  console.log('[mapView]: Submit button CLICKED');
+
+  // 1) signal that submit was clicked
+  try { 
+    console.log('[mapView]: posting runner:submitClicked');
+    window.parent.postMessage({ type: 'runner:submitClicked' }, '*'); 
+  } catch {}
+
+  // 2) send a fresh dv:state immediately (uses the unified bridge you added)
+  try {
+    console.log('[mapView]: posting dv:state RIGHT AFTER submit');
+    if (typeof window.postToRunner === 'function') {
+      const snap = window.computeEvalStateSafe ? window.computeEvalStateSafe() : null;
+      console.log('[mapView]: dv:state snapshot after submit', {
+        hasMeets: !!snap?.meets,
+        meets: snap?.meets ? {
+          power: snap.meets.power, overloads: snap.meets.overloads,
+          cost: snap.meets.cost, emissions: snap.meets.emissions, overall: snap.meets.overall
+        } : 'NA',
+        totals: snap?.totals || 'NA',
+        state:  snap?.state  || 'NA'
+      });
+      window.postToRunner(snap);
+    }
+  } catch (e) { console.warn('[Submit] postToRunner failed', e); }
+
+  // 3) open the overlay (Runner will wait for overlayClosed)
   showResultOverlay();
 });
+
+
 }
 
 
@@ -3309,12 +3355,13 @@ if (scEl) {
 
 
   // Optional: debug snapshot
+  /*
   console.log("[submit-stats] eval",
     { totalP, target: scen.target_mw, meetsPower,
       overloads, allowedOverloads, meetsLines,
     totalC, costCap, baseScore, score, doubled,
     totalE, emiCap, allMet });
-}
+*/}
 
 function computeSubmitStats() {
   const startedAt = window.lvScenarioStartedAt || performance.now();
@@ -3328,6 +3375,25 @@ function computeSubmitStats() {
   const highestLoadPct = (typeof getHighestLoadPctAtSubmit === "function")
     ? getHighestLoadPctAtSubmit(window.currentLines || [], window.currentScenarioData || {})
     : 0;
+
+  // DEBUG — show the top-5 line loads at submit (MapView)
+try {
+  const tops = (window.currentLines || [])
+    .map(L => ({
+      id: (L?.id) ? String(L.id)
+                  : (typeof _lineId === 'function' ? _lineId(L) : `Line_Bus${L.from_bus}_Bus${L.to_bus}`),
+      pct: (() => {
+        const rate = +(L?.rate_a ?? L?.rateA ?? 0);
+        const flow = Math.abs(+(L?.flow ?? 0));
+        return rate > 0 ? (flow / rate) * 100 : 0;
+      })()
+    }))
+    .sort((a,b) => b.pct - a.pct)
+    .slice(0, 5);
+
+  console.log('[submit][map] highestLoadPct =', highestLoadPct);
+  console.table(tops);
+} catch (e) {}
 
   const scen = window.currentScenarioData || {};
   const totals = {
@@ -3357,42 +3423,64 @@ function computeSubmitStats() {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Results overlay (handles submit + timeout). Paste-replace this whole block.
+// ─────────────────────────────────────────────────────────────────────────────
+function showResultOverlay(opts = {}) {
+  console.log('[mapView]: showResultOverlay OPEN', { mode: opts?.mode || 'submit' });
+  const isTimeout = opts?.mode === 'timeout';
 
-
-function showResultOverlay() {
+  // Pull current stats from your view
   const {
-    timeFormatted, highestLoadPct, totalCost, totalEmissions,
-    baseScore, doubled, finalScore
+    timeFormatted,
+    highestLoadPct,
+    totalCost,
+    totalEmissions,
+    baseScore,
+    doubled,
+    finalScore
   } = computeSubmitStats();
 
-  const overlay = document.createElement("div");
-  overlay.id = "result-overlay";
+  // Helpers (robust formatting + fallbacks)
+  const fmtInt   = (n, def='—') => Number.isFinite(+n) ? Math.round(+n).toLocaleString() : def;
+  const fmtMoney = (n, def='—') => Number.isFinite(+n) ? `$${Math.round(+n).toLocaleString()}` : def;
+  const fmtPct   = (n, def='—') => Number.isFinite(+n) ? `${Math.round(+n)}%` : def;
+
+  const timeLabel       = isTimeout ? 'Time out' : (timeFormatted || '—');
+  const scoreIsAvail    = !isTimeout && Number.isFinite(+finalScore);
+  const scoreLabel      = !scoreIsAvail ? '—'
+                         : (doubled
+                            ? `${fmtInt(baseScore)} <span class="x2">×2</span> = <span class="strong">${fmtInt(finalScore)}</span>`
+                            : `<span class="strong">${fmtInt(finalScore)}</span>`);
+  const hiLoadLabel     = isTimeout ? '—' : fmtPct(highestLoadPct);
+  const totalCostLabel  = fmtMoney(totalCost);
+  const totalEmisLabel  = fmtInt(totalEmissions) + (Number.isFinite(+totalEmissions) ? ' tCO₂' : '');
+
+  // If an old overlay is still around, remove it first (idempotent)
+  document.getElementById('result-overlay')?.remove();
+
+  // Build overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'result-overlay';
   Object.assign(overlay.style, {
-    position:"fixed", top:"0", left:"0", width:"100vw", height:"100vh",
-    background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center",
-    justifyContent:"center", zIndex:"999"
+    position:'fixed', inset:'0', width:'100vw', height:'100vh',
+    background:'rgba(0,0,0,0.6)', display:'flex',
+    alignItems:'center', justifyContent:'center', zIndex:'999'
   });
 
-  // Build the header row (time + score)
-  const scoreLabel = (baseScore == null)
-    ? "—"
-    : (doubled
-        ? `${Math.round(baseScore).toLocaleString()} <span class="x2">×2</span> = <span class="strong">${Math.round(finalScore).toLocaleString()}</span>`
-        : `<span class="strong">${Math.round(finalScore).toLocaleString()}</span>`);
-
-  const box = document.createElement("div");
-  box.className = "results-box";
+  const box = document.createElement('div');
+  box.className = 'results-box';
   box.innerHTML = `
     <h2 class="results-title">Summary</h2>
 
     <div class="results-toprow">
       <div class="time">
         <div class="k">Time</div>
-        <div class="v">${timeFormatted}</div>
+        <div class="v">${timeLabel}</div>
       </div>
       <div class="score">
         <div class="k">Score</div>
-        <div class="v score-green">${scoreLabel}</div>
+        <div class="v ${scoreIsAvail ? 'score-green' : ''}">${scoreLabel}</div>
       </div>
     </div>
 
@@ -3401,12 +3489,18 @@ function showResultOverlay() {
         <tr><th class="results-key">Metric</th><th class="results-val">Value</th></tr>
       </thead>
       <tbody>
-        <tr><td class="results-key">Highest load at submit</td>
-            <td class="results-val">${Math.round(highestLoadPct)}%</td></tr>
-        <tr><td class="results-key">Total cost</td>
-            <td class="results-val">$${Math.round(totalCost).toLocaleString()}</td></tr>
-        <tr><td class="results-key">Total emissions</td>
-            <td class="results-val">${Math.round(totalEmissions).toLocaleString()} tCO₂</td></tr>
+        <tr>
+          <td class="results-key">Highest load at submit</td>
+          <td class="results-val">${hiLoadLabel}</td>
+        </tr>
+        <tr>
+          <td class="results-key">Total cost</td>
+          <td class="results-val">${totalCostLabel}</td>
+        </tr>
+        <tr>
+          <td class="results-key">Total emissions</td>
+          <td class="results-val">${totalEmisLabel}</td>
+        </tr>
       </tbody>
     </table>
 
@@ -3416,47 +3510,54 @@ function showResultOverlay() {
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  const close = () => overlay.remove();
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-  document.getElementById("close-overlay").addEventListener("click", close);
-  const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
-  document.addEventListener("keydown", onKey);
-
-  // Notify runner after dismissal (kept)
-  document.getElementById("close-overlay").addEventListener("click", () => {
+  // Dismiss logic — guarantee single fire + notify runner
+  let notified = false;
+  const notifyOnce = () => {
+    if (notified) return;
+    notified = true;
+    console.log('[mapView]: posted runner:overlayClosed');
     try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
-  });
-}
-try { window.showResultOverlay = showResultOverlay; } catch {}
+  };
+
+  const cleanup = () => {
+  console.log('[mapView]: overlay CLEANUP (about to remove)');
+  overlay.remove();
+  document.removeEventListener('keydown', onKey);
+
+  // NEW: one last, freshest snapshot right before closing
+  try { 
+    console.log('[mapView]: posting dv:state FINAL before overlayClosed');
+    if (typeof window.postToRunner === 'function') window.postToRunner(); 
+  } catch {}
+
+  console.log('[mapView]: posted runner:overlayClosed');
+  try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
+};
 
 
+  const onKey = (e) => { if (e.key === 'Escape') cleanup(); };
 
-
-
-  // Lines card stays a mode toggle, not a compound filter
-// === Lines card handler ===
-const linesCard = document.getElementById("scale-lines");
-const linesStatus = document.getElementById("status-lines");
-if (linesCard) {
-  linesCard.addEventListener("click", () => {
-    const next = (currentMapMode !== "lines");
-
-    // Lines focus and Power focus are exclusive: turning Lines ON turns Power OFF
-    if (next && activeFilters.has('power')) {
-      activeFilters.delete('power');
-      const powerEl = document.getElementById("scale-power");
-      const powerStatus = document.getElementById("status-power");
-      if (powerEl) powerEl.classList.remove("selected");
-      if (powerStatus) powerStatus.textContent = "Click to focus";
-    }
-
-    setLinesFocus(next);
-
-    // If we changed filters (turned power off), refresh generator rendering
-    safeUpdate();
-  }, { passive:false });
+  // Click outside the box closes
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(); });
+  // Close button closes
+  box.querySelector('#close-overlay')?.addEventListener('click', cleanup);
+  // Esc key closes
+  document.addEventListener('keydown', onKey);
 }
 
+// Export both names (runner uses showResultsOverlay)
+try {
+  window.showResultOverlay  = showResultOverlay;
+  window.showResultsOverlay = showResultOverlay;
+} catch {}
+
+// Show timeout overlay when runner says time’s up
+window.addEventListener('message', (ev) => {
+  const msg = ev?.data || {};
+  if (msg && msg.type === 'runner:timeUp') {
+    showResultsOverlay({ mode: 'timeout' });
+  }
+});
 
 
   </script>
@@ -3533,24 +3634,6 @@ if (linesCard) {
       console.warn('[RunnerBridge] eval failed, falling back:', e);
     }
     return computeFallbackState();
-  }
-
-  // Post state to the runner (parent)
-  function postToRunner(precomputed) {
-    const state = precomputed || computeEvalStateSafe(/*useOriginal=*/true);
-    const payload = {
-      type: 'dv:state',
-      view: (window.renderGenerators ? 'list' : 'map'), // heuristic
-      scenarioId: (getScenario().scenario_id || null),
-      state,
-      meta: {
-        gens: getGens().length,
-        lines: getLines().length,
-        ts: Date.now()
-      }
-    };
-    try { window.parent && window.parent.postMessage(payload, '*'); }
-    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
   }
 
   // Monkey-patch evaluateScenarioState ONCE to avoid recursion
@@ -3658,22 +3741,6 @@ if (linesCard) {
     } catch (e) { console.warn('[RunnerBridge] eval failed; using fallback', e); }
     return computeFallbackState();
   }
-
-  function postToRunner(snapshot) {
-    const payload = {
-      type: 'dv:state',
-      view: 'map',
-      scenarioId: snapshot.scenarioId || (getScenario().scenario_id || null),
-      totals: snapshot.totals ?? null,
-      state:  snapshot.state ?? null,
-      meta:   snapshot.meta ?? null,
-      meets:  snapshot.meets ?? null,
-      goals:  snapshot.goals ?? null
-    };
-    try { window.parent && window.parent.postMessage(payload, '*'); }
-    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
-  }
-
   // Patch evaluate/apply (FIX: ...args, not .args)
   if (typeof window.evaluateScenarioState === 'function' && !window.__origEvaluateScenarioState) {
     window.__origEvaluateScenarioState = window.evaluateScenarioState;
@@ -3705,7 +3772,17 @@ if (linesCard) {
   const submitBtn = document.getElementById('submit-button');
   if (submitBtn) {
     submitBtn.addEventListener('click', () => {
+      console.log('[mapView]: Submit button CLICKED', { disabled: !!btn.disabled });
       try { window.parent.postMessage({ type: 'runner:submitClicked' }, '*'); } catch {}
+      window.addEventListener('message', (ev) => {
+  const msg = ev?.data || {};
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.type === 'runner:timeUp') {
+    // Your overlay function should accept a mode that switches time label to "Time out"
+    showResultsOverlay({ mode: 'timeout' });
+  }
+});
+
     }, { passive: true });
   }
 })();
@@ -3742,6 +3819,148 @@ if (linesCard) {
     });
   })();
 </script>
+<script>
+/**
+ * Unified Runner Bridge — single dv:state payload (always includes meets + goals)
+ * Exposes:
+ *   - window.postToRunner(snapshot?)        → sends unified dv:state
+ *   - window.computeEvalStateSafe()         → returns normalized snapshot
+ */
+(() => {
+  const RUNNER_MODE = new URLSearchParams(location.search).get('runner') === '1';
+
+  const nz = v => Number(v || 0);
+
+  function gens()  { return Array.isArray(window.currentGenerators) ? window.currentGenerators : []; }
+  function lines() {
+    const L = window.currentLines;
+    if (Array.isArray(L)) return L;
+    if (!L) return [];
+    return (typeof L === 'object' && !('length' in L)) ? Object.values(L) : Array.from(L);
+  }
+  function scen() { return window.currentScenarioData || {}; }
+
+  function computeFallback() {
+    const G = gens(), L = lines(), S = scen();
+
+    const totals = {
+      power:     G.reduce((s,g)=>s + nz(g.pg), 0),
+      cost:      G.reduce((s,g)=>s + nz(g.pg)*nz(g.cost_per_mw), 0),
+      emissions: G.reduce((s,g)=>s + nz(g.pg)*nz(g.emissions_per_mw), 0)
+    };
+
+    const overloaded_count = L.filter(el => {
+      const rate = nz(el.rate_a ?? el.rateA);
+      const flow = Math.abs(nz(el.flow));
+      return rate > 0 && flow > rate;
+    }).length;
+
+    const tol = Number.isFinite(nz(S.target_tolerance)) ? nz(S.target_tolerance) : 0.05;
+    const maxOver = (S.allowed_overloads != null) ? nz(S.allowed_overloads)
+                   : (S.max_overloads    != null) ? nz(S.max_overloads) : 0;
+
+    const goals = {
+      target_mw:        (S.target_mw != null)        ? nz(S.target_mw)        : null,
+      max_cost:         (S.cost_limit != null)       ? nz(S.cost_limit)       : null,
+      max_emissions:    (S.emissions_limit != null)  ? nz(S.emissions_limit)  : null,
+      max_overloads:    maxOver,
+      target_tolerance: tol
+    };
+
+    const meets = {
+      power:     goals.target_mw == null ? true
+                  : (totals.power >= goals.target_mw*(1 - tol) &&
+                     totals.power <= goals.target_mw*(1 + tol)),
+      cost:      goals.max_cost == null      ? true : (totals.cost      <= goals.max_cost),
+      emissions: goals.max_emissions == null ? true : (totals.emissions <= goals.max_emissions),
+      overloads: overloaded_count <= goals.max_overloads
+    };
+    meets.overall = !!(meets.power && meets.overloads && meets.cost && meets.emissions);
+
+    return {
+      scenarioId: (S.scenario_id || S.id || null),
+      totals,
+      state: { overloaded_count },
+      goals,
+      meets,
+      meta: { gens: G.length, lines: L.length, ts: Date.now() }
+    };
+  }
+
+  function computeState() {
+    const S = scen();
+    try {
+      if (typeof window.evaluateScenarioState === 'function') {
+        const r  = window.evaluateScenarioState(S, lines()); // map signature
+        const fb = computeFallback();
+        return {
+          scenarioId: (S.scenario_id || S.id || null),
+          totals: r?.totals ?? fb.totals,
+          state:  r?.state  ?? fb.state,
+          meets:  r?.meets  ?? fb.meets,
+          goals:  r?.goals  ?? fb.goals,
+          meta:   { gens: gens().length, lines: lines().length, ts: Date.now() }
+        };
+      }
+    } catch (e) {
+      console.warn('[RunnerBridge] evaluateScenarioState error — using fallback', e);
+    }
+    return computeFallback();
+  }
+
+  function postSnapshot(snapshot) {
+    const snap = snapshot || computeState();
+    const payload = {
+      type: 'dv:state',
+      view: 'map',
+      scenarioId: snap.scenarioId ?? null,
+      totals: snap.totals ?? null,
+      state:  snap.state  ?? null,
+      meets:  snap.meets  ?? null,
+      goals:  snap.goals  ?? null,
+      meta:   snap.meta   ?? { ts: Date.now() }
+    };
+    try { window.parent.postMessage(payload, '*'); }
+    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
+  }
+
+  // --- Export globals so legacy calls like postToRunner() keep working ---
+  window.computeEvalStateSafe = computeState;
+  window.postToRunner = (snap) => { try { postSnapshot(snap); } catch(e) { console.warn(e); } };
+
+  // If not in runner mode, keep the API present as no-ops and exit early
+  if (!RUNNER_MODE) {
+    window.postToRunner = () => {};
+    return;
+  }
+
+  // Beacon after each recompute
+  if (typeof window.evaluateScenarioState === 'function' && !window.__origEvaluateScenarioState) {
+    window.__origEvaluateScenarioState = window.evaluateScenarioState;
+    window.evaluateScenarioState = function patchedEvaluateScenarioState(...args) {
+      const result = window.__origEvaluateScenarioState.apply(this, args);
+      postSnapshot();
+      return result;
+    };
+  }
+
+  // Respond to Runner pulls
+  window.addEventListener('message', (e) => {
+    const msg = e?.data || {};
+    if (msg.type === 'runner:requestState') postSnapshot();
+    if (msg.type === 'runner:timeUp') {
+      // Optional: if you show a timeout overlay, do it here
+      if (typeof window.showResultOverlay === 'function') {
+        window.showResultOverlay({ mode: 'timeout' });
+      }
+    }
+  });
+
+  // Initial beacon when ready
+  window.addEventListener('load', () => postSnapshot());
+})();
+</script>
+
 
 
 </body>

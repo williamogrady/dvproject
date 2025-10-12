@@ -5,6 +5,30 @@
   'use strict';
 
   // ---------- Base UI ----------
+
+let submitClicked = false;       // did the user click submit in the active step?
+let allMetAtSubmit = false;      // snapshot of allMet at submit moment
+let pendingReason = null;        // 'submit_success' | 'submit_unmet' | 'timeout'
+let timeUpFired   = false;       // ← NEW: was this step ended by time up?
+let stepFinished = false;
+
+ function computeAllMet(state) {
+  const meets = state?.meets;
+  if (meets) return !!(meets.power && meets.overloads);
+  // Fallback: infer from totals/state/goals if present
+  try {
+    const goals = state?.goals || {};
+    const totals = state?.totals || {};
+   const overloaded = (state?.state?.overloaded_count ?? null);
+    const tol = goals?.target_tolerance ?? 0.05;
+   const powerOK = goals?.target_mw == null
+     ? true
+      : (totals.power >= goals.target_mw * (1 - tol) &&
+         totals.power <= goals.target_mw * (1 + tol));
+    const overloadsOK = (overloaded == null) ? false : (overloaded <= (goals.max_overloads ?? 0));
+    return !!(powerOK && overloadsOK);
+  } catch { return false; }
+ }
  // ---------- Base UI ----------
 document.body.innerHTML = `
   <style>
@@ -119,21 +143,57 @@ function clearCurrentPill(pos) {
   }
 }
 
-// Decide outcome for the current step based on lastState + reason
-function decideOutcome(lastState, reason) {
-  const r = String(reason || '').toLowerCase();
-
-  // Your rule: opening/dismissing the submit overlay counts as a success.
-  if (r === 'overlayclosed') return 'pass';
-
-  // Also count explicit submit reasons as success (some views send 'submitted', 'done', or 'complete')
-  if (r === 'submitted' || r === 'done' || r === 'complete' || r === 'submit(fallback)') {
-    return 'pass';
+function decideOutcome(reason) {
+    return String(reason || '') === 'submit_success' ? 'pass' : 'fail';
   }
 
-  // Everything else (timeouts, navigations) is a fail.
-  return 'fail';
+function clearCurrentPill(pos) {
+  const el = viewIndexToPill[pos];
+  if (!el) return;
+  el.classList.remove('pill--current');
+  if (!el.classList.contains('pill--pass') && !el.classList.contains('pill--fail')) {
+    el.classList.add('pill--todo');
+  }
 }
+
+function finishStep(reason) {
+  if (finishing) return;
+  finishing = true;
+
+  stopTimer();
+
+  const entry = logs[logs.length - 1];
+  if (entry && entry.type === 'view' && !entry.end) {
+    entry.end       = Date.now();
+    entry.reason    = reason;
+    entry.submitted = !!submitClicked;
+    entry.allMet    = !!allMetAtSubmit;
+
+    if (lastState) {
+      entry.snapshot = {
+        scenarioId:     lastState.scenarioId ?? entry.scenarioId,
+        totals:         lastState.totals ?? null,
+        state:          lastState.state ?? null,
+        meta:           lastState.meta ?? null,
+        score:          (lastState.score ?? null),
+        score_base:     (lastState.score_base ?? null),
+        score_doubled:  (lastState.score_doubled ?? false)
+      };
+    }
+
+    const outcome = decideOutcome(reason);
+    console.log('[testRunner]: STEP RESULT', {
+  view: entry.view, scenario: entry.scenario, reason, outcome
+  });
+    clearCurrentPill(viewPos);
+    setPillState(viewPos, outcome);
+
+  }
+
+  setTimeout(() => { finishing = false; next(); }, 0);
+}
+
+
   function expandSeries(scriptObj) {
     const out = [];
     for (const item of (scriptObj?.series || [])) {
@@ -233,172 +293,196 @@ async function loadSequenceByName(name) {
   let lastState = null;
   let finishing = false;
   let overlayWait = null; // timeout id if we’re waiting for overlayClosed
+  let timerEndsAt = 0;
+  let timerTick   = 0;
 
   // ---------- Timer ----------
-  const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-  function startTimer(sec) {
-    secondsLeft = Math.max(0, Number(sec || 0));
-    timerEl.textContent = fmt(secondsLeft);
-    clearInterval(tickInt);
-    tickInt = setInterval(() => {
-      secondsLeft -= 1;
-      timerEl.textContent = fmt(Math.max(0, secondsLeft));
-      if (secondsLeft <= 0) {
-        clearInterval(tickInt);
-        finishStep('timeout');
-      }
-    }, 1000);
-  }
-  function stopTimer() { clearInterval(tickInt); tickInt = null; }
+ const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 
-  // ---------- Break overlay ----------
-  function showBreak(seconds, note) {
-    const br = document.createElement('div');
-    br.className = 'veil';
-    br.innerHTML = `
-      <div class="panel">
-        <h1>Short break</h1>
-        ${note ? `<p style="opacity:.9;margin:6px 0">${note}</p>` : ''}
-        <p>Next step will start in <b><span id="br-secs">${Number(seconds||10)}</span>s</b>.</p>
-        <button class="btn" id="br-skip">Continue now</button>
-      </div>`;
-    document.querySelector('.stage').appendChild(br);
+function startTimer(totalSeconds = 180) {
+  stopTimer();
 
-    const span = br.querySelector('#br-secs');
-    const btn  = br.querySelector('#br-skip');
-
-    let s = Number(seconds || 10);
-    let done = false;
-    const int = setInterval(() => { s -= 1; span.textContent = s; if (s <= 0) clear(); }, 1000);
-
-    function clear() {
-      if (done) return;
-      done = true;
-      clearInterval(int);
-      br.remove();
-      next();
+  timeUpFired = false;  // ← NEW: reset for this step
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+    timerEl.textContent = `Time left: ${fmt(left)}`;
+    if (left <= 0) {
+      stopTimer();
+      timeUpFired = true; // ← NEW: mark timeout
+      try { stage.contentWindow.postMessage({ type: 'runner:timeUp' }, '*'); } catch {}
+      if (overlayWait) clearTimeout(overlayWait);
+      overlayWait = setTimeout(() => { overlayWait = null; finishStep('timeout'); }, 15000);
+      return;
     }
-    btn.addEventListener('click', clear);
-  }
+    timerTick = requestAnimationFrame(tick);
+  };
+
+  timerEndsAt = Date.now() + (Number(totalSeconds) * 1000);
+  timerEl.textContent = `Time left: ${fmt(Number(totalSeconds) || 0)}`;
+  timerTick = requestAnimationFrame(tick);
+}
+
+function stopTimer() {
+  if (timerTick) cancelAnimationFrame(timerTick);
+  timerTick = 0;
+}
+
+
+function showBreak(note = '') {
+  // Hide/clear the iframe stage if you do that today
+  stage.classList.remove('visible');
+  stage.src = 'about:blank';
+
+  // Simple overlay/panel for the break
+  const br = document.createElement('div');
+  br.className = 'veil';
+  br.innerHTML = `
+    <div class="panel">
+      <h1>Break</h1>
+      ${note ? `<p style="opacity:.9;margin:6px 0">${note}</p>` : ''}
+      <button class="btn" id="br-continue">Continue</button>
+    </div>`;
+  document.querySelector('.stage').appendChild(br);
+
+  br.querySelector('#br-continue')?.addEventListener('click', () => {
+    br.remove();
+    next();
+  });
+}
 
 // ---------- Messages from views ----------
 function requestFinalState() {
   try { stage.contentWindow?.postMessage({ type: 'runner:requestState' }, '*'); } catch {}
 }
-window.addEventListener('message', (e) => {
-  const msg = e.data || {};
 
-  // Live snapshot (views may send either)
+window.addEventListener('message', (e) => {
+  const msg = e?.data || {};
+
+  // [testRunner]: guard against late beacons after finishing this step
+  if (stepFinished) {
+    console.log('[testRunner]: ignoring message after finish', msg?.type || 'unknown');
+    return;
+  }
+
+  // Streamed snapshots from the views
   if (msg.type === 'runner:state' || msg.type === 'dv:state') {
     lastState = msg;
-  }
-
-  // Prefer advancing on overlay close (user saw the in-view results)
-  if (msg.type === 'runner:overlayClosed') {
-    if (overlayWait) { clearTimeout(overlayWait); overlayWait = null; }
-    requestFinalState();                              // NEW: nudge for freshest state
-    setTimeout(() => finishStep('submitted'), 250);   // NEW: wait a beat
-  }
-
-  // Fallback: some views fire on submit click; wait briefly for overlay then advance.
-  if (msg.type === 'runner:submitClicked') {
-    if (overlayWait) clearTimeout(overlayWait);
-    overlayWait = setTimeout(() => {
-      overlayWait = null;
-      requestFinalState();                            // NEW
-      setTimeout(() => finishStep('submitted'), 250); // NEW
-    }, 3000);
-  }
+    console.log('[testRunner]: dv:state RECEIVED', {
+  hasMeets: !!(msg && msg.meets),
+  meets: msg?.meets ? {
+    power: msg.meets.power, overloads: msg.meets.overloads,
+    cost: msg.meets.cost, emissions: msg.meets.emissions, overall: msg.meets.overall
+  } : 'NA',
+  totals: msg?.totals || 'NA',
+  state:  msg?.state  || 'NA',
+  ts:     msg?.meta?.ts || 'NA'
 });
+    return;
+  }
+
+  // User clicked SUBMIT in the view → classify now, but do not advance
+  if (msg.type === 'runner:submitClicked') {
+    submitClicked  = true;
+    console.log('[testRunner]: runner:submitClicked RECEIVED');
+    allMetAtSubmit = computeAllMet(lastState);
+    pendingReason  = allMetAtSubmit ? 'submit_success' : 'submit_unmet';
+    console.log('[testRunner]: submit verdict', {
+    allMetAtSubmit, pendingReason,
+    snapshot: (typeof lastState !== 'undefined') ? {
+      hasMeets: !!lastState?.meets,
+      meets: lastState?.meets || 'NA',
+      totals: lastState?.totals || 'NA',
+      state:  lastState?.state  || 'NA',
+      ts:     lastState?.meta?.ts || 'NA'
+    } : 'no lastState'
+  });
+    requestFinalState();
+    return;
+  }
+
+
+if (msg.type === 'runner:overlayClosed') {
+  console.log('[testRunner]: runner:overlayClosed RECEIVED', {
+    submitClicked, pendingReason,
+    lastStateHasMeets: !!lastState?.meets,
+    meets: lastState?.meets || 'NA',
+    totals: lastState?.totals || 'NA',
+    state:  lastState?.state  || 'NA',
+    ts:     lastState?.meta?.ts || 'NA'
+  });
+
+  let reason;
+  if (submitClicked) {
+    // Do NOT recompute here; trust the submit-time verdict.
+    reason = pendingReason || 'submit_unmet';
+  } else if (timeUpFired) {
+    reason = 'timeout';
+  } else {
+    reason = 'submit_unmet';
+  }
+
+  console.log('[testRunner]: finishing', { reason });
+
+  // Lock this step to prevent late dv:state from downgrading it
+  stepFinished = true;
+  finishStep(reason);
+  return;
+}
+
+
+
+});
+
 
   // ---------- Flow control ----------
   function start() { next(); }
 
-  function next() {
-    idx += 1;
-    if (idx >= steps.length) return finishAll();
+function next() {
+  idx += 1;
+  if (idx >= steps.length) return finishAll();
 
-    const step = steps[idx];
+  const step = steps[idx];
 
-    if (step.type === 'break') {
-      // breaks do not affect progress
-      showBreak(step.seconds, step.note);
-      return;
-    }
-
-    if (step.type === 'view') {
-      // Increment progress over view steps
-      viewPos += 1;
-      progressEl.textContent = `${viewPos} / ${totalViewSteps}`;
-      setPillState(viewPos, 'current'); // NEW
-
-      const base = step.view === 'list' ? '/listB' : '/mapB';
-      const url  = `${base}?runner=1&scenario=${encodeURIComponent(step.scenarioId)}`;
-
-      stage.classList.remove('visible');
-      stage.src = 'about:blank';
-
-      logs.push({
-        idx,
-        type: 'view',
-        view: step.view,
-        scenarioId: step.scenarioId,
-        seconds: step.seconds,
-        start: Date.now()
-      });
-
-      stage.onload = () => {
-        stage.classList.add('visible');
-        try { stage.contentWindow.postMessage({ type:'runner:init', scenarioId: step.scenarioId }, '*'); } catch {}
-        startTimer(Number(step.seconds || 180));
-        console.log(`[Runner] ENTER ${step.view}:${step.scenarioId}  [${viewPos}/${totalViewSteps}]`);
-      };
-      stage.src = url;
-      return;
-    }
-
-    // Unknown step -> skip
-    console.warn('[Runner] Skipping unknown step:', step);
-    next();
+  if (step.type === 'break') {
+    showBreak(step.note || '');
+    return;
   }
 
-function finishStep(reason) {
-  if (finishing) return;  // debounce
-  finishing = true;
+  if (step.type === 'view') {
+    viewPos += 1;
+    progressEl.textContent = `${viewPos} / ${totalViewSteps}`;
+    setPillState(viewPos, 'current');
 
-  stopTimer();
+    const base = step.view === 'list' ? '/listB' : '/mapB';
+    const url = `${base}?runner=1&scenario=${encodeURIComponent(step.scenarioId)}`;
 
-  const entry = logs[logs.length - 1];
-  if (entry && entry.type === 'view' && !entry.end) {
-    entry.end = Date.now();
-    entry.reason = reason;
-    if (lastState) {
-      entry.snapshot = {
-        scenarioId:     lastState.scenarioId ?? entry.scenarioId,
-        totals:         lastState.totals ?? null,
-        state:          lastState.state ?? null,
-        meta:           lastState.meta ?? null,
+    stage.classList.remove('visible');
+    stage.src = 'about:blank';
 
-        // Scores (emit these from the view in dv:state)
-        score:          (lastState.score ?? null),
-        score_base:     (lastState.score_base ?? null),
-        score_doubled:  (lastState.score_doubled ?? false)
-      };
-    }
-    // Prefer explicit overall from the view if present
-    if (lastState?.meets && typeof lastState.meets.overall === 'boolean') {
-      entry.overall = !!lastState.meets.overall;
-    }
+    logs.push({
+      idx,
+      type: 'view',
+      view: step.view,
+      scenarioId: step.scenarioId,
+      seconds: step.seconds,
+      start: Date.now()
+    });
 
-    // NEW: color the current pill
-    const outcome = decideOutcome(lastState, reason); // 'pass'|'fail'
-    clearCurrentPill(viewPos);
-    setPillState(viewPos, outcome);
+    stage.onload = () => {
+      stage.classList.add('visible');
+      try {
+        stage.contentWindow.postMessage({ type:'runner:init', scenarioId: step.scenarioId }, '*');
+      } catch {}
+      startTimer(Number(step.seconds || 180));
+      console.log(`[Runner] ENTER ${step.view}:${step.scenarioId}  [${viewPos}/${totalViewSteps}]`);
+    };
+    stage.src = url;
+    return;
   }
 
-  setTimeout(() => { finishing = false; next(); }, 0);
+  console.warn('[Runner] Skipping unknown step:', step);
+  next();
 }
-
 
 
 function finishAll() {

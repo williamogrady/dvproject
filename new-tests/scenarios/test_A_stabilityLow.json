@@ -2,6 +2,8 @@
     "scenario_id": "test_A_stabilityLow",
     "title": "Stability Low",
     "target_mw": 3200,
+    "cost_limit": 20000,
+    "emissions_limit": 1000,
     "line_limit_pct": 0.04,
     "locked_generators": ["Gen12", "Gen4", "Gen27", "Gen25", 
                           "Gen31", "Gen32"

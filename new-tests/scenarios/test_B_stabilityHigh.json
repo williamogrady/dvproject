@@ -2,6 +2,8 @@
     "scenario_id": "test_B_stabilityHigh",
     "title": "Stability High",
     "target_mw": 4000,
+    "cost_limit": 20000,
+    "emissions_limit": 1000,
     "line_limit_pct": 0.04,
     "locked_generators": ["Gen24", "Gen72", "Gen73", "Gen74", "Gen70"],
     "disabled_generators": ["Gen10", "Gen89", "Gen90", "Gen87", "Gen85"

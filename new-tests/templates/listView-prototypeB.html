@@ -737,20 +737,19 @@ function buildDisabledLineSetFromScenario(scen = {}) {
   const list = scen.disabled_lines || scen.disabledLines || [];
   list.forEach(raw => {
     const s = String(raw);
-    // Accept "Line-13-14", "13-14", "Line_Bus13_Bus14", etc.
-    const m = s.match(/(\d+)[^\d]+(\d+)/);
+    const m = s.match(/(\d+)[^\d]+(\d+)/); // supports "13-14", "Line_Bus13_Bus14", etc.
     if (m) {
       const a = Number(m[1]), b = Number(m[2]);
       const lo = Math.min(a, b), hi = Math.max(a, b);
       out.add(`Line_Bus${lo}_Bus${hi}`);
     } else {
-      // If it’s already a normalized id, keep it
       out.add(s);
     }
   });
-    window.disabledLineSet = out;
-  return out;               // ← add this line
+  window.disabledLineSet = out;
+  return out;  // ← important: so callers receive the Set
 }
+
 
 // --- Always exclude these
 const EXCLUDE_BUSES = new Set([1]);          // bus numbers to drop
@@ -956,7 +955,7 @@ async function loadScenario(scenarioId){
   currentScenarioData = data.scenario ? data.scenario : data;
     currentGenerators   = (data.generators || []).filter(g => g.bus !== 1);
   const lines         = data.lines || data.powerflow?.lines || [];
-  window.currentLines = lines;
+  window.currentLines = Array.isArray(data.lines) ? data.lines : [];
   
   // Start timer
   window.lvScenarioStartedAt = performance.now(); // start timer for this scenario
@@ -1016,19 +1015,6 @@ setTimeout(() => window.debugScenarioVsMap(), 0);
 /** Helpers */
 function _sum(arr, f){ return (arr||[]).reduce((s,x)=>s+(+f(x)||0),0); }
 function _loadPct(L){ const r = +L.rate_a || 1; return Math.abs(+L.flow || 0) / r * 100; }
-// in listView-prototypeB.html
-function _lineId(L){
-  if (L?.id) return String(L.id); // keep real id if present (matches chevrons)
-  const a = Number(L.from_bus ?? L.from ?? L.i ?? L.bus1 ?? NaN);
-  const b = Number(L.to_bus   ?? L.to   ?? L.j ?? L.bus2 ?? NaN);
-  if (Number.isFinite(a) && Number.isFinite(b)){
-    const lo = Math.min(a,b), hi = Math.max(a,b);
-    // ✅ match map’s path/chevron ids:
-    return `Line_Bus${lo}_Bus${hi}`;
-  }
-  // last-resort fallback (won’t ping chevrons, but avoids crash)
-  return `${a}-${b}`;
-}
 
 function _loadColor(pct){
   if (pct > 120) return '#d32f2f'; // red
@@ -1213,7 +1199,7 @@ function evaluateScenarioState(gens = [], lines = [], scenario = {}) {
   let overloads = 0;
   for (const L of (lines||[])) {
     if (!L) continue;
-    const id = String(L.id ?? (typeof _lineId === 'function' ? _lineId(L) : `${L.from_bus}-${L.to_bus}`));
+    const id = _lineId(L); 
     if (disabled.has(id)) continue;
     const rate = +(L.rate_a ?? L.rateA ?? 0);
     const flow = Math.abs(+L.flow || 0);
@@ -1579,12 +1565,13 @@ const norm = (linesIn || [])
   })
   .sort((a,b) => b.pct - a.pct);
 
-
+const S = (window.disabledLineSet instanceof Set) ? window.disabledLineSet : new Set();
+const normEnabled = norm.filter(d => !S.has(d.id));
   // Row 3: top-3 overloaded (>100%)
-  const row3 = norm.filter(d => d.pct > 100).slice(0,3);
-  // Row 4: next top-3 remaining (not in row3)
-  const used = new Set(row3.map(d => d.id));
-  const row4 = norm.filter(d => !used.has(d.id)).slice(0,3);
+ const row3 = normEnabled.filter(d => d.pct > 100).slice(0,3);
+const used = new Set(row3.map(d => d.id));
+const row4 = normEnabled.filter(d => !used.has(d.id)).slice(0,3);
+
 
   // placeholders occupy space but stay invisible (no reflow jumps)
   function buildLinePlaceholder(variant){
@@ -2352,6 +2339,7 @@ levels.forEach((level, i) => {
         });
         const data = await res.json();
         currentGenerators = sanitizeGenerators(data.generators);
+        window.currentLines = Array.isArray(data.lines) ? data.lines : [];
         renderGenerators(currentGenerators);
         renderLines(data.lines, data.solved !== false);
         renderOverview(currentGenerators, currentScenarioData, data.lines);
@@ -2433,6 +2421,7 @@ const doToggle = async () => {
   });
   const data = await res.json();
   currentGenerators = sanitizeGenerators(data.generators);
+  window.currentLines = Array.isArray(data.lines) ? data.lines : [];
   renderGenerators(currentGenerators);
   renderLines(data.lines, data.solved !== false);
   renderOverview(currentGenerators, currentScenarioData, data.lines);
@@ -3326,90 +3315,121 @@ function _lv_disabledLineSet(scen){
   return s;
 }
 
-function computeSubmitStats(){
-  const gens  = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
-  const lines = Array.isArray(window.currentLines)      ? window.currentLines      : [];
-  const scen  = window.currentScenarioData || {};
+// Normalizes a line id the same way both views expect.
+// (If you already have this helper exactly like below, keep one copy.)
+function _lineId(L){
+  if (L?.id) return String(L.id); // prefer real id when present
+  const a = Number(L.from_bus ?? L.from ?? L.i ?? L.bus1 ?? NaN);
+  const b = Number(L.to_bus   ?? L.to   ?? L.j ?? L.bus2 ?? NaN);
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    const lo = Math.min(a,b), hi = Math.max(a,b);
+    return `Line_Bus${lo}_Bus${hi}`;
+  }
+  return `${a}-${b}`; // last-resort
+}
 
-  // --- Time
+function getHighestLoadPctAtSubmit(lines = [], scen = window.currentScenarioData){
+  // Build/reuse the disabled line set so we don’t include turned-off lines
+  const S = (window.disabledLineSet instanceof Set)
+    ? window.disabledLineSet
+    : (typeof buildDisabledLineSetFromScenario === 'function'
+        ? buildDisabledLineSetFromScenario(scen || {})
+        : new Set());
+
+  let max = 0;
+  for (const L of (lines || [])){
+    if (!L) continue;
+    // normalize id like in _lineId so it matches S entries
+    const id = (L.id) ? String(L.id) : _lineId(L);
+    if (S.has(id)) continue; // skip disabled
+    const rate = +(L.rate_a ?? L.rateA ?? 0);
+    const flow = Math.abs(+(L.flow || 0));
+    const pct  = rate > 0 ? (flow / rate) * 100 : 0;
+    if (Number.isFinite(pct) && pct > max) max = pct;
+  }
+  return max;
+}
+
+function getTopVisibleLoadPctAtSubmit(linesIn = [], scen = window.currentScenarioData){
+  const S = (window.disabledLineSet instanceof Set) ? window.disabledLineSet
+        : (typeof buildDisabledLineSetFromScenario === 'function'
+             ? buildDisabledLineSetFromScenario(scen || {}) : new Set());
+
+  // Normalize & sort exactly like the Lines card
+  const norm = (linesIn || [])
+    .map(L => {
+      const rate  = +(L.rate_a ?? L.rateA ?? 0);
+      const flow  = +(L.flow_signed ?? L.flow ?? 0);
+      const pct01 = rate > 0 ? Math.abs(flow) / rate : 0;
+      return { id: _lineId(L), pct: pct01 * 100 };
+    })
+    .filter(d => !S.has(d.id))
+    .sort((a,b) => b.pct - a.pct);
+
+  // Row 3 = top 3 overloaded (>100%); Row 4 = next top 3 remaining
+  const row3 = norm.filter(d => d.pct > 100).slice(0,3);
+  const used = new Set(row3.map(d => d.id));
+  const row4 = norm.filter(d => !used.has(d.id)).slice(0,3);
+
+  return row4.length ? row4[0].pct : 0;
+}
+
+function computeSubmitStats() {
   const startedAt = window.lvScenarioStartedAt || performance.now();
   const now = performance.now();
   const elapsedMs = Math.max(0, now - startedAt);
-  const timeFormatted = (typeof formatDuration === "function")
+
+  const timeFormatted = typeof formatDuration === "function"
     ? formatDuration(elapsedMs)
     : `${Math.floor(elapsedMs/60000)}:${String(Math.floor((elapsedMs/1000)%60)).padStart(2,'0')}`;
 
-  // --- Totals from generators
-  let totalCost = 0, totalEmissions = 0;
-  for (const g of gens){
-    const pg = Number(g?.pg) || 0;
-    totalCost      += pg * (Number(g?.cost_per_mw)        || 0);
-    totalEmissions += pg * (Number(g?.emissions_per_mw)   || 0);
-  }
+  const highestLoadPct = (typeof getTopVisibleLoadPctAtSubmit === "function")
+   ? getTopVisibleLoadPctAtSubmit(window.currentLines || [], window.currentScenarioData || {})
+   : 0;
 
-  // --- Highest load % across enabled lines (skip disabled)
-  const disabled =
-    (window.disabledLineSet instanceof Set)
-      ? window.disabledLineSet
-      : (typeof buildDisabledLineSetFromScenario === 'function'
-          ? buildDisabledLineSetFromScenario(scen)
-          : new Set());
+  console.log('[submit] highestLoadPct=', highestLoadPct,
+            { sampleTop: (window.currentLines||[])
+              .map(L => ({ id: (L.id)||_lineId(L),
+                           pct: (Math.abs(+L.flow||0) / (+L.rate_a||+L.rateA||1))*100 }))
+              .sort((a,b)=>b.pct-a.pct).slice(0,5) });
 
-// --- Highest load % across enabled lines (skip disabled, reuse shared helper if present)
-let highestLoadPct = 0;
-if (typeof getHighestLoadPctAtSubmit === "function") {
-  highestLoadPct = getHighestLoadPctAtSubmit(lines, scen);
-} else {
-  const disabled =
-    (window.disabledLineSet instanceof Set)
-      ? window.disabledLineSet
-      : (typeof buildDisabledLineSetFromScenario === 'function'
-          ? buildDisabledLineSetFromScenario(scen)
-          : new Set());
-  for (const L of lines){
-    if (!L) continue;
-    const id = (L.id) ? String(L.id)
-                      : (typeof _lineId === 'function' ? _lineId(L) : `${L.from_bus}-${L.to_bus}`);
-    if (disabled.has(id)) continue;
-    const rate = Number(L.rate_a ?? L.rateA) || 0;
-    const flow = Math.abs(Number(L.flow) || 0);
-    const pct  = rate > 0 ? (flow / rate) * 100 : 0;
-    if (Number.isFinite(pct) && pct > highestLoadPct) highestLoadPct = pct;
-  }
-}
+  const scen = window.currentScenarioData || {};
+  const totals = {
+    cost:      Number(window.totalCost || 0),
+    emissions: Number(window.totalEmissions || 0)
+  };
+  const caps = {
+    cost:      (scen.cost_limit != null) ? Number(scen.cost_limit) : null,
+    emissions: (scen.emissions_limit != null) ? Number(scen.emissions_limit) : null
+  };
 
-  // --- Caps
-  const costCap = (scen.cost_limit       != null) ? Number(scen.cost_limit)       : null;
-  const emisCap = (scen.emissions_limit  != null) ? Number(scen.emissions_limit)  : null;
-
-  // --- Score rules:
-  // base = max(costCap - totalCost, 0) if a costCap exists; doubled if emisCap exists AND emissions <= emisCap AND base>0
+  // Score rules: if no cost cap → score = null (not applicable)
+  // else base = max(costCap - cost, 0); doubled iff emissions cap exists AND emissions <= cap AND base > 0
   let baseScore = null, doubled = false, finalScore = null;
-  if (Number.isFinite(costCap)) {
-    baseScore = Math.max(costCap - totalCost, 0);
-    const emiOk = Number.isFinite(emisCap) && (totalEmissions <= emisCap);
+  if (Number.isFinite(caps.cost)) {
+    baseScore = (totals.cost <= caps.cost) ? (caps.cost - totals.cost) : 0;
+    const emiOk = Number.isFinite(caps.emissions) && (totals.emissions <= caps.emissions);
     doubled = !!(emiOk && baseScore > 0);
     finalScore = doubled ? baseScore * 2 : baseScore;
   }
 
   return {
     timeFormatted, elapsedMs, highestLoadPct,
-    totalCost, totalEmissions,
-    costCap, emisCap,
+    totalCost: totals.cost, totalEmissions: totals.emissions,
+    costCap: caps.cost, emisCap: caps.emissions,
     baseScore, doubled, finalScore
   };
 }
-function showResultOverlay() {
+
+function showResultOverlay(opts = {}) {
+  const isTimeout = opts && opts.mode === 'timeout';
+
   const {
-    timeFormatted,
-    highestLoadPct,
-    totalCost,
-    totalEmissions,
-    baseScore,
-    doubled,
-    finalScore
+    timeFormatted, highestLoadPct, totalCost, totalEmissions,
+    baseScore, doubled, finalScore
   } = computeSubmitStats();
 
+  const timeLabel = isTimeout ? 'Time out' : timeFormatted;
   const overlay = document.createElement("div");
   overlay.id = "result-overlay";
   Object.assign(overlay.style, {
@@ -3418,6 +3438,7 @@ function showResultOverlay() {
     justifyContent:"center", zIndex:"999"
   });
 
+  // Build the header row (time + score)
   const scoreLabel = (baseScore == null)
     ? "—"
     : (doubled
@@ -3466,6 +3487,7 @@ function showResultOverlay() {
   const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
   document.addEventListener("keydown", onKey);
 
+  // Notify runner after dismissal (kept)
   document.getElementById("close-overlay").addEventListener("click", () => {
     try { window.parent.postMessage({ type: 'runner:overlayClosed' }, '*'); } catch {}
   });
@@ -3473,8 +3495,29 @@ function showResultOverlay() {
 try { window.showResultOverlay = showResultOverlay; } catch {}
 
 
+const submitBtn = document.getElementById('submit-button');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      try { window.parent.postMessage({ type: 'runner:submitClicked' }, '*'); } catch {}
+      window.addEventListener('message', (ev) => {
+  const msg = ev?.data || {};
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.type === 'runner:timeUp') {
+    // Your overlay function should accept a mode that switches time label to "Time out"
+    showResultsOverlay({ mode: 'timeout' });
+  }
+});
 
+    }, { passive: true });
+  }
 
+window.addEventListener('message', (ev) => {
+  const msg = ev?.data || {};
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.type === 'runner:timeUp') {
+    showResultsOverlay({ mode: 'timeout' });
+  }
+});
 
 </script>
 <style>
@@ -3570,22 +3613,6 @@ try { window.showResultOverlay = showResultOverlay; } catch {}
     return computeFallbackState();
   }
 
-  function postToRunner(precomputed){
-    const snap = normalize(precomputed || computeEvalStateSafe());
-    const payload = {
-      type: 'dv:state',
-      view: 'list',
-      scenarioId: snap.scenarioId,
-      totals: snap.totals,
-      state:  snap.state,
-      meta:   snap.meta,
-      meets:  snap.meets,
-      goals:  snap.goals
-    };
-    try { window.parent && window.parent.postMessage(payload, '*'); }
-    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
-  }
-
   // Patch WITHOUT recursion (fix the `.args` bug)
   if (typeof window.evaluateScenarioState === 'function' && !window.__origEvaluateScenarioState) {
     window.__origEvaluateScenarioState = window.evaluateScenarioState;
@@ -3644,6 +3671,148 @@ try { window.showResultOverlay = showResultOverlay; } catch {}
       if (e.key === 'Escape') panel.setAttribute('hidden', '');
     });
   })();
+</script>
+
+<script>
+/**
+ * Unified Runner Bridge — single dv:state payload (always includes meets + goals)
+ * Exposes:
+ *   - window.postToRunner(snapshot?)        → sends unified dv:state
+ *   - window.computeEvalStateSafe()         → returns normalized snapshot
+ */
+(() => {
+  const RUNNER_MODE = new URLSearchParams(location.search).get('runner') === '1';
+
+  const nz = v => Number(v || 0);
+
+  function gens()  { return Array.isArray(window.currentGenerators) ? window.currentGenerators : []; }
+  function lines() {
+    const L = window.currentLines;
+    if (Array.isArray(L)) return L;
+    if (!L) return [];
+    return (typeof L === 'object' && !('length' in L)) ? Object.values(L) : Array.from(L);
+  }
+  function scen() { return window.currentScenarioData || {}; }
+
+  function computeFallback() {
+    const G = gens(), L = lines(), S = scen();
+
+    const totals = {
+      power:     G.reduce((s,g)=>s + nz(g.pg), 0),
+      cost:      G.reduce((s,g)=>s + nz(g.pg)*nz(g.cost_per_mw), 0),
+      emissions: G.reduce((s,g)=>s + nz(g.pg)*nz(g.emissions_per_mw), 0)
+    };
+
+    const overloaded_count = L.filter(el => {
+      const rate = nz(el.rate_a ?? el.rateA);
+      const flow = Math.abs(nz(el.flow));
+      return rate > 0 && flow > rate;
+    }).length;
+
+    const tol = Number.isFinite(nz(S.target_tolerance)) ? nz(S.target_tolerance) : 0.05;
+    const maxOver = (S.allowed_overloads != null) ? nz(S.allowed_overloads)
+                   : (S.max_overloads    != null) ? nz(S.max_overloads) : 0;
+
+    const goals = {
+      target_mw:        (S.target_mw != null)        ? nz(S.target_mw)        : null,
+      max_cost:         (S.cost_limit != null)       ? nz(S.cost_limit)       : null,
+      max_emissions:    (S.emissions_limit != null)  ? nz(S.emissions_limit)  : null,
+      max_overloads:    maxOver,
+      target_tolerance: tol
+    };
+
+    const meets = {
+      power:     goals.target_mw == null ? true
+                  : (totals.power >= goals.target_mw*(1 - tol) &&
+                     totals.power <= goals.target_mw*(1 + tol)),
+      cost:      goals.max_cost == null      ? true : (totals.cost      <= goals.max_cost),
+      emissions: goals.max_emissions == null ? true : (totals.emissions <= goals.max_emissions),
+      overloads: overloaded_count <= goals.max_overloads
+    };
+    meets.overall = !!(meets.power && meets.overloads && meets.cost && meets.emissions);
+
+    return {
+      scenarioId: (S.scenario_id || S.id || null),
+      totals,
+      state: { overloaded_count },
+      goals,
+      meets,
+      meta: { gens: G.length, lines: L.length, ts: Date.now() }
+    };
+  }
+
+  function computeState() {
+    const S = scen();
+    try {
+      if (typeof window.evaluateScenarioState === 'function') {
+        const r  = window.evaluateScenarioState(S, lines()); // map signature
+        const fb = computeFallback();
+        return {
+          scenarioId: (S.scenario_id || S.id || null),
+          totals: r?.totals ?? fb.totals,
+          state:  r?.state  ?? fb.state,
+          meets:  r?.meets  ?? fb.meets,
+          goals:  r?.goals  ?? fb.goals,
+          meta:   { gens: gens().length, lines: lines().length, ts: Date.now() }
+        };
+      }
+    } catch (e) {
+      console.warn('[RunnerBridge] evaluateScenarioState error — using fallback', e);
+    }
+    return computeFallback();
+  }
+
+  function postSnapshot(snapshot) {
+    const snap = snapshot || computeState();
+    const payload = {
+      type: 'dv:state',
+      view: 'map',
+      scenarioId: snap.scenarioId ?? null,
+      totals: snap.totals ?? null,
+      state:  snap.state  ?? null,
+      meets:  snap.meets  ?? null,
+      goals:  snap.goals  ?? null,
+      meta:   snap.meta   ?? { ts: Date.now() }
+    };
+    try { window.parent.postMessage(payload, '*'); }
+    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
+  }
+
+  // --- Export globals so legacy calls like postToRunner() keep working ---
+  window.computeEvalStateSafe = computeState;
+  window.postToRunner = (snap) => { try { postSnapshot(snap); } catch(e) { console.warn(e); } };
+
+  // If not in runner mode, keep the API present as no-ops and exit early
+  if (!RUNNER_MODE) {
+    window.postToRunner = () => {};
+    return;
+  }
+
+  // Beacon after each recompute
+  if (typeof window.evaluateScenarioState === 'function' && !window.__origEvaluateScenarioState) {
+    window.__origEvaluateScenarioState = window.evaluateScenarioState;
+    window.evaluateScenarioState = function patchedEvaluateScenarioState(...args) {
+      const result = window.__origEvaluateScenarioState.apply(this, args);
+      postSnapshot();
+      return result;
+    };
+  }
+
+  // Respond to Runner pulls
+  window.addEventListener('message', (e) => {
+    const msg = e?.data || {};
+    if (msg.type === 'runner:requestState') postSnapshot();
+    if (msg.type === 'runner:timeUp') {
+      // Optional: if you show a timeout overlay, do it here
+      if (typeof window.showResultOverlay === 'function') {
+        window.showResultOverlay({ mode: 'timeout' });
+      }
+    }
+  });
+
+  // Initial beacon when ready
+  window.addEventListener('load', () => postSnapshot());
+})();
 </script>
 
 

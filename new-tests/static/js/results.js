@@ -55,15 +55,61 @@
   // ===== No results state =====
   if (!data || !Array.isArray(data.logs)) {
     panel.innerHTML = `
-      <div style="${S.shell}">
-        <h1 style="${S.h1}">Results</h1>
-        <p style="opacity:.85; font-size:18px">We couldn't find a completed run in this browser session.</p>
-        <div id="actions" style="${S.actions}">
-          <a href="/test" class="btn" style="${S.btn}">Try Again</a>
-          <a href="/"      class="btn" style="${S.btn}">Go Home</a>
-        </div>
-      </div>`;
-    return;
+  <div style="${S.shell}">
+    <h1 style="${S.h1}">Results</h1>
+
+    <div style="${S.subrow}">
+      <div class="pill" style="${S.pill}">
+        ✅ Tasks completed: <b>${steps.filter(s => s.completed).length}</b> / <b>${steps.length}</b>
+      </div>
+    </div>
+
+    <div id="chart-section" style="${S.chartSection}">
+      <h3 style="${S.chartTitle}">Time per task</h3>
+      <div id="chart-wrap" style="${S.chartWrap}">
+        <canvas id="chart-time-line" height="260" style="display:block; width:100%"></canvas>
+      </div>
+      <div style="${S.hint}">Lower is faster</div>
+    </div>
+
+    <!-- Compact per-scenario table -->
+    <div id="mini-table" style="margin: 6px auto 14px; max-width: 900px;">
+      <div style="overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+        <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:14px;">
+          <thead>
+            <tr style="background:#0f172a;">
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Task</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">View</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Time (mm:ss)</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Highest load @ submit</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${steps.map(s => `
+              <tr>
+                <td style="padding:8px 12px;">${s.index} (${s.scenarioId})</td>
+                <td style="padding:8px 12px; text-transform:capitalize;">${s.view || '—'}</td>
+                <td style="padding:8px 12px;">${fmtMMSS(s.secs)}</td>
+                <td style="padding:8px 12px;">${fmtPct(s.highestLoadAtSubmit)}</td>
+                <td style="padding:8px 12px;">${s.score != null ? s.score : '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="actions" style="${S.actions}">
+      <button id="btn-csv" class="btn" style="${S.btn}">Export data to CSV</button>
+      <a href="/test" class="btn" style="${S.btn}">Try Again</a>
+      <a href="/"      class="btn" style="${S.btn}">Go Home</a>
+    </div>
+
+    <div id="msg" style="${S.msg}"></div>
+  </div>
+`;
+
   }
 
 // ===== Extract steps (per-task) =====
@@ -73,60 +119,145 @@ const secondsOf = v => Math.max(0, Math.round((v.end - v.start) / 1000));
 const durations = views.map(secondsOf);
 
 // Minimal step objects for CSV + summary (simple completion rule)
+// + also collect: view, highestLoadAtSubmit, score
+function fmtPct(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return '—';
+  return `${x.toFixed(1)}%`;
+}
+
+function pickHighestLoadAtSubmitForSuccessfulSubmit(snap, reason) {
+  // Only for successful submit
+  if (String(reason) !== 'submit_success') return null;
+
+  const t = snap?.totals || {};
+  const meta = snap?.meta || {};
+  const state = snap?.state || {};
+
+  const candidates = [
+    t.highestLoadAtSubmit,
+    meta.highestLoadAtSubmit,
+    state.highestLoadAtSubmit,
+    t.highestLoadPct,
+    t.maxLinePct,
+    t.maxLoadPct,
+    t.highestLoad
+  ];
+
+  for (const v of candidates) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+
+  const lines = state?.lines || snap?.lines || null;
+  if (Array.isArray(lines)) {
+    let best = 0;
+    for (const L of lines) {
+      const rate = +(L.rate_a ?? L.rateA ?? L.rate ?? 0);
+      const flow = Math.abs(+L.flow || 0);
+      if (rate > 0) {
+        const pct = 100 * (flow / rate);
+        if (pct > best) best = pct;
+      }
+    }
+    if (best > 0) return best;
+  }
+
+  return null;
+}
+
+function pickScoreForSuccessfulSubmit(snap, reason) {
+  if (String(reason) !== 'submit_success') return null;
+  if (snap?.score != null) return Number(snap.score);
+  if (snap?.score_base != null) {
+    const base = Number(snap.score_base);
+    return snap?.score_doubled ? base * 2 : base;
+  }
+  return null;
+}
+
 const steps = views.map((v, i) => {
-  const snap    = v.snapshot || {};
-  const reason  = String(v.reason || '').toLowerCase();
+  const snap   = v.snapshot || {};
+  const reason = String(v.reason || '');
 
-  // Treat any submission as a completed task on the summary page
-  const didSubmit =
-    reason === 'done' ||
-    reason === 'submitted' ||
-    reason === 'complete' ||
-    reason === 'overlayclosed' ||     // overlay was shown & dismissed
-    reason === 'submit(fallback)';    // legacy
-
-  const completed = !!didSubmit;
+  const secs   = secondsOf(v);
+  const view   = (v.view || '').toLowerCase();
+  const hiLoad = pickHighestLoadAtSubmitForSuccessfulSubmit(snap, reason);
+  const score  = pickScoreForSuccessfulSubmit(snap, reason);
 
   return {
     index: i + 1,
     scenarioId: v.scenarioId || v.scenario || '',
-    secs: secondsOf(v),
-    completed
+    view,
+    reason,                                   // 'submit_success' | 'submit_unmet' | 'timeout' | (legacy)
+    secs,
+    completed: reason === 'submit_success',
+    highestLoadAtSubmit: hiLoad,
+    score
   };
 });
-
 
 const completedCount = steps.filter(s => s.completed).length;
 
 
-  // ===== UI: bigger, centered layout =====
-  panel.innerHTML = `
-    <div style="${S.shell}">
-      <h1 style="${S.h1}">Results</h1>
+panel.innerHTML = `
+  <div style="${S.shell}">
+    <h1 style="${S.h1}">Results</h1>
 
-      <div style="${S.subrow}">
-        <div class="pill" style="${S.pill}">
-          ✅ Tasks completed: <b>${completedCount}</b> / <b>${steps.length}</b>
-        </div>
+    <div style="${S.subrow}">
+      <div class="pill" style="${S.pill}">
+        ✅ Tasks completed: <b>${completedCount}</b> / <b>${steps.length}</b>
       </div>
-
-      <div id="chart-section" style="${S.chartSection}">
-        <h3 style="${S.chartTitle}">Time per task</h3>
-        <div id="chart-wrap" style="${S.chartWrap}">
-          <canvas id="chart-time-line" height="260" style="display:block; width:100%"></canvas>
-        </div>
-        <div style="${S.hint}">Lower is faster</div>
-      </div>
-
-      <div id="actions" style="${S.actions}">
-        <button id="btn-csv" class="btn" style="${S.btn}">Export data to CSV</button>
-        <a href="/test" class="btn" style="${S.btn}">Try Again</a>
-        <a href="/"      class="btn" style="${S.btn}">Go Home</a>
-      </div>
-
-      <div id="msg" style="${S.msg}"></div>
     </div>
-  `;
+
+    <div id="chart-section" style="${S.chartSection}">
+      <h3 style="${S.chartTitle}">Time per task</h3>
+      <div id="chart-wrap" style="${S.chartWrap}">
+        <canvas id="chart-time-line" height="260" style="display:block; width:100%"></canvas>
+      </div>
+      <div style="${S.hint}">Lower is faster</div>
+    </div>
+
+    <!-- Compact per-scenario table -->
+    <div id="mini-table" style="margin: 6px auto 14px; max-width: 900px;">
+      <div style="overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+        <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:14px;">
+          <thead>
+            <tr style="background:#0f172a;">
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Task</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">View</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Time (mm:ss)</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Highest load @ submit</th>
+              <th style="text-align:left; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06);">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${steps.map(s => `
+              <tr>
+                <td style="padding:8px 12px;">${s.index} (${s.scenarioId})</td>
+                <td style="padding:8px 12px; text-transform:capitalize;">${s.view || '—'}</td>
+                <td style="padding:8px 12px;">
+                  ${ s.reason === 'timeout' ? 'Time out' : fmtMMSS(s.secs) }
+                </td>
+                <td style="padding:8px 12px;">${fmtPct(s.highestLoadAtSubmit)}</td>
+                <td style="padding:8px 12px;">${s.score != null ? s.score : '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="actions" style="${S.actions}">
+      <button id="btn-csv" class="btn" style="${S.btn}">Export data to CSV</button>
+      <a href="/test" class="btn" style="${S.btn}">Try Again</a>
+      <a href="/"      class="btn" style="${S.btn}">Go Home</a>
+    </div>
+
+    <div id="msg" style="${S.msg}"></div>
+  </div>
+`;
+
 
  // ===== Chart: stable sizing (no warp) =====
 const $canvas = document.getElementById('chart-time-line');
@@ -189,45 +320,61 @@ if ('ResizeObserver' in window) {
   // Minimal payload per final schema:
   // run: { participant_id, sequence: "A"|"B"|"C"|"D" }
   // steps: [ { scenario, seconds, completed } ]
-  function buildPayloadMinimal(stepArr, srcData) {
-    const participant_id =
-      srcData.participant_id ||
-      srcData.runner?.participant_id ||
-      srcData.plan?.participant_id ||
-      "anon";
+  // Minimal payload per final schema:
+// run: { participant_id, sequence: "A"|"B"|"C"|"D" }
+// steps: [ { scenario, view, seconds, completed, highest_load_at_submit, score } ]
+function buildPayloadMinimal(stepArr, srcData) {
+  const participant_id =
+    srcData.participant_id ||
+    srcData.runner?.participant_id ||
+    srcData.plan?.participant_id ||
+    "anon";
 
-    let sequence =
-      srcData.sequence ||
-      srcData.runner?.sequence ||
-      srcData.plan?.sequence ||
-      null;
+  let sequence =
+    srcData.sequence ||
+    srcData.runner?.sequence ||
+    srcData.plan?.sequence ||
+    null;
+  if (typeof sequence === 'number') sequence = ['A','B','C','D'][sequence] || null;
 
-    if (typeof sequence === 'number') sequence = ['A','B','C','D'][sequence] || null;
+  return {
+    participant_id,
+    sequence,
+    steps: stepArr.map(s => ({
+      scenario: s.scenarioId || s.scenario || '',
+      view: s.view || '',
+      seconds: Math.max(0, Math.round(Number(s.secs) || 0)),
+      completed: !!s.completed,
+      highest_load_at_submit: (s.highestLoadAtSubmit != null ? Number(s.highestLoadAtSubmit) : ''),
+      score: (s.score != null ? Number(s.score) : '')
+    }))
+  };
+}
 
-    return {
-      participant_id,
-      sequence, // "A" | "B" | "C" | "D" (or null if missing)
-      steps: stepArr.map(s => ({
-        scenario: s.scenarioId || s.scenario || '',
-        seconds: Math.max(0, Math.round(Number(s.secs) || 0)),
-        completed: !!s.completed
-      }))
-    };
-  }
 
-  function buildCSVMinimal(payload) {
-    const header = ['participant_id','sequence','scenario','seconds','completed'];
-    const rows = payload.steps.map(st => ([
-      csvSafe(payload.participant_id),
-      csvSafe(payload.sequence),
-      csvSafe(st.scenario),
-      String(st.seconds),
-      st.completed ? '1' : '0'
-    ]));
-    return [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+function buildCSVMinimal(payload) {
+  const header = [
+    'participant_id','sequence',
+    'scenario','view','seconds','completed',
+    'highest_load_at_submit','score'
+  ];
 
-    function csvSafe(v){ return (v == null) ? '' : String(v).replace(/"/g,'""'); }
-  }
+  const rows = payload.steps.map(st => ([
+    csvSafe(payload.participant_id),
+    csvSafe(payload.sequence),
+    csvSafe(st.scenario),
+    csvSafe(st.view),
+    String(st.seconds),
+    st.completed ? '1' : '0',
+    st.highest_load_at_submit === '' ? '' : String(st.highest_load_at_submit),
+    st.score === '' ? '' : String(st.score)
+  ]));
+
+  return [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+  function csvSafe(v){ return (v == null) ? '' : String(v).replace(/"/g,'""'); }
+}
+
 
   function downloadBlob(text, name, type) {
     const blob = new Blob([text], { type });
@@ -248,6 +395,12 @@ function fmtMMSS(sec) {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+}
+
+function fmtPct(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return '—';
+  return `${x.toFixed(1)}%`;
 }
 
 // Draw the line chart; stores geometry on canvas for tooltip
