@@ -8,6 +8,41 @@
   let data = null;
   try { data = JSON.parse(sessionStorage.getItem('dv_last_results') || 'null'); } catch {}
 
+  console.log('[Results] loaded dv_last_results', {
+  hasData: !!data, logs: Array.isArray(data?.logs) ? data.logs.length : 0,
+  runner: data?.runner || null
+});
+
+// Per-view compact trace (what the runner says we stored)
+try {
+  (data?.logs || [])
+    .filter(l => l.type === 'view')
+    .forEach((l, i) => {
+      const snap = l.snapshot || {};
+      const hiLoad =
+        snap.highestLoadAtSubmit ?? snap.highestLoadPct ??
+        snap.maxLinePct ?? snap.maxLoadPct ?? snap.highestLoad ?? null;
+
+      const score =
+        snap.finalScore ?? snap.score ??
+        (Number.isFinite(snap.baseScore ?? snap.score_base)
+          ? ((snap.doubled ?? snap.score_doubled) ? (snap.baseScore ?? snap.score_base) * 2
+                                                  : (snap.baseScore ?? snap.score_base))
+          : null);
+
+      console.log('[Results][Row]', i, {
+        view: l.view, scenarioId: l.scenarioId,
+        reason: l.reason, submitted: l.submitted,
+        aliases: { highestLoadPct: hiLoad, score },
+        totalsKeys: snap.totals ? Object.keys(snap.totals) : 'null',
+        stateKeys:  snap.state  ? Object.keys(snap.state)  : 'null'
+      });
+    });
+} catch (e) {
+  console.warn('[Results] summary logging failed', e);
+}
+
+
   if (!panel) {
     console.warn('Results: panel not found');
     document.body.innerHTML = '<pre>Results panel not found.</pre>';
@@ -126,64 +161,91 @@ function fmtPct(n) {
   return `${x.toFixed(1)}%`;
 }
 
-function pickHighestLoadAtSubmitForSuccessfulSubmit(snap, reason) {
-  // Only for successful submit
-  if (String(reason) !== 'submit_success') return null;
-
-  const t = snap?.totals || {};
-  const meta = snap?.meta || {};
+function pickHighestLoadAtSubmitForSuccessfulSubmit(log) {
+  if (String(log?.reason) !== 'submit_success') return null;
+  const snap  = log?.snapshot || {};
+  const t     = snap?.totals || {};
+  const meta  = snap?.meta || {};
   const state = snap?.state || {};
 
-  const candidates = [
-    t.highestLoadAtSubmit,
-    meta.highestLoadAtSubmit,
-    state.highestLoadAtSubmit,
-    t.highestLoadPct,
-    t.maxLinePct,
-    t.maxLoadPct,
-    t.highestLoad
+  // ✅ Prioritize stable normalized fields from runner snapshot
+  const direct = [
+    snap?.highestLoadAtSubmit,
+    t?.highestLoadAtSubmit,
+    meta?.highestLoadAtSubmit,
+    state?.highestLoadAtSubmit
   ];
-
-  for (const v of candidates) {
+  for (const v of direct) {
     const n = Number(v);
     if (Number.isFinite(n) && n > 0) return n;
   }
 
+  // ✅ Fall back to legacy aliases (highestLoadPct / maxLinePct)
+  const aliases = [
+    snap?.highestLoadPct, t?.highestLoadPct, meta?.highestLoadPct, state?.highestLoadPct,
+    snap?.maxLinePct,     t?.maxLinePct,     meta?.maxLinePct,     state?.maxLinePct
+  ];
+  for (const v of aliases) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+
+  // ✅ Last resort: compute directly from line data if available
   const lines = state?.lines || snap?.lines || null;
   if (Array.isArray(lines)) {
     let best = 0;
     for (const L of lines) {
       const rate = +(L.rate_a ?? L.rateA ?? L.rate ?? 0);
       const flow = Math.abs(+L.flow || 0);
-      if (rate > 0) {
-        const pct = 100 * (flow / rate);
-        if (pct > best) best = pct;
-      }
+      if (rate > 0) best = Math.max(best, 100 * (flow / rate));
     }
-    if (best > 0) return best;
+    return best > 0 ? best : null;
   }
 
   return null;
 }
 
-function pickScoreForSuccessfulSubmit(snap, reason) {
-  if (String(reason) !== 'submit_success') return null;
-  if (snap?.score != null) return Number(snap.score);
-  if (snap?.score_base != null) {
-    const base = Number(snap.score_base);
-    return snap?.score_doubled ? base * 2 : base;
+function pickScoreForSuccessfulSubmit(log) {
+  if (String(log?.reason) !== 'submit_success') return null;
+  const snap = log?.snapshot || {};
+
+  // ✅ Prefer finalScore first (runner normalized field)
+  const direct = [
+    snap?.finalScore,
+    log?.finalScore,
+    snap?.score,
+    log?.score
+  ];
+  for (const v of direct) {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
   }
+
+  // ✅ Reconstruct from baseScore + doubled if necessary
+  const base = Number(snap?.baseScore ?? log?.baseScore ?? snap?.score_base ?? log?.score_base);
+  const dbl  = Boolean(snap?.doubled ?? log?.doubled ?? snap?.score_doubled ?? log?.score_doubled);
+  if (Number.isFinite(base)) return dbl ? base * 2 : base;
+
   return null;
 }
+
 
 const steps = views.map((v, i) => {
   const snap   = v.snapshot || {};
   const reason = String(v.reason || '');
 
   const secs   = secondsOf(v);
-  const view   = (v.view || '').toLowerCase();
-  const hiLoad = pickHighestLoadAtSubmitForSuccessfulSubmit(snap, reason);
-  const score  = pickScoreForSuccessfulSubmit(snap, reason);
+const view   = (v.view || '').toLowerCase();
+
+// Prefer runner-stamped primitives; fall back to pickers if missing
+const hiLoad = (v.highestLoadAtSubmit != null)
+  ? v.highestLoadAtSubmit
+  : pickHighestLoadAtSubmitForSuccessfulSubmit(v);
+
+const score  = (v.finalScore != null)
+  ? v.finalScore
+  : pickScoreForSuccessfulSubmit(v);
+
 
   return {
     index: i + 1,

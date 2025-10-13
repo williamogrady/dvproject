@@ -157,6 +157,7 @@ function clearCurrentPill(pos) {
 }
 
 function finishStep(reason) {
+  console.log('[Runner DBG] finishStep() called', { idx, viewPos, reason, finishing_before: finishing });
   if (finishing) return;
   finishing = true;
 
@@ -164,34 +165,103 @@ function finishStep(reason) {
 
   const entry = logs[logs.length - 1];
   if (entry && entry.type === 'view' && !entry.end) {
-    entry.end       = Date.now();
-    entry.reason    = reason;
-    entry.submitted = !!submitClicked;
-    entry.allMet    = !!allMetAtSubmit;
+ entry.end       = Date.now();
+entry.reason    = reason;
+entry.submitted = !!submitClicked;
+entry.allMet    = !!allMetAtSubmit;
 
-    if (lastState) {
-      entry.snapshot = {
-        scenarioId:     lastState.scenarioId ?? entry.scenarioId,
-        totals:         lastState.totals ?? null,
-        state:          lastState.state ?? null,
-        meta:           lastState.meta ?? null,
-        score:          (lastState.score ?? null),
-        score_base:     (lastState.score_base ?? null),
-        score_doubled:  (lastState.score_doubled ?? false)
-      };
+// ── Normalize submit stats from lastState (aliases + safe fallback) ──
+// ── Normalize submit stats from lastState (check meta; no score synthesis) ──
+let highestLoadAtSubmit =
+  (Number.isFinite(+lastState?.highestLoadAtSubmit)           ? +lastState.highestLoadAtSubmit :
+   Number.isFinite(+lastState?.highestLoadPct)                ? +lastState.highestLoadPct :
+   Number.isFinite(+lastState?.totals?.highestLoadAtSubmit)   ? +lastState.totals.highestLoadAtSubmit :
+   Number.isFinite(+lastState?.totals?.highestLoadPct)        ? +lastState.totals.highestLoadPct :
+   Number.isFinite(+lastState?.meta?.highestLoadAtSubmit)     ? +lastState.meta.highestLoadAtSubmit :
+   Number.isFinite(+lastState?.meta?.highestLoadPct)          ? +lastState.meta.highestLoadPct :
+   Number.isFinite(+lastState?.maxLinePct)                    ? +lastState.maxLinePct :
+   Number.isFinite(+lastState?.state?.maxLinePct)             ? +lastState.state.maxLinePct :
+   null);
+
+// Fallback: compute from line flows if still missing
+if (highestLoadAtSubmit == null) {
+  const lines = lastState?.state?.lines || lastState?.lines || [];
+  if (Array.isArray(lines) && lines.length) {
+    let best = 0;
+    for (const L of lines) {
+      const rate = +(L?.rate_a ?? L?.rateA ?? L?.rate ?? 0);
+      const flow = Math.abs(+(L?.flow ?? 0));
+      if (rate > 0) best = Math.max(best, 100 * (flow / rate));
     }
+    if (best > 0) highestLoadAtSubmit = best;
+  }
+}
 
-    const outcome = decideOutcome(reason);
-    console.log('[testRunner]: STEP RESULT', {
-  view: entry.view, scenario: entry.scenario, reason, outcome
-  });
-    clearCurrentPill(viewPos);
-    setPillState(viewPos, outcome);
+// Score: ONLY pass through if explicitly provided (no baseScore synthesis)
+let finalScore =
+  (Number.isFinite(+lastState?.finalScore)        ? +lastState.finalScore :
+   Number.isFinite(+lastState?.meta?.finalScore)  ? +lastState.meta.finalScore :
+   Number.isFinite(+lastState?.score)             ? +lastState.score :
+   null);
+
+// Mirror like time (top-level primitives)
+entry.highestLoadAtSubmit = (Number.isFinite(+highestLoadAtSubmit) && +highestLoadAtSubmit > 0) ? +highestLoadAtSubmit : null;
+entry.finalScore          = (Number.isFinite(+finalScore) ? +finalScore : null);
+
+// Snapshot (keep existing fields; add normalized keys)
+entry.snapshot = {
+  scenarioId: lastState?.scenarioId ?? entry.scenarioId,
+  totals:     lastState?.totals ?? null,
+  state:      lastState?.state  ?? null,
+  meta:       lastState?.meta   ?? null,
+
+  // legacy passthroughs if present
+  score:          (Number.isFinite(+lastState?.score) ? +lastState.score : null),
+  score_base:     (Number.isFinite(+lastState?.baseScore ?? +lastState?.score_base)
+                    ? (+lastState?.baseScore ?? +lastState?.score_base) : null),
+  score_doubled:  !!(lastState?.doubled ?? lastState?.score_doubled),
+
+  // normalized keys Results prefers
+  highestLoadAtSubmit: entry.highestLoadAtSubmit,
+  finalScore:          entry.finalScore
+};
+
+
+// Snapshot (keep existing fields; add normalized keys)
+entry.snapshot = {
+  scenarioId: lastState?.scenarioId ?? entry.scenarioId,
+  totals:     lastState?.totals ?? null,
+  state:      lastState?.state  ?? null,
+  meta:       lastState?.meta   ?? null,
+
+  // legacy / passthrough for older results readers
+  score:          (Number.isFinite(+lastState?.score) ? +lastState.score : null),
+  score_base:     (Number.isFinite(+lastState?.baseScore ?? +lastState?.score_base)
+                    ? (+lastState?.baseScore ?? +lastState?.score_base) : null),
+  score_doubled:  !!(lastState?.doubled ?? lastState?.score_doubled),
+
+  // normalized keys the Results page should prefer
+  highestLoadAtSubmit: entry.highestLoadAtSubmit,
+  finalScore:          entry.finalScore
+};
+
+const outcome = decideOutcome(reason);
+console.log('[testRunner]: STEP RESULT', {
+  view: entry.view, scenario: entry.scenarioId || entry.scenario, reason, outcome,
+  stored: {
+    highestLoadAtSubmit: entry.highestLoadAtSubmit,
+    finalScore:          entry.finalScore
+  }
+});
+clearCurrentPill(viewPos);
+setPillState(viewPos, outcome);
 
   }
 
+  console.log('[Runner DBG] finishStep() → scheduling next()', { idx_after_finish: idx, viewPos_after_finish: viewPos });
   setTimeout(() => { finishing = false; next(); }, 0);
 }
+
 
 
   function expandSeries(scriptObj) {
@@ -311,7 +381,12 @@ function startTimer(totalSeconds = 180) {
       timeUpFired = true; // ← NEW: mark timeout
       try { stage.contentWindow.postMessage({ type: 'runner:timeUp' }, '*'); } catch {}
       if (overlayWait) clearTimeout(overlayWait);
-      overlayWait = setTimeout(() => { overlayWait = null; finishStep('timeout'); }, 15000);
+      overlayWait = setTimeout(() => {
+  console.log('[Runner DBG] timeout grace elapsed → finishStep("timeout")', { idx, viewPos });
+  overlayWait = null;
+  stepFinished = true;       // <- make the guard consistent with submit path
+  finishStep('timeout');
+}, 15000);
       return;
     }
     timerTick = requestAnimationFrame(tick);
@@ -364,21 +439,46 @@ window.addEventListener('message', (e) => {
     return;
   }
 
+  console.log('[Runner DBG] message:', {
+      stepFinished, finishing, submitClicked, timeUpFired,
+      msgType: msg?.type, idx, viewPos
+    });
+
+
   // Streamed snapshots from the views
-  if (msg.type === 'runner:state' || msg.type === 'dv:state') {
-    lastState = msg;
-    console.log('[testRunner]: dv:state RECEIVED', {
-  hasMeets: !!(msg && msg.meets),
-  meets: msg?.meets ? {
-    power: msg.meets.power, overloads: msg.meets.overloads,
-    cost: msg.meets.cost, emissions: msg.meets.emissions, overall: msg.meets.overall
-  } : 'NA',
-  totals: msg?.totals || 'NA',
-  state:  msg?.state  || 'NA',
-  ts:     msg?.meta?.ts || 'NA'
-});
-    return;
-  }
+if (msg.type === 'runner:state' || msg.type === 'dv:state') {
+  lastState = msg;
+
+  const hiLoad =
+    msg?.highestLoadAtSubmit ?? msg?.highestLoadPct ??
+    msg?.maxLinePct ?? msg?.maxLoadPct ??
+    msg?.snapshot?.highestLoadAtSubmit ?? msg?.snapshot?.highestLoadPct ??
+    msg?.totals?.highestLoadAtSubmit ?? msg?.totals?.highestLoadPct ??
+    msg?.state?.highestLoadAtSubmit  ?? msg?.state?.highestLoadPct  ?? null;
+
+  const score =
+    msg?.finalScore ?? msg?.score ??
+    (Number.isFinite(msg?.baseScore ?? msg?.score_base)
+      ? ((msg?.doubled ?? msg?.score_doubled) ? (msg?.baseScore ?? msg?.score_base) * 2
+                                              : (msg?.baseScore ?? msg?.score_base))
+      : null);
+
+  console.log('[Runner][RECV dv:state]', {
+    idx, viewPos,
+    hasMeets: !!(msg && msg.meets),
+    meets: msg?.meets ? {
+      power: msg.meets.power, overloads: msg.meets.overloads,
+      cost: msg.meets.cost, emissions: msg.meets.emissions, overall: msg.meets.overall
+    } : 'NA',
+    scenarioId: msg?.scenarioId,
+    aliases: { highestLoadPct: hiLoad, score },
+    totalsKeys: msg?.totals ? Object.keys(msg.totals) : 'null',
+    stateKeys:  msg?.state  ? Object.keys(msg.state)  : 'null',
+    ts:         msg?.meta?.ts || 'NA'
+  });
+  return;
+}
+
 
   // User clicked SUBMIT in the view → classify now, but do not advance
   if (msg.type === 'runner:submitClicked') {
@@ -411,6 +511,11 @@ if (msg.type === 'runner:overlayClosed') {
     ts:     lastState?.meta?.ts || 'NA'
   });
 
+  console.log('[Runner DBG] overlayClosed: deciding reason', {
+  submitClicked, pendingReason, timeUpFired,
+  lastStateHasMeets: !!lastState?.meets
+});
+
   let reason;
   if (submitClicked) {
     // Do NOT recompute here; trust the submit-time verdict.
@@ -421,7 +526,7 @@ if (msg.type === 'runner:overlayClosed') {
     reason = 'submit_unmet';
   }
 
-  console.log('[testRunner]: finishing', { reason });
+  console.log('[Runner DBG] overlayClosed → finishStep()', { reason });
 
   // Lock this step to prevent late dv:state from downgrading it
   stepFinished = true;
@@ -438,7 +543,16 @@ if (msg.type === 'runner:overlayClosed') {
   function start() { next(); }
 
 function next() {
+  console.log('[Runner DBG] next() ENTER', {
+  prev_idx: idx, steps_len: steps.length, viewPos_before: viewPos
+});
   idx += 1;
+  console.log('[Runner DBG] next() idx++', { idx, steps_len: steps.length });
+
+  if (idx >= steps.length) {
+    console.log('[Runner DBG] next() → finishAll()');
+    return finishAll();
+  }
   if (idx >= steps.length) return finishAll();
 
   const step = steps[idx];
@@ -449,6 +563,17 @@ function next() {
   }
 
   if (step.type === 'view') {
+    // ---- RESET PER-STEP STATE (must run before the iframe starts talking) ----
+stopTimer();                 // stop any previous timer
+stepFinished     = false;    // allow messages from the new step
+submitClicked    = false;
+allMetAtSubmit   = false;
+pendingReason    = null;
+timeUpFired      = false;
+lastState        = null;
+if (overlayWait) { clearTimeout(overlayWait); overlayWait = null; }
+// -------------------------------------------------------------------------
+
     viewPos += 1;
     progressEl.textContent = `${viewPos} / ${totalViewSteps}`;
     setPillState(viewPos, 'current');
@@ -457,6 +582,9 @@ function next() {
     const url = `${base}?runner=1&scenario=${encodeURIComponent(step.scenarioId)}`;
 
     stage.classList.remove('visible');
+    console.log('[Runner DBG] next() → VIEW', {
+  idx, viewPos, scenarioId: step.scenarioId, view: step.view, seconds: step.seconds
+});
     stage.src = 'about:blank';
 
     logs.push({
@@ -467,8 +595,9 @@ function next() {
       seconds: step.seconds,
       start: Date.now()
     });
-
+stage.onload = null;  // avoid “phantom” onload logs from the previous URL
     stage.onload = () => {
+      console.log('[Runner DBG] stage onload', { idx, viewPos, url });
       stage.classList.add('visible');
       try {
         stage.contentWindow.postMessage({ type:'runner:init', scenarioId: step.scenarioId }, '*');
@@ -484,8 +613,13 @@ function next() {
   next();
 }
 
-
 function finishAll() {
+  console.log('[Runner DBG] finishAll() START', {
+    total_logs: logs.length,
+    total_steps: steps.length,
+    last_log_tail: logs.slice(-3)
+  });
+
   const qs = new URLSearchParams(location.search);
   const sequenceId = qs.get('sequence') || null;
 
@@ -498,9 +632,25 @@ function finishAll() {
       sequence: sequenceId
     }
   };
+
+  // emit a compact per-view summary so we can see hiLoad/score BEFORE we navigate
+  try {
+    const summary = (payload.logs || [])
+      .filter(l => l.type === 'view')
+      .map((l, i) => ({
+        i,
+        view: l.view, scenarioId: l.scenarioId,
+        reason: l.reason, submitted: l.submitted,
+        hiLoad: l?.snapshot?.highestLoadAtSubmit ?? null,
+        score:  l?.snapshot?.score ?? null
+      }));
+    console.log('[Runner DBG] finishAll() summary by step', summary);
+  } catch {}
+
   try { sessionStorage.setItem('dv_last_results', JSON.stringify(payload)); } catch {}
   location.href = '/results';
 }
+
 
 
 

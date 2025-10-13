@@ -3772,6 +3772,24 @@ window.addEventListener('message', (ev) => {
   const submitBtn = document.getElementById('submit-button');
   if (submitBtn) {
     submitBtn.addEventListener('click', () => {
+
+      // right after user hits Submit
+const S = (typeof computeSubmitStats === 'function') ? computeSubmitStats() : null;
+const highest = Number.isFinite(+S?.highestLoadPct) ? +S.highestLoadPct : null;
+const fscore  = (S?.finalScore != null && Number.isFinite(+S.finalScore)) ? +S.finalScore : null;
+
+// when building the dv:state payload you already send AFTER submit:
+payload.highestLoadAtSubmit = highest;    // ← top-level, normalized
+payload.finalScore          = fscore;     // ← top-level, normalized
+
+payload.meta = Object.assign({}, payload.meta, {
+  highestLoadAtSubmit: highest,           // ← same inside meta
+  finalScore:          fscore,
+  // (optional pass-through if you want)
+  baseScore: Number.isFinite(+S?.baseScore) ? +S.baseScore : null,
+  doubled: !!S?.doubled
+});
+
       console.log('[mapView]: Submit button CLICKED', { disabled: !!btn.disabled });
       try { window.parent.postMessage({ type: 'runner:submitClicked' }, '*'); } catch {}
       window.addEventListener('message', (ev) => {
@@ -3908,21 +3926,40 @@ window.addEventListener('message', (ev) => {
     return computeFallback();
   }
 
-  function postSnapshot(snapshot) {
-    const snap = snapshot || computeState();
-    const payload = {
-      type: 'dv:state',
-      view: 'map',
-      scenarioId: snap.scenarioId ?? null,
-      totals: snap.totals ?? null,
-      state:  snap.state  ?? null,
-      meets:  snap.meets  ?? null,
-      goals:  snap.goals  ?? null,
-      meta:   snap.meta   ?? { ts: Date.now() }
-    };
-    try { window.parent.postMessage(payload, '*'); }
-    catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
-  }
+ function postSnapshot(snapshot) {
+  const snap = snapshot || computeState();
+  // pull common aliases so we can see if views are actually producing them
+  const hiLoad =
+    snap?.highestLoadAtSubmit ?? snap?.highestLoadPct ??
+    snap?.maxLinePct ?? snap?.maxLoadPct ?? snap?.highestLoad ?? null;
+
+  const score =
+    snap?.finalScore ?? snap?.score ??
+    (Number.isFinite(snap?.baseScore) ? (snap?.doubled ? snap.baseScore * 2 : snap.baseScore) : null);
+
+  const payload = {
+    type: 'dv:state',
+    view: 'map',
+    scenarioId: snap.scenarioId ?? null,
+    totals: snap.totals ?? null,
+    state:  snap.state  ?? null,
+    meets:  snap.meets  ?? null,
+    goals:  snap.goals  ?? null,
+    meta:   snap.meta   ?? { ts: Date.now() }
+  };
+
+  console.log('[View→Runner][MAP] posting dv:state', {
+    scenarioId: payload.scenarioId,
+    hasMeets: !!payload.meets,
+    totalsKeys: payload.totals ? Object.keys(payload.totals) : 'null',
+    stateKeys:  payload.state  ? Object.keys(payload.state)  : 'null',
+    aliases: { highestLoadPct: hiLoad, score }
+  });
+
+  try { window.parent.postMessage(payload, '*'); }
+  catch (e) { console.warn('[RunnerBridge] postMessage failed:', e); }
+}
+
 
   // --- Export globals so legacy calls like postToRunner() keep working ---
   window.computeEvalStateSafe = computeState;
