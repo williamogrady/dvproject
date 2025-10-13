@@ -4,7 +4,7 @@
   "target_mw": 1000,
   "emissions_limit": null,
   "cost_limit": null,
-  "line_limit_pct": null,
+  "line_limit_pct": 0.04,
   "disabled_generators": [],
   "initial_outputs": {},
   "disabled_lines": [],

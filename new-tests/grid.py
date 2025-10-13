@@ -254,60 +254,98 @@ class Grid:
 
 
     def update_case_from_objects(self):
+        """
+        Rules:
+        • Scenario 'initial_outputs' decides who starts ON (MW) vs OFF.
+        • Generators not listed start OFF but enabled (user can turn on).
+        • disabled=True => hard OFF (GEN_STATUS=0), user cannot turn on.
+        • User edits always win:
+            - user_active & pg>0  => fix to that MW
+            - user_active & pg==0 => explicit OFF (keep 0), never add back via normalization
+        • Pre-PF normalization:
+            - If any gens are ON, spread small deficit/surplus ONLY across free,
+            scenario-ON gens that the user didn’t touch. This shrinks slack to ≈ losses.
+            - If no gens are ON, mark grid de-energized and do not run PF (handled in run_power_flow).
+        """
+        import numpy as np
+
+        # MATPOWER case['gen'] columns
         GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
 
-        total_pd = float(np.sum(self.case['bus'][:, 2]))  # Pd sum after any scaling
-        # default to original case PG unless user set a value
-        desired_pg = self._base_gen_pg.copy()
+        # Total active demand (Pd) already scenario-scaled
+        total_pd = float(np.sum(self.case['bus'][:, 2]))
 
-        # apply user toggles / scenario: status & explicit pg
+        # Start from ZERO; we’ll fill with scenario/user values
+        desired_pg = np.zeros_like(self._base_gen_pg, dtype=float)
+
+        # 1) Apply status & desired_pg from (disabled → user → scenario)
+        any_on = False
         for i, gen in enumerate(self.generators):
             is_disabled = bool(getattr(gen, "disabled", False))
+            ua = bool(getattr(gen, "user_active", getattr(gen, "touched", False)))
+            user_pg = float(getattr(gen, "pg", 0.0) or 0.0)
+
+            # status: disabled => OFF hard; else enabled
             self.case['gen'][i, GEN_STATUS] = 0 if is_disabled else 1
 
             if is_disabled:
-                desired_pg[i] = 0.0
+                desired_pg[i] = 0.0  # hard off
+            elif ua:
+                # user intent always wins (including explicit OFF at 0)
+                desired_pg[i] = user_pg
             else:
-                # if user specified a PG (>0) use it; otherwise keep original
-                pg_val = float(getattr(gen, "pg", 0.0) or 0.0)
-                if pg_val > 0:
-                    desired_pg[i] = pg_val
+                # not user-touched → scenario decides ON/OFF (apply_scenario set gen.pg from initial_outputs)
+                scen_pg = float(getattr(gen, "pg", 0.0) or 0.0)
+                desired_pg[i] = scen_pg
 
-            # keep PMAX >= scheduled PG so we never make it trivially infeasible
+            if desired_pg[i] > 0.0:
+                any_on = True
+
+            # Ensure PMAX ≥ scheduled PG (avoid trivial infeasibility)
             if desired_pg[i] > float(self.case['gen'][i, PMAX]):
                 self.case['gen'][i, PMAX] = desired_pg[i]
 
-        # OPTIONAL: gently normalize the non-user generators to hit load level
-        # so runpf has a reasonable starting point (helps convergence).
-        scheduled = float(np.sum(desired_pg))
-        deficit = total_pd - scheduled
-        if abs(deficit) > 1e-6:
-            # distribute the deficit over generators that the user did NOT pin
-            free_idx = []
-            fixed = np.zeros_like(desired_pg, dtype=bool)
-            for i, gen in enumerate(self.generators):
-                # "fixed" if disabled OR user explicitly set pg>0
-                if (self.case['gen'][i, GEN_STATUS] == 0) or (float(getattr(gen, "pg", 0.0) or 0.0) > 0.0):
-                    fixed[i] = True
-                else:
-                    free_idx.append(i)
+        # 2) De-energized flag OR normalization among free, scenario-ON gens
+        if not any_on:
+            # mark: blackout baseline → skip PF, zero flows later
+            self._deenergized = True
+        else:
+            self._deenergized = False
+            scheduled = float(np.sum(desired_pg))
+            deficit = total_pd - scheduled
+            if abs(deficit) > 1e-6:
+                # free = enabled, not user-touched, and currently ON (scenario ON) → desired_pg>0
+                free_idx = []
+                for i, gen in enumerate(self.generators):
+                    is_enabled = (self.case['gen'][i, GEN_STATUS] == 1)
+                    ua = bool(getattr(gen, "user_active", getattr(gen, "touched", False)))
+                    if is_enabled and (not ua) and (desired_pg[i] > 0.0):
+                        free_idx.append(i)
 
-            if free_idx:
-                base_free = np.maximum(self._base_gen_pg[free_idx], 1e-3)
-                weights = base_free / base_free.sum()
-                desired_pg[free_idx] += deficit * weights
+                if free_idx:
+                    # Weight by current desired (scenario) outputs; fallback to PMAX if needed
+                    base = desired_pg[free_idx].copy()
+                    if float(np.sum(base)) <= 1e-9:
+                        base = np.maximum(self.case['gen'][free_idx, PMAX], 1e-3)
+                    weights = base / float(np.sum(base))
 
-                # keep within [0, PMAX]; not strictly required for PF, but sensible
-                for j in free_idx:
-                    desired_pg[j] = float(np.clip(desired_pg[j], 0.0, self.case['gen'][j, PMAX]))
+                    desired_pg[free_idx] = desired_pg[free_idx] + deficit * weights
+                    # Clamp within [0, PMAX]
+                    for j in free_idx:
+                        pmax_j = float(self.case['gen'][j, PMAX])
+                        desired_pg[j] = float(np.clip(desired_pg[j], 0.0, pmax_j))
 
-        # write PG to the case (this is the initial dispatch for runpf)
+        # 3) Write initial dispatch for PF
         self.case['gen'][:, PG] = desired_pg
 
+        # Debug
         try:
             print("🧮 Scheduled total PG (MW):", float(np.sum(self.case['gen'][:, PG])))
+            print("🔌 De-energized:", bool(getattr(self, "_deenergized", False)))
         except Exception as _e:
             print("⚠️ Could not sum scheduled PG:", _e)
+
+
 
 
     def calibrate_global_rate(self, percentile=0.90, target_level=0.90, exclude_pairs=None):
@@ -547,6 +585,19 @@ class Grid:
         except Exception as _e:
             print("⚠️ Failed to apply branch statuses from scenario:", _e)
 
+        # 🔕 BLACKOUT BASELINE: if de-energized, do NOT run PF → zero flows (prevents slack overloads)
+        if getattr(self, "_deenergized", False):
+            print("🌑 De-energized grid: skipping PF; zeroing flows & overloads.")
+            for br in self.branches:
+                br.flow = 0.0
+                br.flow_signed = 0.0
+                br.direction = 0
+                br.overloaded = False
+            self.last_total_cost = 0
+            # Optional: print a compact debug report to make it visible in logs
+            self.debug_utilization_report(k=8, tag="(de-energized)")
+            return True
+
         # Run power flow
         try:
             options = ppoption(VERBOSE=0, OUT_ALL=0)
@@ -561,7 +612,6 @@ class Grid:
         if success:
             self.update_branch_flows(results['branch'])
             self.last_total_cost = self.compute_total_cost(results)
-            # Helpful debug report without biasing the network
             self.debug_utilization_report(
                 k=12,
                 tag=f"(scenario={self.active_scenario.get('id') if self.active_scenario else ''})"
@@ -570,9 +620,12 @@ class Grid:
             print("⚠️ Power flow failed — clearing branch flows")
             for br in self.branches:
                 br.flow = 0.0
+                br.flow_signed = 0.0
+                br.direction = 0
                 br.overloaded = False
 
         return success
+
 
 
 
