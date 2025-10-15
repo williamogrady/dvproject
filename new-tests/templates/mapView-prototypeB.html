@@ -1251,15 +1251,7 @@ function appliedSet(){
 
 // Inversion helper: invert everywhere EXCEPT Bus68–Bus69
 function shouldInvertChevronPair(a, b){
-  const lo = Math.min(+a, +b), hi = Math.max(+a, +b);
-  // Exempt these pairs from inversion (normal direction)
-  const exceptions = [
-    [5,8],
-    [65, 66],
-    [68, 69],   // North corridor special
-    [26, 30], [105, 107]    // Your new exception
-  ];
-  return !exceptions.some(([x, y]) => lo === x && hi === y);
+  return;
 }
 
 
@@ -1779,8 +1771,8 @@ function drawChevrons(lines, nodes, mode) {
         const base = baseAngleAB(A, B) || { midX:0, midY:0, deg:0 };
         midX = base.midX; midY = base.midY;
 
-        const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
-        angleDeg = base.deg + ((line.flow_signed ?? 0) < 0 ? 180 : 0) + invertExtra;
+        //const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
+        angleDeg = base.deg + ((line.flow_signed ?? 0) < 0 ? 180 : 0) /*+ invertExtra*/;
       }
 
       const _T = `translate(${midX}, ${midY}) rotate(${angleDeg})`;
@@ -2486,18 +2478,69 @@ Promise.all([
 function logicalUpper(b, gen) { return Math.min(b.upper, gen.pmax || 0); }
 function logicalLower(b, gen) { return Math.min(b.lower, gen.pmax || 0); }
 
-  zoomGroup.selectAll("path.map-line")
-    .data(lines)
-    .enter()
-    .append("path")
-    .attr("class", "map-line")
-    .attr("id", d => d.id)
-    .attr("d", d => d.d)
-    .attr("stroke", "#888")
-    .attr("stroke-width", 1.5)
-    .attr("fill", "none");
+// ---- Draw lines ------------------------------------------------------------
+const lineGroup = zoomGroup.selectAll("path.map-line")
+  .data(lines)
+  .enter()
+  .append("path")
+  .attr("class", "map-line")
+  .attr("id", d => d.id)
+  .attr("d", d => d.d)
+  .attr("stroke", "#888")
+  .attr("stroke-width", 1.5)
+  .attr("fill", "none");
 
-zoomGroup.selectAll("rect.map-bus")
+// === DEBUG for lines (label + arrow) ===
+lineGroup.each(function(d) {
+  const path = this;
+  if (!path || typeof path.getTotalLength !== "function") return;
+
+  const L = path.getTotalLength();
+  const mid = path.getPointAtLength(L * 0.5);
+  const p2 = path.getPointAtLength(Math.min(L, L * 0.5 + 8));
+  const ang = Math.atan2(p2.y - mid.y, p2.x - mid.x) * 180 / Math.PI;
+
+  // Label with ID and direction
+  
+  zoomGroup.append("text")
+    .attr("x", mid.x)
+    .attr("y", mid.y - 8)
+    .attr("text-anchor", "middle")
+    .attr("font-family", "monospace")
+    .attr("font-size", 6)
+    .attr("fill", "#ffea00")
+    .attr("stroke", "#3b3000")
+    .attr("stroke-width", 0.8)
+    .attr("paint-order", "stroke")
+    .text(`${d.source}→${d.target}`);
+
+// 1) Find the target bus node (fallback to path end if not found)
+const nodesById = new Map((nodes || []).map(n => [String(n.id), n]));
+const tLabel = String(d.target).startsWith("Bus") ? String(d.target) : `Bus${d.target}`;
+const tNode  = nodesById.get(tLabel) || (() => {
+  // fallback: use the actual path end point
+  const end = path.getPointAtLength(L);
+  return { x: end.x, y: end.y };
+})();
+
+// 2) Angle from midpoint to TARGET
+const angToTarget = Math.atan2(tNode.y - mid.y, tNode.x - mid.x) * 180 / Math.PI;
+
+// 3) Draw the tiny arrow pointing to target
+zoomGroup.append("path")
+  .attr("d", "M -7,-4 L 0,0 L -7,4")
+  .attr("transform", `translate(${mid.x},${mid.y+2}) rotate(${angToTarget})`)
+  .attr("fill", "none")
+  .attr("stroke", "#ffea00")
+  .attr("stroke-width", 2);
+
+// (Optional) update your debug label text nearby — unchanged:
+// zoomGroup.append("text") ... .text(`${d.id} | ${d.source}→${d.target}`);
+
+});
+
+// ---- Draw buses ------------------------------------------------------------
+const busGroup = zoomGroup.selectAll("rect.map-bus")
   .data(nodes.filter(d => d.type === "bus"))
   .enter()
   .append("rect")
@@ -2516,6 +2559,23 @@ zoomGroup.selectAll("rect.map-bus")
     }
     return null;
   });
+
+// === DEBUG for buses (label beside each bus) ===
+zoomGroup.selectAll("text.map-bus-label")
+  .data(nodes.filter(d => d.type === "bus"))
+  .enter()
+  .append("text")
+  .attr("class", "map-bus-label")
+  .attr("x", d => d.x + 10)
+  .attr("y", d => d.y - 5)
+  .attr("font-family", "monospace")
+  .attr("font-size", 10)
+  .attr("fill", "#00d2ff")
+  .attr("stroke", "#00131a")
+  .attr("stroke-width", 0.6)
+  .attr("paint-order", "stroke")
+  .text(d => d.id);
+
 
 zoomGroup.selectAll("path.map-load")
   .data(nodes.filter(d => d.type === "load"))
@@ -3423,6 +3483,139 @@ try {
   };
 }
 
+
+// === SIMPLE DEBUG OVERLAY (no hotkeys, no toggles) ===========================
+(function(){
+  // Choose the drawing root: prefer #zoom-group (if you use one), else the root <svg>
+  function getRootSelection(){
+    let sel = d3.select("#zoom-group");
+    if (sel.empty()) sel = d3.select("#map-svg");
+    if (sel.empty()) sel = d3.select("svg");
+    return sel;
+  }
+
+  function ensureOverlay(){
+    const root = getRootSelection();
+    let g = root.select("#debug-overlay");
+    if (g.empty()){
+      g = root.append("g")
+        .attr("id","debug-overlay")
+        .style("pointer-events","none");  // don’t block interactions
+    } else {
+      g.selectAll("*").remove();
+    }
+    return g;
+  }
+
+  function normBus(b){
+    const n = Number(String(b).replace(/^Bus/i,''));
+    return { num: n, label: isFinite(n) ? `Bus${n}` : String(b) };
+  }
+
+  // Compute midpoint + tangent angle for an existing <path id="...">
+  function midAndAngleByPathId(pathId){
+    const el = document.getElementById(pathId);
+    if (!el || typeof el.getTotalLength !== "function") return null;
+    const L   = Math.max(1, el.getTotalLength());
+    const mid = el.getPointAtLength(L * 0.5);
+    const p2  = el.getPointAtLength(Math.min(L, L * 0.5 + 8));
+    const deg = Math.atan2(p2.y - mid.y, p2.x - mid.x) * 180/Math.PI;
+    return { x: mid.x, y: mid.y, deg };
+  }
+
+  // Public: install overlay once
+  window.installDebugOverlay = function installDebugOverlay(){
+    const overlay = ensureOverlay();
+
+    // Pull data from your globals (adjust names if yours differ)
+    const nodes = Array.isArray(window.staticNodes) ? window.staticNodes : [];
+    const lines = Array.isArray(window.staticLines) ? window.staticLines : [];
+
+    const busNodes = nodes.filter(n => n && n.type === "bus" && isFinite(+String(n.id).replace(/^Bus/i,'')));
+    const genNodes = nodes.filter(n => n && n.type === "generator");
+
+    // ----- BUS labels --------------------------------------------------------
+    const gBus = overlay.append("g").attr("id","dbg-buses");
+    gBus.selectAll("text")
+      .data(busNodes, d => d.id)
+      .enter().append("text")
+      .attr("x", d => (d.x ?? 0) + 10)
+      .attr("y", d => (d.y ?? 0) - 10)
+      .attr("font-family","monospace")
+      .attr("font-size",11)
+      .attr("fill","#00d2ff")
+      .attr("stroke","#00131a")
+      .attr("stroke-width",0.6)
+      .attr("paint-order","stroke")
+      .text(d => String(d.id));
+
+    // ----- GENERATOR labels --------------------------------------------------
+    const gGen = overlay.append("g").attr("id","dbg-gens");
+    gGen.selectAll("text")
+      .data(genNodes, d => d.id)
+      .enter().append("text")
+      .attr("x", d => (d.x ?? 0) + 10)
+      .attr("y", d => (d.y ?? 0) + 14)
+      .attr("font-family","monospace")
+      .attr("font-size",11)
+      .attr("fill","#7CFF6B")
+      .attr("stroke","#103515")
+      .attr("stroke-width",0.6)
+      .attr("paint-order","stroke")
+      .text(d => String(d.id));
+
+    // ----- LINE labels (ID + SVG direction) ---------------------------------
+    const gLine = overlay.append("g").attr("id","dbg-lines");
+
+    // Normalize source/target whether stored as numbers or "Bus##"
+    const normedLines = lines.map(l => {
+      const s = normBus(l.source);
+      const t = normBus(l.target);
+      return { ...l, _sNum: s.num, _tNum: t.num, _sLab: s.label, _tLab: t.label };
+    }).filter(l => Number.isFinite(l._sNum) && Number.isFinite(l._tNum));
+
+    normedLines.forEach(L => {
+      // Needs an existing <path id="L.id"> already in the DOM
+      const mid = midAndAngleByPathId(L.id);
+      if (!mid) return;
+
+      // Text label slightly above midpoint
+      gLine.append("text")
+        .attr("x", mid.x)
+        .attr("y", mid.y - 8)
+        .attr("text-anchor","middle")
+        .attr("font-family","monospace")
+        .attr("font-size",11)
+        .attr("fill","#ffea00")
+        .attr("stroke","#3b3000")
+        .attr("stroke-width",0.8)
+        .attr("paint-order","stroke")
+        .text(`${L.id}  |  ${L._sLab} → ${L._tLab}`);
+
+      // Tiny arrow to show SVG path orientation (purely visual)
+      const g = gLine.append("g")
+        .attr("transform", `translate(${mid.x},${mid.y+2}) rotate(${mid.deg})`);
+      g.append("path")
+        .attr("d","M -7,-4 L 0,0 L -7,4")
+        .attr("fill","none")
+        .attr("stroke","#ffea00")
+        .attr("stroke-width",2);
+    });
+  };
+
+  // Public: remove overlay completely
+  window.removeDebugOverlay = function removeDebugOverlay(){
+    const root = getRootSelection();
+    root.select("#debug-overlay").remove();
+  };
+})();
+
+
+
+
+
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Results overlay (handles submit + timeout). Paste-replace this whole block.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3558,6 +3751,8 @@ window.addEventListener('message', (ev) => {
     showResultsOverlay({ mode: 'timeout' });
   }
 });
+
+
 
 
   </script>
@@ -3996,6 +4191,13 @@ payload.meta = Object.assign({}, payload.meta, {
   // Initial beacon when ready
   window.addEventListener('load', () => postSnapshot());
 })();
+
+
+
+
+
+
+
 </script>
 
 

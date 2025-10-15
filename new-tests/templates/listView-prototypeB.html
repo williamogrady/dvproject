@@ -1026,15 +1026,7 @@ function _loadColor(pct){
 
 // Inversion helper: invert everywhere EXCEPT Bus68–Bus69
 function shouldInvertChevronPair(a, b){
-  const lo = Math.min(+a, +b), hi = Math.max(+a, +b);
-  // Exempt these pairs from inversion (normal direction)
-  const exceptions = [
-    [5,8],
-    [65, 66],
-    [68, 69],   // North corridor special
-    [26, 30], [105, 107]    // Your new exception
-  ];
-  return !exceptions.some(([x, y]) => lo === x && hi === y);
+  return;
 }
 
 // Mini chevron that matches MapView's shape, is perfectly centered, and supports zero-flow
@@ -1873,9 +1865,9 @@ function renderMapLineLoads(lines) {
         const fs = +(line.flow_signed ?? line.flow ?? 0);
 
           // Global inversion (except Bus68–Bus69)
-        const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
+        //const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
 
-        const angle = base.deg + (fs < 0 ? 180 : 0) + invertExtra;
+        const angle = base.deg + (fs < 0 ? 180 : 0) /*+ invertExtra*/;
 
         const midX = base.midX, midY = base.midY;
 
