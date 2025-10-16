@@ -2489,7 +2489,7 @@ const lineGroup = zoomGroup.selectAll("path.map-line")
   .attr("stroke", "#888")
   .attr("stroke-width", 1.5)
   .attr("fill", "none");
-
+/*
 // === DEBUG for lines (label + arrow) ===
 lineGroup.each(function(d) {
   const path = this;
@@ -2538,6 +2538,8 @@ zoomGroup.append("path")
 // zoomGroup.append("text") ... .text(`${d.id} | ${d.source}→${d.target}`);
 
 });
+*/
+const NODE_Y_OFFSET = 50;
 
 // ---- Draw buses ------------------------------------------------------------
 const busGroup = zoomGroup.selectAll("rect.map-bus")
@@ -2546,8 +2548,6 @@ const busGroup = zoomGroup.selectAll("rect.map-bus")
   .append("rect")
   .attr("class", "map-bus")
   .attr("id", d => d.id)
-  .attr("x", d => d.x - d.width / 2)
-  .attr("y", d => d.y - d.height / 2)
   .attr("width", d => d.width)
   .attr("height", d => d.height)
   .attr("fill", "#666")
@@ -2558,8 +2558,10 @@ const busGroup = zoomGroup.selectAll("rect.map-bus")
       return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
     }
     return null;
-  });
-
+  })
+    .attr("x", d => d.x - d.width / 2 + 60)
+  .attr("y", d => d.y - d.height / 2 + 10) ;
+/*
 // === DEBUG for buses (label beside each bus) ===
 zoomGroup.selectAll("text.map-bus-label")
   .data(nodes.filter(d => d.type === "bus"))
@@ -2576,7 +2578,7 @@ zoomGroup.selectAll("text.map-bus-label")
   .attr("paint-order", "stroke")
   .text(d => d.id);
 
-
+*/
 zoomGroup.selectAll("path.map-load")
   .data(nodes.filter(d => d.type === "load"))
   .enter()
@@ -2602,6 +2604,7 @@ zoomGroup.selectAll("path.map-load")
           L ${right},${eaveY}
           Z`;
 })
+  .attr("y", d => d.y - d.height / 2 + 25)
   .attr("transform", d => {
     if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
       return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
@@ -4191,14 +4194,61 @@ payload.meta = Object.assign({}, payload.meta, {
   // Initial beacon when ready
   window.addEventListener('load', () => postSnapshot());
 })();
-
-
-
-
-
-
-
 </script>
+<script>
+(() => {
+  function logChevronDirections(label = 'mapView chevrons') {
+    const lines = window.currentLines || [];
+    if (!Array.isArray(lines) || !lines.length) {
+      console.warn('[chevrons]', label, 'no currentLines found');
+      return;
+    }
+
+    const rows = lines.map(L => {
+      const id   = L.id || `Line_Bus${L.from_bus}_Bus${L.to_bus}`;
+      const fbus = L.from_bus ?? L.fbus ?? '(?)';
+      const tbus = L.to_bus   ?? L.tbus ?? '(?)';
+      const flow = +(L.flow_signed ?? L.flow ?? 0);
+      const rate = +(L.rate_a ?? 1);
+      const pct  = rate > 0 ? (Math.abs(flow) / rate) : 0;
+      const expected = flow > 0 ? 'from→to' : flow < 0 ? 'to→from' : 'zero';
+
+      const chev = document.querySelector(`.chevron[data-line-id="${CSS.escape(id)}"]`);
+      const drawn = chev?.dataset?.dir
+        ? chev.dataset.dir.replace(/^(fwd|forward).*$/i, 'from→to')
+                           .replace(/^(rev|reverse).*$/i, 'to→from')
+                           .replace(/^(zero|none).*$/i, 'zero')
+        : '(n/a)';
+      const mismatch = drawn !== '(n/a)' && drawn !== expected ? '❌' : '';
+
+      return {
+        id,
+        from_bus: fbus,
+        to_bus: tbus,
+        flow_MW: flow.toFixed(2),
+        rate_MW: rate,
+        pct_load: (pct*100).toFixed(1) + '%',
+        expected_dir: expected,
+        drawn_dir: drawn,
+        mismatch
+      };
+    });
+
+    const mismatches = rows.filter(r => r.mismatch).length;
+    console.groupCollapsed(`[chevrons] ${label} — ${rows.length} lines (${mismatches} mismatched)`);
+    console.table(rows);
+    console.groupEnd();
+  }
+
+  window.debugLogChevronDirections = logChevronDirections;
+  window.addEventListener('load', () => logChevronDirections('initial load'));
+  window.addEventListener('keydown', e => {
+    if (e.shiftKey && (e.key === 'd' || e.key === 'D'))
+      logChevronDirections('manual dump');
+  });
+})();
+</script>
+
 
 
 

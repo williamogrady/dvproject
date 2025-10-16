@@ -43,6 +43,8 @@ def _load_ui_busbus_map(json_path: str):
             existing = pair_to_id.get((lo, hi))
             if existing is None or existing.endswith("_2"):
                 pair_to_id[(lo, hi)] = ui_id
+            if (lo, hi) is None:
+                    print("⚠️ Line", {lo}, "to", {hi}, "missing from _ui_pairs — flow zeroed")
     except Exception as e:
         print(f"⚠️ Could not load UI lines from {json_path}: {e}")
     return pair_to_id
@@ -692,3 +694,4 @@ class Grid:
 
     def get_branches(self):
         return [json_clean(branch.to_dict()) for branch in self.branches]
+
