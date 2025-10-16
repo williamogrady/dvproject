@@ -1,0 +1,746 @@
+[
+  {
+    "fbus": 1,
+    "tbus": 2
+  },
+  {
+    "fbus": 1,
+    "tbus": 3
+  },
+  {
+    "fbus": 4,
+    "tbus": 5
+  },
+  {
+    "fbus": 3,
+    "tbus": 5
+  },
+  {
+    "fbus": 5,
+    "tbus": 6
+  },
+  {
+    "fbus": 6,
+    "tbus": 7
+  },
+  {
+    "fbus": 8,
+    "tbus": 9
+  },
+  {
+    "fbus": 8,
+    "tbus": 5
+  },
+  {
+    "fbus": 9,
+    "tbus": 10
+  },
+  {
+    "fbus": 4,
+    "tbus": 11
+  },
+  {
+    "fbus": 5,
+    "tbus": 11
+  },
+  {
+    "fbus": 11,
+    "tbus": 12
+  },
+  {
+    "fbus": 2,
+    "tbus": 12
+  },
+  {
+    "fbus": 3,
+    "tbus": 12
+  },
+  {
+    "fbus": 7,
+    "tbus": 12
+  },
+  {
+    "fbus": 11,
+    "tbus": 13
+  },
+  {
+    "fbus": 12,
+    "tbus": 14
+  },
+  {
+    "fbus": 13,
+    "tbus": 15
+  },
+  {
+    "fbus": 14,
+    "tbus": 15
+  },
+  {
+    "fbus": 12,
+    "tbus": 16
+  },
+  {
+    "fbus": 15,
+    "tbus": 17
+  },
+  {
+    "fbus": 16,
+    "tbus": 17
+  },
+  {
+    "fbus": 17,
+    "tbus": 18
+  },
+  {
+    "fbus": 18,
+    "tbus": 19
+  },
+  {
+    "fbus": 19,
+    "tbus": 20
+  },
+  {
+    "fbus": 15,
+    "tbus": 19
+  },
+  {
+    "fbus": 20,
+    "tbus": 21
+  },
+  {
+    "fbus": 21,
+    "tbus": 22
+  },
+  {
+    "fbus": 22,
+    "tbus": 23
+  },
+  {
+    "fbus": 23,
+    "tbus": 24
+  },
+  {
+    "fbus": 23,
+    "tbus": 25
+  },
+  {
+    "fbus": 26,
+    "tbus": 25
+  },
+  {
+    "fbus": 25,
+    "tbus": 27
+  },
+  {
+    "fbus": 27,
+    "tbus": 28
+  },
+  {
+    "fbus": 28,
+    "tbus": 29
+  },
+  {
+    "fbus": 30,
+    "tbus": 17
+  },
+  {
+    "fbus": 8,
+    "tbus": 30
+  },
+  {
+    "fbus": 26,
+    "tbus": 30
+  },
+  {
+    "fbus": 17,
+    "tbus": 31
+  },
+  {
+    "fbus": 29,
+    "tbus": 31
+  },
+  {
+    "fbus": 23,
+    "tbus": 32
+  },
+  {
+    "fbus": 31,
+    "tbus": 32
+  },
+  {
+    "fbus": 27,
+    "tbus": 32
+  },
+  {
+    "fbus": 15,
+    "tbus": 33
+  },
+  {
+    "fbus": 19,
+    "tbus": 34
+  },
+  {
+    "fbus": 35,
+    "tbus": 36
+  },
+  {
+    "fbus": 35,
+    "tbus": 37
+  },
+  {
+    "fbus": 33,
+    "tbus": 37
+  },
+  {
+    "fbus": 34,
+    "tbus": 36
+  },
+  {
+    "fbus": 34,
+    "tbus": 37
+  },
+  {
+    "fbus": 38,
+    "tbus": 37
+  },
+  {
+    "fbus": 37,
+    "tbus": 39
+  },
+  {
+    "fbus": 37,
+    "tbus": 40
+  },
+  {
+    "fbus": 30,
+    "tbus": 38
+  },
+  {
+    "fbus": 39,
+    "tbus": 40
+  },
+  {
+    "fbus": 40,
+    "tbus": 41
+  },
+  {
+    "fbus": 40,
+    "tbus": 42
+  },
+  {
+    "fbus": 41,
+    "tbus": 42
+  },
+  {
+    "fbus": 43,
+    "tbus": 44
+  },
+  {
+    "fbus": 34,
+    "tbus": 43
+  },
+  {
+    "fbus": 44,
+    "tbus": 45
+  },
+  {
+    "fbus": 45,
+    "tbus": 46
+  },
+  {
+    "fbus": 46,
+    "tbus": 47
+  },
+  {
+    "fbus": 46,
+    "tbus": 48
+  },
+  {
+    "fbus": 47,
+    "tbus": 49
+  },
+  {
+    "fbus": 42,
+    "tbus": 49
+  },
+  {
+    "fbus": 42,
+    "tbus": 49
+  },
+  {
+    "fbus": 45,
+    "tbus": 49
+  },
+  {
+    "fbus": 48,
+    "tbus": 49
+  },
+  {
+    "fbus": 49,
+    "tbus": 50
+  },
+  {
+    "fbus": 49,
+    "tbus": 51
+  },
+  {
+    "fbus": 51,
+    "tbus": 52
+  },
+  {
+    "fbus": 52,
+    "tbus": 53
+  },
+  {
+    "fbus": 53,
+    "tbus": 54
+  },
+  {
+    "fbus": 49,
+    "tbus": 54
+  },
+  {
+    "fbus": 49,
+    "tbus": 54
+  },
+  {
+    "fbus": 54,
+    "tbus": 55
+  },
+  {
+    "fbus": 54,
+    "tbus": 56
+  },
+  {
+    "fbus": 55,
+    "tbus": 56
+  },
+  {
+    "fbus": 56,
+    "tbus": 57
+  },
+  {
+    "fbus": 50,
+    "tbus": 57
+  },
+  {
+    "fbus": 56,
+    "tbus": 58
+  },
+  {
+    "fbus": 51,
+    "tbus": 58
+  },
+  {
+    "fbus": 54,
+    "tbus": 59
+  },
+  {
+    "fbus": 56,
+    "tbus": 59
+  },
+  {
+    "fbus": 56,
+    "tbus": 59
+  },
+  {
+    "fbus": 55,
+    "tbus": 59
+  },
+  {
+    "fbus": 59,
+    "tbus": 60
+  },
+  {
+    "fbus": 59,
+    "tbus": 61
+  },
+  {
+    "fbus": 60,
+    "tbus": 61
+  },
+  {
+    "fbus": 60,
+    "tbus": 62
+  },
+  {
+    "fbus": 61,
+    "tbus": 62
+  },
+  {
+    "fbus": 63,
+    "tbus": 59
+  },
+  {
+    "fbus": 63,
+    "tbus": 64
+  },
+  {
+    "fbus": 64,
+    "tbus": 61
+  },
+  {
+    "fbus": 38,
+    "tbus": 65
+  },
+  {
+    "fbus": 64,
+    "tbus": 65
+  },
+  {
+    "fbus": 49,
+    "tbus": 66
+  },
+  {
+    "fbus": 49,
+    "tbus": 66
+  },
+  {
+    "fbus": 62,
+    "tbus": 66
+  },
+  {
+    "fbus": 62,
+    "tbus": 67
+  },
+  {
+    "fbus": 65,
+    "tbus": 66
+  },
+  {
+    "fbus": 66,
+    "tbus": 67
+  },
+  {
+    "fbus": 65,
+    "tbus": 68
+  },
+  {
+    "fbus": 47,
+    "tbus": 69
+  },
+  {
+    "fbus": 49,
+    "tbus": 69
+  },
+  {
+    "fbus": 68,
+    "tbus": 69
+  },
+  {
+    "fbus": 69,
+    "tbus": 70
+  },
+  {
+    "fbus": 24,
+    "tbus": 70
+  },
+  {
+    "fbus": 70,
+    "tbus": 71
+  },
+  {
+    "fbus": 24,
+    "tbus": 72
+  },
+  {
+    "fbus": 71,
+    "tbus": 72
+  },
+  {
+    "fbus": 71,
+    "tbus": 73
+  },
+  {
+    "fbus": 70,
+    "tbus": 74
+  },
+  {
+    "fbus": 70,
+    "tbus": 75
+  },
+  {
+    "fbus": 69,
+    "tbus": 75
+  },
+  {
+    "fbus": 74,
+    "tbus": 75
+  },
+  {
+    "fbus": 76,
+    "tbus": 77
+  },
+  {
+    "fbus": 69,
+    "tbus": 77
+  },
+  {
+    "fbus": 75,
+    "tbus": 77
+  },
+  {
+    "fbus": 77,
+    "tbus": 78
+  },
+  {
+    "fbus": 78,
+    "tbus": 79
+  },
+  {
+    "fbus": 77,
+    "tbus": 80
+  },
+  {
+    "fbus": 77,
+    "tbus": 80
+  },
+  {
+    "fbus": 79,
+    "tbus": 80
+  },
+  {
+    "fbus": 68,
+    "tbus": 81
+  },
+  {
+    "fbus": 81,
+    "tbus": 80
+  },
+  {
+    "fbus": 77,
+    "tbus": 82
+  },
+  {
+    "fbus": 82,
+    "tbus": 83
+  },
+  {
+    "fbus": 83,
+    "tbus": 84
+  },
+  {
+    "fbus": 83,
+    "tbus": 85
+  },
+  {
+    "fbus": 84,
+    "tbus": 85
+  },
+  {
+    "fbus": 85,
+    "tbus": 86
+  },
+  {
+    "fbus": 86,
+    "tbus": 87
+  },
+  {
+    "fbus": 85,
+    "tbus": 88
+  },
+  {
+    "fbus": 85,
+    "tbus": 89
+  },
+  {
+    "fbus": 88,
+    "tbus": 89
+  },
+  {
+    "fbus": 89,
+    "tbus": 90
+  },
+  {
+    "fbus": 89,
+    "tbus": 90
+  },
+  {
+    "fbus": 90,
+    "tbus": 91
+  },
+  {
+    "fbus": 89,
+    "tbus": 92
+  },
+  {
+    "fbus": 89,
+    "tbus": 92
+  },
+  {
+    "fbus": 91,
+    "tbus": 92
+  },
+  {
+    "fbus": 92,
+    "tbus": 93
+  },
+  {
+    "fbus": 92,
+    "tbus": 94
+  },
+  {
+    "fbus": 93,
+    "tbus": 94
+  },
+  {
+    "fbus": 94,
+    "tbus": 95
+  },
+  {
+    "fbus": 80,
+    "tbus": 96
+  },
+  {
+    "fbus": 82,
+    "tbus": 96
+  },
+  {
+    "fbus": 94,
+    "tbus": 96
+  },
+  {
+    "fbus": 80,
+    "tbus": 97
+  },
+  {
+    "fbus": 80,
+    "tbus": 98
+  },
+  {
+    "fbus": 80,
+    "tbus": 99
+  },
+  {
+    "fbus": 92,
+    "tbus": 100
+  },
+  {
+    "fbus": 94,
+    "tbus": 100
+  },
+  {
+    "fbus": 95,
+    "tbus": 96
+  },
+  {
+    "fbus": 96,
+    "tbus": 97
+  },
+  {
+    "fbus": 98,
+    "tbus": 100
+  },
+  {
+    "fbus": 99,
+    "tbus": 100
+  },
+  {
+    "fbus": 100,
+    "tbus": 101
+  },
+  {
+    "fbus": 92,
+    "tbus": 102
+  },
+  {
+    "fbus": 101,
+    "tbus": 102
+  },
+  {
+    "fbus": 100,
+    "tbus": 103
+  },
+  {
+    "fbus": 100,
+    "tbus": 104
+  },
+  {
+    "fbus": 103,
+    "tbus": 104
+  },
+  {
+    "fbus": 103,
+    "tbus": 105
+  },
+  {
+    "fbus": 100,
+    "tbus": 106
+  },
+  {
+    "fbus": 104,
+    "tbus": 105
+  },
+  {
+    "fbus": 105,
+    "tbus": 106
+  },
+  {
+    "fbus": 105,
+    "tbus": 107
+  },
+  {
+    "fbus": 105,
+    "tbus": 108
+  },
+  {
+    "fbus": 106,
+    "tbus": 107
+  },
+  {
+    "fbus": 108,
+    "tbus": 109
+  },
+  {
+    "fbus": 103,
+    "tbus": 110
+  },
+  {
+    "fbus": 109,
+    "tbus": 110
+  },
+  {
+    "fbus": 110,
+    "tbus": 111
+  },
+  {
+    "fbus": 110,
+    "tbus": 112
+  },
+  {
+    "fbus": 17,
+    "tbus": 113
+  },
+  {
+    "fbus": 32,
+    "tbus": 113
+  },
+  {
+    "fbus": 32,
+    "tbus": 114
+  },
+  {
+    "fbus": 27,
+    "tbus": 115
+  },
+  {
+    "fbus": 114,
+    "tbus": 115
+  },
+  {
+    "fbus": 68,
+    "tbus": 116
+  },
+  {
+    "fbus": 12,
+    "tbus": 117
+  },
+  {
+    "fbus": 75,
+    "tbus": 118
+  },
+  {
+    "fbus": 76,
+    "tbus": 118
+  }
+]

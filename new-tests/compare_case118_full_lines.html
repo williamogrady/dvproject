@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>case118 ↔ full_lines Cross-Reference</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --bg:#0f1115; --fg:#e7e9ee; --muted:#9aa0a6; --card:#171a21; --accent:#7aa2f7; --good:#34d399; --rev:#f59e0b; --miss:#ef4444; --line:#2a2f3a; }
+  html,body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+  .wrap { max-width:1100px; margin:28px auto; padding:0 16px; }
+  h1 { margin:0 0 10px; font-size:20px; }
+  p.hint { color:var(--muted); margin-top:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:14px 0; }
+  .inputs { display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
+  .inputs > div { background: #12151c; border:1px dashed var(--line); border-radius:12px; padding:12px; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  input[type="file"] { width:100%; }
+  textarea { width:100%; height:120px; background:#0d1117; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .btns { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button { background:var(--accent); color:#0b0e14; border:0; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .badges { display:flex; gap:10px; color:var(--muted); }
+  .badge { padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); background:#0e1218; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  th, td { padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { text-align:left; position:sticky; top:0; background:var(--card); z-index:1; }
+  td.ids { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:12px; }
+  .same { background: rgba(52,211,153,.15); color:#34d399; border:1px solid rgba(52,211,153,.35); }
+  .rev  { background: rgba(245,158,11,.13); color:#f59e0b; border:1px solid rgba(245,158,11,.35); }
+  .miss { background: rgba(239,68,68,.13); color:#ef4444; border:1px solid rgba(239,68,68,.35); }
+  .footer { color:var(--muted); margin-top:14px; font-size:12px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .small { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>case118 ↔ full_lines Cross-Reference</h1>
+  <p class="hint">Upload your <b>case118 branches</b> (CSV or JSON) and <b>full_lines.json</b>, then click “Build Table”.</p>
+
+  <div class="card inputs">
+    <div>
+      <label>1) case118 branches (pick one)</label>
+      <div class="small">CSV format: <span class="mono">fbus,tbus</span> (headers required). JSON format: <span class="mono">[{"fbus":1,"tbus":2}, ...]</span> or <span class="mono">{"branch":[...]}</span>.</div>
+      <input type="file" id="caseFile" accept=".csv,.json,.txt" />
+      <div style="margin:8px 0;text-align:center;color:var(--muted)">— or paste CSV/JSON below —</div>
+      <textarea id="casePaste" placeholder="Paste case118 CSV or JSON here…"></textarea>
+    </div>
+
+    <div>
+      <label>2) full_lines.json</label>
+      <input type="file" id="linesFile" accept=".json" />
+      <div class="small" style="margin-top:8px">We only use Bus↔Bus entries: <span class="mono">{ id, source:\"BusX\", target:\"BusY\" }</span>.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="btns">
+      <button id="buildBtn">Build Table</button>
+      <span class="badges">
+        <span class="badge" id="statSame">Same: 0</span>
+        <span class="badge" id="statRev">Reversed: 0</span>
+        <span class="badge" id="statMiss">Missing: 0</span>
+      </span>
+    </div>
+
+    <div id="results" style="overflow:auto; max-height:65vh;">
+      <table id="outTable">
+        <thead>
+          <tr>
+            <th>Line ID (canonical)</th>
+            <th>case118 fbus</th>
+            <th>case118 tbus</th>
+            <th>full_lines source</th>
+            <th>full_lines target</th>
+            <th>Match Type</th>
+            <th>Matching full_lines IDs</th>
+          </tr>
+        </thead>
+        <tbody id="outBody"></tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Tips: “Same” means <span class="mono">source==fbus</span> and <span class="mono">target==tbus</span>. “Reversed” means <span class="mono">source==tbus</span>, <span class="mono">target==fbus</span>. “Missing” means no Bus↔Bus entry for that pair in full_lines.
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+
+  const caseFile   = $('#caseFile');
+  const casePaste  = $('#casePaste');
+  const linesFile  = $('#linesFile');
+  const buildBtn   = $('#buildBtn');
+  const outBody    = $('#outBody');
+
+  const statSame = $('#statSame');
+  const statRev  = $('#statRev');
+  const statMiss = $('#statMiss');
+
+  function parseCSV(text){
+    // Minimal CSV parser for "fbus,tbus" with header
+    const rows = text.trim().split(/\r?\n/);
+    if (!rows.length) return [];
+    const header = rows[0].split(',').map(h => h.trim().toLowerCase());
+    const fi = header.indexOf('fbus'), ti = header.indexOf('tbus');
+    if (fi < 0 || ti < 0) throw new Error('CSV must include headers "fbus,tbus".');
+    const pairs = [];
+    for (let i=1;i<rows.length;i++){
+      const cols = rows[i].split(',').map(s => s.trim());
+      if (!cols[fi] || !cols[ti]) continue;
+      const f = parseInt(cols[fi],10), t = parseInt(cols[ti],10);
+      if (Number.isFinite(f) && Number.isFinite(t)) pairs.push([f,t]);
+    }
+    return pairs;
+  }
+
+  function normalizeBusLabel(s){
+    if (!s) return null;
+    s = String(s);
+    if (/^bus\d+$/i.test(s)) return parseInt(s.replace(/[^0-9]/g,''),10);
+    return null;
+  }
+
+  function collectFullLinesPairs(data){
+    // Accept either array or {lines:[...]}
+    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.lines) ? data.lines : []);
+    const pairs = [];
+    for (const L of arr){
+      const s = normalizeBusLabel(L && L.source);
+      const t = normalizeBusLabel(L && L.target);
+      if (Number.isFinite(s) && Number.isFinite(t)){
+        pairs.push({ s, t, id: (L && L.id) || '' });
+      }
+    }
+    return pairs;
+  }
+
+  function asPairsFromJSON(json){
+    // Accept [{"fbus":1,"tbus":2}, ...] or {"branch":[[f,t,...], ...]}
+    const pairs = [];
+    if (Array.isArray(json)){
+      for (const it of json){
+        if (Array.isArray(it) && it.length >= 2){
+          const f = parseInt(it[0],10), t = parseInt(it[1],10);
+          if (Number.isFinite(f) && Number.isFinite(t)) pairs.push([f,t]);
+        } else if (it && typeof it === 'object' && 'fbus' in it && 'tbus' in it){
+          const f = parseInt(it.fbus,10), t = parseInt(it.tbus,10);
+          if (Number.isFinite(f) && Number.isFinite(t)) pairs.push([f,t]);
+        }
+      }
+    } else if (json && typeof json === 'object'){
+      if (Array.isArray(json.branch)){
+        for (const it of json.branch){
+          if (Array.isArray(it) && it.length >= 2){
+            const f = parseInt(it[0],10), t = parseInt(it[1],10);
+            if (Number.isFinite(f) && Number.isFinite(t)) pairs.push([f,t]);
+          } else if (it && typeof it === 'object' && 'fbus' in it && 'tbus' in it){
+            const f = parseInt(it.fbus,10), t = parseInt(it.tbus,10);
+            if (Number.isFinite(f) && Number.isFinite(t)) pairs.push([f,t]);
+          }
+        }
+      }
+    }
+    return pairs;
+  }
+
+  async function readTextFromFile(inputEl){
+    const f = inputEl.files && inputEl.files[0];
+    if (!f) return '';
+    return await f.text();
+  }
+
+  function buildIndex(flPairs){
+    // Maps for quick lookup
+    const exact = new Map(); // key "f|t" -> [ids...]
+    const rev   = new Map(); // key "f|t" but stored as reversed in data (i.e., (t,f))
+    const unordered = new Map(); // key "min|max" -> [{s,t,id},...]
+    for (const {s,t,id} of flPairs){
+      const kExact = `${s}|${t}`;
+      const kRev   = `${t}|${s}`;
+      const kUn    = `${Math.min(s,t)}|${Math.max(s,t)}`;
+
+      if (!exact.has(kExact)) exact.set(kExact, []);
+      exact.get(kExact).push(id);
+
+      if (!rev.has(kRev)) rev.set(kRev, []);
+      rev.get(kRev).push(id);
+
+      if (!unordered.has(kUn)) unordered.set(kUn, []);
+      unordered.get(kUn).push({s,t,id});
+    }
+    return { exact, rev, unordered };
+  }
+
+  function canonicalLineId(f,t){ return `Line_Bus${f}_Bus${t}`; }
+
+  function renderTable(casePairs, flPairs){
+    const { exact, rev } = buildIndex(flPairs);
+    outBody.innerHTML = '';
+
+    let same=0, reversed=0, missing=0;
+
+    for (const [f,t] of casePairs){
+      const kExact = `${f}|${t}`;
+      const kRev   = `${f}|${t}`; // lookup in rev map uses reversed storage (t,f) when building
+      const sameIds = exact.get(kExact) || [];
+      const revIds  = rev.get(kExact)   || []; // contains IDs where pair is stored as (t,f)
+
+      let status, tagClass, tagText, srcTxt='—', tgtTxt='—', idsTxt='—';
+
+      if (sameIds.length && !revIds.length){
+        status = 'Same'; tagClass='same'; tagText='✅ Same direction'; same++;
+        srcTxt = String(f); tgtTxt = String(t);
+        idsTxt = sameIds.join(', ');
+      } else if (revIds.length && !sameIds.length){
+        status = 'Reversed'; tagClass='rev'; tagText='🔁 Reversed'; reversed++;
+        srcTxt = String(t); tgtTxt = String(f);
+        idsTxt = revIds.join(', ');
+      } else if (sameIds.length && revIds.length){
+        // Both present (rare but possible when there are duplicates)
+        status = 'Mixed'; tagClass='rev'; tagText='↔ Mixed';
+        // show both directions as hint
+        srcTxt = `${f} | ${t}`; tgtTxt = `${t} | ${f}`;
+        idsTxt = [...sameIds.map(x=>`(f→t) ${x}`), ...revIds.map(x=>`(t→f) ${x}`)].join(', ');
+        reversed++; // count with reversed bucket or handle separately if you prefer
+      } else {
+        status = 'Missing'; tagClass='miss'; tagText='❌ Missing in full_lines'; missing++;
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ids mono">${canonicalLineId(f,t)}</td>
+        <td>${f}</td>
+        <td>${t}</td>
+        <td>${srcTxt}</td>
+        <td>${tgtTxt}</td>
+        <td><span class="tag ${tagClass}">${tagText}</span></td>
+        <td class="ids">${idsTxt}</td>
+      `;
+      outBody.appendChild(tr);
+    }
+
+    statSame.textContent = `Same: ${same}`;
+    statRev.textContent  = `Reversed/Mixed: ${reversed}`;
+    statMiss.textContent = `Missing: ${missing}`;
+  }
+
+  async function build(){
+    // 1) Load case pairs
+    let casePairs = [];
+    const pasted = casePaste.value.trim();
+
+    if (pasted){
+      try {
+        // Try JSON first
+        const json = JSON.parse(pasted);
+        const fromJson = asPairsFromJSON(json);
+        if (fromJson.length) {
+          casePairs = fromJson;
+        }
+      } catch(e){
+        // Not JSON → try CSV
+        if (/fbus/i.test(pasted) && /tbus/i.test(pasted)){
+          casePairs = parseCSV(pasted);
+        }
+      }
+    }
+
+    if (!casePairs.length && caseFile.files.length){
+      const txt = await readTextFromFile(caseFile);
+      // Try JSON, else CSV
+      try {
+        const json = JSON.parse(txt);
+        const fromJson = asPairsFromJSON(json);
+        if (fromJson.length) casePairs = fromJson;
+      } catch(e){
+        if (/fbus/i.test(txt) && /tbus/i.test(txt)){
+          casePairs = parseCSV(txt);
+        }
+      }
+    }
+
+    if (!casePairs.length){
+      alert('Provide case118 branches as CSV or JSON (via file or paste).');
+      return;
+    }
+
+    // 2) Load full_lines
+    if (!linesFile.files.length){
+      alert('Select full_lines.json.');
+      return;
+    }
+    let fullLinesData;
+    try {
+      fullLinesData = JSON.parse(await readTextFromFile(linesFile));
+    } catch(e){
+      alert('Could not parse full_lines.json');
+      return;
+    }
+    const flPairs = collectFullLinesPairs(fullLinesData);
+
+    // 3) Render cross-reference
+    renderTable(casePairs, flPairs);
+  }
+
+  buildBtn.addEventListener('click', build);
+})();
+</script>
+</body>
+</html>
