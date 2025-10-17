@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Debug Grid — Lines & Buses</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --ink: #e6e8ef;
+    --muted: #9aa3b2;
+    --good: #1ec28b;
+    --bad: #ff5d5d;
+    --line: #8aa0b5;
+    --bus: #e2b714;
+    --from: #6ac8ff;
+    --to: #ff86d5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+    height: 100vh; display: grid; grid-template-columns: 1fr 320px;
+  }
+  #stage-wrap { position: relative; overflow: hidden; border-right: 1px solid #222831; }
+  #toolbar {
+    position: absolute; top: 12px; left: 12px; z-index: 10;
+    background: rgba(23,26,33,0.85); backdrop-filter: blur(6px);
+    border: 1px solid #222831; border-radius: 12px; padding: 8px 10px; display: flex; gap: 8px; align-items: center;
+  }
+  #toolbar .legend { display: flex; gap: 12px; align-items: center; color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; background: #11151c; border: 1px solid #222831; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot.bus { background: var(--bus); }
+  .dot.from { background: var(--from); }
+  .dot.to   { background: var(--to); }
+
+  #sidebar {
+    padding: 16px;
+    background: var(--panel);
+    display: grid; grid-template-rows: auto auto 1fr;
+    gap: 16px;
+  }
+  h2 { font-size: 16px; margin: 0 0 8px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 12px; }
+  .card {
+    background: #11151c; border: 1px solid #222831; border-radius: 14px; padding: 12px; 
+  }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button, label.btn {
+    background: #1b1f2a; color: var(--ink); border: 1px solid #2a2f3c; border-radius: 10px;
+    padding: 8px 10px; cursor: pointer; font-weight: 600;
+  }
+  button:hover, label.btn:hover { filter: brightness(1.15); }
+  input[type="file"] { display: none; }
+
+  .lists { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .lists .bucket h3 { margin: 0 0 8px; font-size: 14px; }
+  ul { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow: auto; }
+  li { padding: 4px 0; border-bottom: 1px dashed #252a35; color: var(--muted); }
+
+  svg { width: 100%; height: 100%; display: block; background: #0c0e13; }
+  .grid {
+    /* faint paper texture lines */
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px;
+  }
+
+  /* Lines */
+.line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 6;                 /* ← much thicker lines */
+  cursor: pointer;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;           /* makes thick lines look smooth */
+}
+
+  .line.state-correct { stroke: var(--good); }
+  .line.state-incorrect { stroke: var(--bad); }
+  .line.state-correct.glow { filter: drop-shadow(0 0 6px rgba(30,194,139,0.6)); }
+  .line.state-incorrect.glow { filter: drop-shadow(0 0 6px rgba(255,93,93,0.6)); }
+
+  /* From/To dots */
+/* End dots: blue = From (F), red = To (T) */
+.end-dot { pointer-events: none; }
+.end-dot.from circle { fill: #2ea8ff; stroke: #02131f; stroke-width: 1; }
+.end-dot.to   circle { fill: #ff4d5a; stroke: #24060a; stroke-width: 1; }
+
+.end-letter {
+  fill: #ffffff;
+  font-weight: 800;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  font-size: 7px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: rgba(0,0,0,0.8);
+  stroke-width: 0.8px;
+}
+
+
+  /* Buses */
+  .bus-dot { fill: var(--bus); stroke: #2a2300; stroke-width: 1.2; }
+  .bus-label { fill: var(--muted); font-size: 11px; font-weight: 700; paint-order: stroke; stroke: #0c0e13; stroke-width: 3px; }
+
+  /* Labels */
+  .line-label { fill: #c9d3e3; font-size: 11px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: #0c0e13; stroke-width: 3px; }
+  .hint { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+  <div id="stage-wrap">
+    <div id="toolbar">
+      <div class="legend">
+        <span class="chip"><span class="dot bus"></span>Bus</span>
+        <span class="chip"><span class="dot from"></span>from</span>
+        <span class="chip"><span class="dot to"></span>to</span>
+        <span class="chip">Click line → cycles: neutral → <span style="color:var(--good)">correct</span> → <span style="color:var(--bad)">incorrect</span></span>
+      </div>
+    </div>
+    <svg id="svg">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L0,8 L8,4 z" fill="#9fb3c7" />
+        </marker>
+      </defs>
+      <g class="grid"></g>
+      <g id="zoom-root">
+        <g id="lines"></g>
+        <g id="line-dots"></g>
+        <g id="line-labels"></g>
+        <g id="buses"></g>
+        <g id="bus-labels"></g>
+      </g>
+    </svg>
+  </div>
+
+  <aside id="sidebar">
+    <div class="card">
+      <h2>Selections</h2>
+      <div class="row" style="gap:6px;margin-bottom:8px;">
+        <button id="btn-clear">Clear</button>
+        <button id="btn-download-json">Download JSON</button>
+        <button id="btn-download-csv">Download CSV</button>
+        <label class="btn" for="file-load">Load JSON</label>
+        <input type="file" id="file-load" accept=".json" />
+      </div>
+      <div class="hint">Tip: you can pan/zoom with mouse or trackpad. Click any line to tag it.</div>
+    </div>
+    <div class="lists">
+      <div class="card bucket">
+        <h3>✅ Correct (<span id="count-correct">0</span>)</h3>
+        <ul id="list-correct"></ul>
+      </div>
+      <div class="card bucket">
+        <h3>❌ Incorrect (<span id="count-incorrect">0</span>)</h3>
+        <ul id="list-incorrect"></ul>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Files</h2>
+      <div class="sub">Using:</div>
+      <div class="sub">new-tests/full_nodes.json</div>
+      <div class="sub">new-tests/full_lines.json</div>
+    </div>
+  </aside>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script>
+  (async function() {
+    const svg = d3.select("#svg");
+    const root = svg.select("#zoom-root");
+    const gLines = d3.select("#lines");
+    const gLineDots = d3.select("#line-dots");
+    const gLineLabels = d3.select("#line-labels");
+    const gBuses = d3.select("#buses");
+    const gBusLabels = d3.select("#bus-labels");
+
+    const correct = new Set();
+    const incorrect = new Set();
+
+    // Helpers: downloads
+    function download(filename, text) {
+      const blob = new Blob([text], {type: "application/octet-stream"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toCSV(rows, headers) {
+      const esc = v => `"${String(v).replace(/"/g, '""')}"`;
+      return [headers.join(","), ...rows.map(r => headers.map(h => esc(r[h] ?? "")).join(","))].join("\n");
+    }
+
+    // Load data
+    const [nodesRaw, linesRaw] = await Promise.all([
+      fetch("/new-tests/full_nodes.json").then(r => r.json()),
+      fetch("/new-tests/full_lines.json").then(r => r.json())
+    ]);
+
+    // Normalize buses map: id -> {x,y,label}
+    const buses = (Array.isArray(nodesRaw) ? nodesRaw : nodesRaw.nodes || nodesRaw)
+      .filter(n => /^Bus\d+$/i.test(n.id) || /bus/i.test(n.type || ""))
+      .reduce((acc, n) => {
+        acc[n.id] = { x: +n.x, y: +n.y, id: n.id, num: (String(n.id).match(/\d+/)||[""])[0] };
+        return acc;
+      }, {});
+
+    // Normalize lines: expect fields
+    const lines = (Array.isArray(linesRaw) ? linesRaw : linesRaw.lines || linesRaw).map(l => {
+  const id = l.id || l.name || l.label;
+  const source = l.source || l.from || l.from_bus || l.bus_from || l.b1 || l.bus1;
+  const target = l.target || l.to || l.to_bus   || l.bus_to   || l.b2 || l.bus2;
+  const d = l.d || l.path || null;
+  return { ...l, id, source, target, d, flipped: !!l.flipped };   // ← add this
+})
+.filter(l => {
+  const isBusToBus = !(String(l.id).endsWith("_Load") || String(l.id).endsWith("_Gen"));
+  const hasGeometry = l.d || (buses[l.source] && buses[l.target]);
+  return l.id && isBusToBus && hasGeometry;
+});
+
+
+    // Build path strings if needed
+    function linePath(l) {
+      if (l.d) return l.d; // use svg path from file
+      const a = buses[l.source], b = buses[l.target];
+      return `M ${a.x},${a.y} L ${b.x},${b.y}`;
+    }
+
+    // Zoom/pan
+    const zoom = d3.zoom().scaleExtent([0.35, 6]).on("zoom", (ev) => root.attr("transform", ev.transform));
+    svg.call(zoom);
+
+    // Draw lines
+    const lineSel = gLines.selectAll("path.line")
+      .data(lines, d => d.id)
+      .join("path")
+      .attr("class", "line")
+      .attr("id", d => `line-${cssSafe(d.id)}`)
+      .attr("d", d => linePath(d))
+      .on("click", (ev, d) => {
+        ev.stopPropagation();
+        cycleState(d.id, ev.currentTarget);
+      });
+
+    // Draw from/to dots & line labels after DOM paints so getTotalLength works
+    requestAnimationFrame(() => {
+      // ------ From/To dots with lettered badges (F / T) ---------------------------
+gLineDots.selectAll("g.lt")
+  .data(lines, d => d.id)
+  .join(
+    enter => {
+      const g = enter.append("g").attr("class", "lt");
+
+      // FROM
+      const gf = g.append("g").attr("class", "end-dot from");
+      gf.append("circle").attr("r", 6);           // bigger dot
+      gf.append("text").attr("class", "end-letter").text("F");
+
+      // TO
+      const gt = g.append("g").attr("class", "end-dot to");
+      gt.append("circle").attr("r", 6);
+      gt.append("text").attr("class", "end-letter").text("T");
+
+      return g;
+    },
+    update => update,
+    exit => exit.remove()
+  )
+  .each(function(d) {
+    const path = document.getElementById(`line-${String(d.id).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
+    if (!path || typeof path.getTotalLength !== "function") return;
+
+    const L = path.getTotalLength();
+    const p0 = path.getPointAtLength(0);
+    const p1 = path.getPointAtLength(Math.max(0, L - 0.01));
+
+    // Nudge slightly inwards so the badges sit nicely on the line tips
+    const nudgePx = 2.0;
+    let fromPt = p0, toPt = p1;
+
+    if (typeof nudgePointTowards === "function") {
+      fromPt = nudgePointTowards(path, 0, nudgePx);
+      toPt   = nudgePointTowards(path, L, nudgePx);
+    }
+
+    d3.select(this).select("g.end-dot.from")
+      .attr("transform", `translate(${fromPt.x},${fromPt.y})`);
+
+    d3.select(this).select("g.end-dot.to")
+      .attr("transform", `translate(${toPt.x},${toPt.y})`);
+  });
+
+
+      gLineLabels.selectAll("text.line-label")
+        .data(lines, d => d.id)
+        .join("text")
+        .attr("class", "line-label")
+        .attr("dy", -6)
+        .text(d => d.id)
+        .each(function(d) {
+          const path = document.getElementById(`line-${cssSafe(d.id)}`);
+          if (!path || typeof path.getTotalLength !== "function") return;
+          const L = path.getTotalLength();
+          const mid = path.getPointAtLength(L * 0.5);
+          d3.select(this).attr("x", mid.x).attr("y", mid.y);
+        });
+    });
+
+ // ---- Draw buses as long rectangles with rotation ---------------------------
+// ---- Draw buses as rotated rectangles + directional shift ------------------
+
+// Build a normalized bus array
+const busArr = (Array.isArray(nodesRaw) ? nodesRaw : (nodesRaw.nodes || nodesRaw))
+  .filter(n => /^Bus\d+$/i.test(n.id) || /bus/i.test(n.type || ""))
+  .map(n => ({
+    id: String(n.id),
+    x: +n.x, y: +n.y,
+    width:  Number.isFinite(+n.width)  ? +n.width  : 70,
+    height: Number.isFinite(+n.height) ? +n.height : 10,
+    rotate: Number.isFinite(+n.rotate) ? +n.rotate : 0,
+    rotateX: Number.isFinite(+n.rotateX) ? +n.rotateX : null,
+    rotateY: Number.isFinite(+n.rotateY) ? +n.rotateY : null,
+  }));
+
+// Clear existing bus visuals (we draw labels inside the same group)
+gBuses.selectAll("*").remove();
+
+// One <g> per bus (rect + label rotate/shift together)
+const busSel = gBuses.selectAll("g.bus")
+  .data(busArr, d => d.id)
+  .join(enter => {
+    const g = enter.append("g")
+      .attr("class", "bus")
+      .attr("id", d => d.id);
+
+    // Rectangle centered at (0,0) in local coords
+    g.append("rect")
+      .attr("class", "map-bus")
+      .attr("x", d => -d.width / 2)
+      .attr("y", d => -d.height / 2)
+      .attr("width",  d => d.width)
+      .attr("height", d => d.height)
+      .attr("rx", 2).attr("ry", 2)
+      .attr("fill", "#666")
+      .attr("stroke", "#000")
+      .attr("stroke-width", 0.8)
+      .attr("vector-effect", "non-scaling-stroke");
+
+    // BIG centered label: full bus ID
+    g.append("text")
+      .attr("class", "map-bus-label")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr("font-family", "monospace")
+      .attr("font-size", 10)           // << "much much bigger"
+      .attr("fill", "#ffffff")
+      .attr("stroke", "#00131a")
+      .attr("stroke-width", 0.8)
+      .attr("paint-order", "stroke")
+      .attr("pointer-events", "none")
+      .text(d => d.id);                // full ID; switch to just number if you want
+
+    return g;
+  })
+  .attr("transform", d => {
+    const a = d.rotate || 0;
+    const hasPivot = d.rotateX != null && d.rotateY != null;
+
+    // Base: translate to pivot/center, rotate, then place at (x,y)
+    const base = hasPivot
+      ? `translate(${d.rotateX},${d.rotateY}) rotate(${a}) translate(${d.x - d.rotateX},${d.y - d.rotateY})`
+      : `translate(${d.x},${d.y}) rotate(${a})`;
+
+    // Shift rule:
+    // - if NOT rotated (a === 0): shift +40 in global X → just translate(40,0)
+    // - if rotated: shift -40 in the bus's LOCAL X after rotation → translate(-40,0)
+    const shift = (a === 0) ? ` translate(45,0)` : ` translate(10,-20)`;
+
+    return base + shift;
+  });
+
+
+  function getLineEndpointsByFlip(path, flipped) {
+  const L = path.getTotalLength();
+  // raw ends
+  const pStart = path.getPointAtLength(0);
+  const pEnd   = path.getPointAtLength(Math.max(0, L - 0.01));
+
+  // choose which is FROM / TO based on flip flag
+  let pFrom = pStart, pTo = pEnd;
+  if (flipped) { pFrom = pEnd; pTo = pStart; }
+
+  // nudge inward (if you already have nudgePointTowards, use it)
+  const nudge = 2.0;
+  if (typeof nudgePointTowards === "function") {
+    pFrom = nudgePointTowards(path, flipped ? L : 0, nudge);
+    pTo   = nudgePointTowards(path, flipped ? 0 : L, nudge);
+  }
+  return [pFrom, pTo];
+}
+
+// Re-position dots for all lines
+function updateDots() {
+  gLineDots.selectAll("g.lt").each(function(d) {
+    const path = document.getElementById(`line-${String(d.id).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
+    if (!path || !path.getTotalLength) return;
+    const [pFrom, pTo] = getLineEndpointsByFlip(path, !!d.flipped);
+    d3.select(this).select("g.end-dot.from").attr("transform", `translate(${pFrom.x},${pFrom.y})`);
+    d3.select(this).select("g.end-dot.to").attr("transform",   `translate(${pTo.x},${pTo.y})`);
+  });
+}
+
+// If you'd rather show just the bus number in the big label, swap the .text line for:
+// .text(d => (String(d.id).match(/\d+/) || [""])[0]);
+
+// If you want labels to always stay upright (not rotated), add:
+// busSel.select("text.map-bus-label")
+//   .attr("transform", d => `rotate(${-d.rotate})`);
+
+    // ——— State + UI ———
+    function cssSafe(id) { return String(id).replace(/[^a-zA-Z0-9_-]/g, "_"); }
+
+    function setLineState(id, state) {
+      const el = document.getElementById(`line-${cssSafe(id)}`);
+      if (!el) return;
+      el.classList.remove("state-correct", "state-incorrect", "glow");
+      correct.delete(id); incorrect.delete(id);
+      if (state === "correct") {
+        el.classList.add("state-correct", "glow");
+        correct.add(id);
+      } else if (state === "incorrect") {
+        el.classList.add("state-incorrect", "glow");
+        incorrect.add(id);
+      }
+      renderLists();
+    }
+
+    function cycleState(id, el) {
+      const isC = correct.has(id);
+      const isI = incorrect.has(id);
+      if (!isC && !isI) setLineState(id, "correct");
+      else if (isC)     setLineState(id, "incorrect");
+      else              setLineState(id, null);
+    }
+
+    function renderLists() {
+      d3.select("#count-correct").text(correct.size);
+      d3.select("#count-incorrect").text(incorrect.size);
+
+      const l1 = d3.select("#list-correct").selectAll("li").data([...correct].sort());
+      l1.join(
+        enter => enter.append("li").text(d => d),
+        update => update.text(d => d),
+        exit => exit.remove()
+      );
+
+      const l2 = d3.select("#list-incorrect").selectAll("li").data([...incorrect].sort());
+      l2.join(
+        enter => enter.append("li").text(d => d),
+        update => update.text(d => d),
+        exit => exit.remove()
+      );
+    }
+
+    // Buttons
+    document.getElementById("btn-clear").addEventListener("click", () => {
+      correct.clear(); incorrect.clear();
+      lineSel.each(function(d){ this.classList.remove("state-correct","state-incorrect","glow"); });
+      renderLists();
+    });
+
+    document.getElementById("btn-download-json").addEventListener("click", () => {
+      const payload = {
+        timestamp: new Date().toISOString(),
+        counts: { correct: correct.size, incorrect: incorrect.size },
+        correct: [...correct].sort(),
+        incorrect: [...incorrect].sort()
+      };
+      download("debug-grid-selections.json", JSON.stringify(payload, null, 2));
+    });
+
+    document.getElementById("btn-download-csv").addEventListener("click", () => {
+      const rows = [
+        ...[...correct].map(id => ({ id, status: "correct" })),
+        ...[...incorrect].map(id => ({ id, status: "incorrect" }))
+      ].sort((a,b) => a.id.localeCompare(b.id));
+      download("debug-grid-selections.csv", toCSV(rows, ["id","status"]));
+    });
+
+    document.getElementById("file-load").addEventListener("change", async (ev) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      try {
+        const txt = await file.text();
+        const json = JSON.parse(txt);
+        const list1 = Array.isArray(json.correct) ? json.correct : [];
+        const list2 = Array.isArray(json.incorrect) ? json.incorrect : [];
+        correct.clear(); incorrect.clear();
+        lineSel.each(function(d){ this.classList.remove("state-correct","state-incorrect","glow"); });
+        list1.forEach(id => setLineState(id, "correct"));
+        list2.forEach(id => setLineState(id, "incorrect"));
+      } catch (e) {
+        alert("Failed to load JSON: " + e.message);
+      } finally {
+        ev.target.value = "";
+      }
+    });
+
+    // Geometry helpers
+    function nudgePointTowards(path, atLen, nudgePx) {
+      const L = path.getTotalLength();
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      const eps = 0.001;
+
+      let lenA = clamp(atLen, 0, L);
+      let lenB = clamp(atLen + (atLen === 0 ? eps : -eps), 0, L);
+
+      const pA = path.getPointAtLength(lenA);
+      const pB = path.getPointAtLength(lenB);
+
+      const dx = pA.x - pB.x;
+      const dy = pA.y - pB.y;
+      const m = Math.hypot(dx, dy) || 1;
+      const ux = dx / m, uy = dy / m;
+
+      return { x: pA.x + ux * nudgePx, y: pA.y + uy * nudgePx };
+    }
+
+    // Initial fit
+    fitToContent();
+
+    function fitToContent() {
+      try {
+        const bbox = root.node().getBBox();
+        const vb = svg.node().getBoundingClientRect();
+        const scale = Math.min(
+          (vb.width  - 80) / bbox.width,
+          (vb.height - 80) / bbox.height
+        );
+        const k = Math.max(0.35, Math.min(2.5, scale));
+        const tx = (vb.width  - bbox.width  * k) / 2 - bbox.x * k;
+        const ty = (vb.height - bbox.height * k) / 2 - bbox.y * k;
+        svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
+      } catch (e) {
+        // ignore if empty
+      }
+    }
+
+    // If you want a keyboard assist: press "c" or "x" to mark hovered line
+    let hoveredId = null;
+    lineSel.on("mouseenter", function(e,d){ hoveredId = d.id; })
+           .on("mouseleave", function(){ hoveredId = null; });
+    window.addEventListener("keydown", (e) => {
+      if (!hoveredId) return;
+      if (e.key === "c") setLineState(hoveredId, "correct");
+      if (e.key === "x") setLineState(hoveredId, "incorrect");
+      if (e.key === "Backspace") setLineState(hoveredId, null);
+    });
+
+    document.getElementById("btn-apply-flips").addEventListener("click", () => {
+  let changed = 0;
+  lines.forEach(d => {
+    const shouldFlip = incorrect.has(d.id);   // ← flip according to selections
+    if (!!d.flipped !== !!shouldFlip) { d.flipped = shouldFlip; changed++; }
+  });
+  updateDots();
+  console.log(`[debuggrid] Applied flips to ${changed} lines (from selections)`);
+});
+
+  })();
+
+  
+  </script>
+</body>
+</html>

@@ -1068,21 +1068,21 @@
     "d": "M2335 684V720"
   },
   {
-    "id": "Line_Bus49_Gen_2",
-    "source": "Bus49",
-    "target": "Gen49",
+    "id": "Line_Bus56_Gen",
+    "source": "Bus56",
+    "target": "Gen56",
     "d": "M2387 100V122"
   },
   {
-    "id": "Line_Bus49_Gen_3",
-    "source": "Bus49",
-    "target": "Gen49",
+    "id": "Line_Bus55_Gen",
+    "source": "Bus55",
+    "target": "Gen55",
     "d": "M2539 99V122"
   },
   {
-    "id": "Line_Bus49_Gen_4",
-    "source": "Bus49",
-    "target": "Gen49",
+    "id": "Line_Bus54_Gen",
+    "source": "Bus54",
+    "target": "Gen54",
     "d": "M2209 100V122"
   },
   {

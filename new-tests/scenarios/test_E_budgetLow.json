@@ -2,7 +2,7 @@
     "scenario_id": "test_E_budgetLow",
     "title": "Budget Low",
     "target_mw": 2800,
-    "cost_limit": 40000,
+    "cost_limit": 20000,
     "line_limit_pct": 0.05,
     "initial_outputs": {
         
