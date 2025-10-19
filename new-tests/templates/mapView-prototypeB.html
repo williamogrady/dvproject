@@ -1293,22 +1293,32 @@ function ensureChevronTooltip() {
   const root = d3.select("#zoom-group");     // ← live inside the zoomed group
   let g = root.select("#chev-tooltip");
   if (g.empty()) {
-    g = root.append("g")
-      .attr("id", "chev-tooltip")
-      .style("pointer-events", "none")
-      .style("display", "none");
+  g = root.append("g")
+    .attr("id", "chev-tooltip")
+    .style("pointer-events", "none")
+    .style("display", "none");
 
-    g.append("rect")
-      .attr("rx", 6).attr("ry", 6)
-      .attr("height", 24)
-      .attr("width", 80);
+  g.append("rect")
+    .attr("rx", 6).attr("ry", 6)
+    .attr("height", 36)     // taller for two lines
+    .attr("width", 120);
 
-    g.append("text")
-      .attr("x", 8).attr("y", 16)
-      .attr("font-family", "Figtree, sans-serif")
-      .attr("font-size", 12)
-      .attr("fill", "#111");
-  }
+  g.append("text")          // line id (top line)
+    .attr("class", "tt-id")
+    .attr("x", 8).attr("y", 12)
+    .attr("font-family", "Figtree, sans-serif")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .attr("fill", "#111");
+
+  g.append("text")          // metrics (second line)
+    .attr("class", "tt-metrics")
+    .attr("x", 8).attr("y", 26)
+    .attr("font-family", "Figtree, sans-serif")
+    .attr("font-size", 12)
+    .attr("fill", "#111");
+}
+
   return g;
 }
 
@@ -1358,31 +1368,43 @@ function getChevronColor(pct) {
 
 function showChevronTooltip(event, d) {
   const g = ensureChevronTooltip();
-  const [x, y] = d3.pointer(event, d3.select("#zoom-group").node());
+const [x, y] = d3.pointer(event, d3.select("#zoom-group").node());
 
-  const pct = (d._pct || 0);
-  const pctLabel = Math.round(pct * 100);
-  const flowSigned = +((d.flow ?? d.flow_signed) || 0);
-  const mwLabel  = Math.round(Math.abs(flowSigned));
-  const signChar = (flowSigned > 0) ? "+" : (flowSigned < 0 ? "−" : "0");
+const pct = (d._pct || 0);
+const pctLabel = Math.round(pct * 100);
+const flowSigned = +((d.flow ?? d.flow_signed) || 0);
+const mwLabel  = Math.round(Math.abs(flowSigned));
+const signChar = (flowSigned > 0) ? "+" : (flowSigned < 0 ? "−" : "0");
 
-  const label = `${pctLabel}% • (${signChar}${mwLabel} MW)`;
-  const padX = 8;
+// two lines: id, then metrics
+const idText = String(d.id || `${d.source}→${d.target}`);
+const metrics = `${pctLabel}% • (${signChar}${mwLabel} MW)`;
+const padX = 8;
 
-  const fillColor = getChevronColor(pct);
+const fillColor = getChevronColor(pct);
 
-  const text = g.select("text").text(label);
-  const w = text.node().getComputedTextLength() + padX * 2;
+// write both lines
+const tId = g.select("text.tt-id").text(idText);
+const tMx = g.select("text.tt-metrics").text(metrics);
 
-  g.select("rect")
-    .attr("width", w)
-    .attr("fill", fillColor)
-    .attr("stroke", "#111")
-    .attr("stroke-width", 0.5)
-    .attr("opacity", 0.95);
+// size the rect to the longest line
+const w1 = tId.node().getComputedTextLength();
+const w2 = tMx.node().getComputedTextLength();
+const w  = Math.max(w1, w2) + padX * 2;
+const h  = 36; // (line heights already set at y=12 and y=26)
 
-  g.attr("transform", `translate(${x + 12}, ${y - 18})`)
-   .style("display", "block");
+g.select("rect")
+  .attr("width", w)
+  .attr("height", h)
+  .attr("fill", fillColor)
+  .attr("stroke", "#111")
+  .attr("stroke-width", 0.5)
+  .attr("opacity", 0.95);
+
+// nudge so the box doesn’t overlap the cursor
+g.attr("transform", `translate(${x + 12}, ${y - 18})`)
+ .style("display", "block");
+
 }
 
 
@@ -2563,24 +2585,29 @@ const busGroup = zoomGroup.selectAll("rect.map-bus")
       : null;
   });
 
-/*
-// === DEBUG for buses (label beside each bus) ===
-zoomGroup.selectAll("text.map-bus-label")
+// Bus labels (centered on the rect, rotated with the bus if the rect is)
+zoomGroup.selectAll("text.bus-label")
   .data(nodes.filter(d => d.type === "bus"))
   .enter()
   .append("text")
-  .attr("class", "map-bus-label")
-  .attr("x", d => d.x + 10)
-  .attr("y", d => d.y - 5)
-  .attr("font-family", "monospace")
+  .attr("class", "bus-label")
+  .attr("x", d => d.x + d.width / 2)
+  .attr("y", d => d.y + d.height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dominant-baseline", "middle")
+  .attr("font-family", "Figtree, sans-serif")
   .attr("font-size", 10)
-  .attr("fill", "#00d2ff")
-  .attr("stroke", "#00131a")
+  .attr("fill", "#fff")
+  .attr("stroke", "#000")
   .attr("stroke-width", 0.6)
   .attr("paint-order", "stroke")
-  .text(d => d.id);
+  .attr("transform", d =>
+    (d.rotate != null && d.rotateX != null && d.rotateY != null)
+      ? `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`
+      : null
+  )
+  .text(d => String(d.id));
 
-*/
 zoomGroup.selectAll("path.map-load")
   .data(nodes.filter(d => d.type === "load"))
   .enter()
