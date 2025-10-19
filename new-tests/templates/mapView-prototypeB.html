@@ -1761,21 +1761,23 @@ function drawChevrons(lines, nodes, mode) {
       const scale = isLinesMode ? (1 + 0.6 * Math.max(0, loadPct)) : 1;
       const size  = Math.max(8, base * scale);
 
-      // Canonical base (AB) + sign flip + global inversion (except Bus68–Bus69)
-      let midX, midY, angleDeg;
-      {
-        const [A,B] = Array.isArray(line._AB)
-          ? line._AB
-          : [ +line.source.replace('Bus',''), +line.target.replace('Bus','') ];
+      // --- Direction + placement (robust) ---
+      const g = getMidAndAngle(line); // uses line.id → midX, midY, angleDeg (already flips on negative flow)
+      if (!g || !Number.isFinite(g.midX) || !Number.isFinite(g.midY)) return;
 
-        const base = baseAngleAB(A, B) || { midX:0, midY:0, deg:0 };
-        midX = base.midX; midY = base.midY;
+      let { midX, midY, angleDeg } = g;
 
-        //const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
-        angleDeg = base.deg + ((line.flow_signed ?? 0) < 0 ? 180 : 0) /*+ invertExtra*/;
-      }
+      // Static correction for visually reversed SVG paths
+      if (line.flipped) angleDeg += 180;
 
+      // Final transform
       const _T = `translate(${midX}, ${midY}) rotate(${angleDeg})`;
+      console.log("[chev]", line.id,
+      "flipped=", !!line.flipped,
+      "angle=", ((angleDeg % 360)+360)%360  // normalize to [0,360)
+    );
+
+
 
       // zero-flow → draw a circle; otherwise a chevron
       const isZero = (Math.abs(flowSigned) < ZERO) || (loadPct === 0);
@@ -2553,14 +2555,14 @@ const busGroup = zoomGroup.selectAll("rect.map-bus")
   .attr("fill", "#666")
   .attr("stroke", "#000")
   .attr("stroke-width", 0.8)
+  .attr("x", d => d.x)            // ← EXACT top-left from SVG
+  .attr("y", d => d.y)            // ← EXACT top-left from SVG
   .attr("transform", d => {
-    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
-      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
-    }
-    return null;
-  })
-    .attr("x", d => d.x - d.width / 2 + 60)
-  .attr("y", d => d.y - d.height / 2 + 10) ;
+    return (d.rotate != null && d.rotateX != null && d.rotateY != null)
+      ? `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`
+      : null;
+  });
+
 /*
 // === DEBUG for buses (label beside each bus) ===
 zoomGroup.selectAll("text.map-bus-label")

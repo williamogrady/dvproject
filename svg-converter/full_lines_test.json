@@ -3,15 +3,13 @@
     "id": "Line_Bus1_Bus2",
     "source": "Bus1",
     "target": "Bus2",
-    "d": "M72 79V118H193V79",
-    "flipped": true
+    "d": "M72 79V118H193V79"
   },
   {
     "id": "Line_Bus1_Bus3",
     "source": "Bus1",
     "target": "Bus3",
-    "d": "M32.5 79L33 201",
-    "flipped": true
+    "d": "M32.5 79L33 201"
   },
   {
     "id": "Line_Bus1_Gen",
@@ -149,8 +147,7 @@
     "id": "Line_Bus105_Bus108",
     "source": "Bus105",
     "target": "Bus108",
-    "d": "M2635.5 1839H2619.5V1743",
-    "flipped": true
+    "d": "M2635.5 1839H2619.5V1743"
   },
   {
     "id": "Line_Bus105_Gen",
@@ -216,15 +213,13 @@
     "id": "Line_Bus11_Bus12",
     "source": "Bus11",
     "target": "Bus12",
-    "d": "M370 296V335H458.5V235.5",
-    "flipped": true
+    "d": "M370 296V335H458.5V235.5"
   },
   {
     "id": "Line_Bus11_Bus13",
     "source": "Bus11",
     "target": "Bus13",
-    "d": "M344 296V385H636.5V457.5",
-    "flipped": true
+    "d": "M344 296V385H636.5V457.5"
   },
   {
     "id": "Line_Bus11_Load",
@@ -242,8 +237,7 @@
     "id": "Line_Bus110_Bus112",
     "source": "Bus110",
     "target": "Bus112",
-    "d": "M2654 2054V2079H2725V2057",
-    "flipped": true
+    "d": "M2654 2054V2079H2725V2057"
   },
   {
     "id": "Line_Bus110_Gen",
@@ -285,8 +279,7 @@
     "id": "Line_Bus114_Bus115",
     "source": "Bus114",
     "target": "Bus115",
-    "d": "M566 1164V1185H637V1164",
-    "flipped": true
+    "d": "M566 1164V1185H637V1164"
   },
   {
     "id": "Line_Bus114_Load",
@@ -322,22 +315,19 @@
     "id": "Line_Bus12_Bus117",
     "source": "Bus12",
     "target": "Bus117",
-    "d": "M619 236V258H761V236",
-    "flipped": true
+    "d": "M619 236V258H761V236"
   },
   {
     "id": "Line_Bus12_Bus14",
     "source": "Bus12",
     "target": "Bus14",
-    "d": "M583 236V296L761 296V354",
-    "flipped": true
+    "d": "M583 236V296L761 296V354"
   },
   {
     "id": "Line_Bus12_Bus16",
     "source": "Bus12",
     "target": "Bus16",
-    "d": "M530 234.5L530.5 589H507",
-    "flipped": true
+    "d": "M530 234.5L530.5 589H507"
   },
   {
     "id": "Line_Bus12_Gen",
@@ -367,8 +357,7 @@
     "id": "Line_Bus14_Bus15",
     "source": "Bus14",
     "target": "Bus15",
-    "d": "M832 360L832 407.81L832 454",
-    "flipped": true
+    "d": "M832 360L832 407.81L832 454"
   },
   {
     "id": "Line_Bus14_Load",
@@ -380,22 +369,19 @@
     "id": "Line_Bus15_Bus17",
     "source": "Bus15",
     "target": "Bus17",
-    "d": "M796 459L796 591.241L796 719",
-    "flipped": true
+    "d": "M796 459L796 591.241L796 719"
   },
   {
     "id": "Line_Bus15_Bus19",
     "source": "Bus15",
     "target": "Bus19",
-    "d": "M904.5 460L904.5 521L1082.5 521V614.5",
-    "flipped": true
+    "d": "M904.5 460L904.5 521L1082.5 521V614.5"
   },
   {
     "id": "Line_Bus15_Bus33",
     "source": "Bus15",
     "target": "Bus33",
-    "d": "M905 455L905 402L1456.6 402L1456.6 270",
-    "flipped": true
+    "d": "M905 455L905 402L1456.6 402L1456.6 270"
   },
   {
     "id": "Line_Bus15_Gen",
@@ -413,8 +399,7 @@
     "id": "Line_Bus16_Bus17",
     "source": "Bus16",
     "target": "Bus17",
-    "d": "M505.686 634H744L743.5 718.5",
-    "flipped": true
+    "d": "M505.686 634H744L743.5 718.5"
   },
   {
     "id": "Line_Bus16_Load",
@@ -426,22 +411,19 @@
     "id": "Line_Bus17_Bus113",
     "source": "Bus17",
     "target": "Bus113",
-    "d": "M671.5 720V700.5L565 701V776H590",
-    "flipped": true
+    "d": "M671.5 720V700.5L565 701V776H590"
   },
   {
     "id": "Line_Bus17_Bus18",
     "source": "Bus17",
     "target": "Bus18",
-    "d": "M796.5 724.5L796.5 757.5L920.5 757.5V724.5",
-    "flipped": true
+    "d": "M796.5 724.5L796.5 757.5L920.5 757.5V724.5"
   },
   {
     "id": "Line_Bus17_Bus31",
     "source": "Bus17",
     "target": "Bus31",
-    "d": "M719 720V669.5H533V936.5H464",
-    "flipped": true
+    "d": "M719 720V669.5H533V936.5H464"
   },
   {
     "id": "Line_Bus17_Load",
@@ -477,8 +459,7 @@
     "id": "Line_Bus19_Bus34",
     "source": "Bus19",
     "target": "Bus34",
-    "d": "M1118 615.5L1118 491.5L1543.5 491.5L1543.5 456.5",
-    "flipped": true
+    "d": "M1118 615.5L1118 491.5L1543.5 491.5L1543.5 456.5"
   },
   {
     "id": "Line_Bus19_Gen",
@@ -496,8 +477,7 @@
     "id": "Line_Bus2_Bus12",
     "source": "Bus2",
     "target": "Bus12",
-    "d": "M245 79V118L503.5 118V228.5",
-    "flipped": true
+    "d": "M245 79V118L503.5 118V228.5"
   },
   {
     "id": "Line_Bus2_Load",
@@ -533,8 +513,7 @@
     "id": "Line_Bus22_Bus23",
     "source": "Bus22",
     "target": "Bus23",
-    "d": "M1062.5 1167.5L1046 1167.5L1046 1226.81L1046 1261.5",
-    "flipped": true
+    "d": "M1062.5 1167.5L1046 1167.5L1046 1226.81L1046 1261.5"
   },
   {
     "id": "Line_Bus22_Load",
@@ -552,8 +531,7 @@
     "id": "Line_Bus23_Bus25",
     "source": "Bus23",
     "target": "Bus25",
-    "d": "M1081 1267L1081 1326.81L1081 1389.5",
-    "flipped": true
+    "d": "M1081 1267L1081 1326.81L1081 1389.5"
   },
   {
     "id": "Line_Bus23_Bus32",
@@ -607,15 +585,13 @@
     "id": "Line_Bus26_Bus25",
     "source": "Bus26",
     "target": "Bus25",
-    "d": "M815 1303.5L815 1390.5",
-    "flipped": true
+    "d": "M815 1303.5L815 1390.5"
   },
   {
     "id": "Line_Bus26_Bus30",
     "source": "Bus26",
     "target": "Bus30",
-    "d": "M861 1301.04V985.514V851.964",
-    "flipped": true
+    "d": "M861 1301.04V985.514V851.964"
   },
   {
     "id": "Line_Bus26_Gen",
@@ -627,8 +603,7 @@
     "id": "Line_Bus27_Bus115",
     "source": "Bus27",
     "target": "Bus115",
-    "d": "M418.5 1233.5L418.5 1212.5L673 1212.5L673 1164.5",
-    "flipped": true
+    "d": "M418.5 1233.5L418.5 1212.5L673 1212.5L673 1164.5"
   },
   {
     "id": "Line_Bus27_Bus28",
@@ -640,8 +615,7 @@
     "id": "Line_Bus27_Bus32",
     "source": "Bus27",
     "target": "Bus32",
-    "d": "M378.5 1233.5L378.5 1114L494 1114V1061.5",
-    "flipped": true
+    "d": "M378.5 1233.5L378.5 1114L494 1114V1061.5"
   },
   {
     "id": "Line_Bus27_Gen",
@@ -671,8 +645,7 @@
     "id": "Line_Bus29_Bus31",
     "source": "Bus29",
     "target": "Bus31",
-    "d": "M319 975L319 936.5L457 936.5",
-    "flipped": true
+    "d": "M319 975L319 936.5L457 936.5"
   },
   {
     "id": "Line_Bus29_Load",
@@ -684,15 +657,13 @@
     "id": "Line_Bus3_Bus12",
     "source": "Bus3",
     "target": "Bus12",
-    "d": "M156 201V172.5L458 172.5L458.5 228.5",
-    "flipped": true
+    "d": "M156 201V172.5L458 172.5L458.5 228.5"
   },
   {
     "id": "Line_Bus3_Bus5",
     "source": "Bus3",
     "target": "Bus5",
-    "d": "M67 206L66.4914 348.922L66 487",
-    "flipped": true
+    "d": "M67 206L66.4914 348.922L66 487"
   },
   {
     "id": "Line_Bus3_Load",
@@ -704,8 +675,7 @@
     "id": "Line_Bus30_Bus115",
     "source": "Bus30",
     "target": "Bus115",
-    "d": "M761 853L761 1067.3L761 1158",
-    "flipped": true
+    "d": "M761 853L761 1067.3L761 1158"
   },
   {
     "id": "Line_Bus30_Bus17",
@@ -717,15 +687,13 @@
     "id": "Line_Bus30_Bus38",
     "source": "Bus30",
     "target": "Bus38",
-    "d": "M831.5 846L831.5 807L1723 807L1722 1005",
-    "flipped": true
+    "d": "M831.5 846L831.5 807L1723 807L1722 1005"
   },
   {
     "id": "Line_Bus31_Bus32",
     "source": "Bus31",
     "target": "Bus32",
-    "d": "M463.5 997H533.5V1054",
-    "flipped": true
+    "d": "M463.5 997H533.5V1054"
   },
   {
     "id": "Line_Bus31_Gen",
@@ -749,8 +717,7 @@
     "id": "Line_Bus32_Bus114",
     "source": "Bus32",
     "target": "Bus114",
-    "d": "M534 1060V1109.84V1158",
-    "flipped": true
+    "d": "M534 1060V1109.84V1158"
   },
   {
     "id": "Line_Bus32_Gen",
@@ -810,8 +777,7 @@
     "id": "Line_Bus35_Bus36",
     "source": "Bus35",
     "target": "Bus36",
-    "d": "M1381 665.5H1622.5V622.5",
-    "flipped": true
+    "d": "M1381 665.5H1622.5V622.5"
   },
   {
     "id": "Line_Bus35_Bus37",
@@ -877,15 +843,13 @@
     "id": "Line_Bus4_Bus11",
     "source": "Bus4",
     "target": "Bus11",
-    "d": "M174 296V332H263V296",
-    "flipped": true
+    "d": "M174 296V332H263V296"
   },
   {
     "id": "Line_Bus4_Bus5",
     "source": "Bus4",
     "target": "Bus5",
-    "d": "M103 298L103.509 392.603L104 484",
-    "flipped": true
+    "d": "M103 298L103.509 392.603L104 484"
   },
   {
     "id": "Line_Bus4_Gen",
@@ -993,8 +957,7 @@
     "id": "Line_Bus45_Bus49",
     "source": "Bus45",
     "target": "Bus49",
-    "d": "M2102.86 720.001L2102.86 697.001L2014.01 697L2014.01 616L1950.12 615.999L1950.12 595.999",
-    "flipped": true
+    "d": "M2102.86 720.001L2102.86 697.001L2014.01 697L2014.01 616L1950.12 615.999L1950.12 595.999"
   },
   {
     "id": "Line_Bus45_Load",
@@ -1006,8 +969,7 @@
     "id": "Line_Bus46_Bus47",
     "source": "Bus46",
     "target": "Bus47",
-    "d": "M1903 686.899L1981 687.188",
-    "flipped": true
+    "d": "M1903 686.899L1981 687.188"
   },
   {
     "id": "Line_Bus46_Bus48",
@@ -1031,8 +993,7 @@
     "id": "Line_Bus47_Bus49",
     "source": "Bus47",
     "target": "Bus49",
-    "d": "M1987 687.479L2138 687.478L2138 720",
-    "flipped": true
+    "d": "M1987 687.479L2138 687.478L2138 720"
   },
   {
     "id": "Line_Bus47_Bus69",
@@ -1050,8 +1011,7 @@
     "id": "Line_Bus48_Bus49",
     "source": "Bus48",
     "target": "Bus49",
-    "d": "M2084.5 557L2084.5 661L2174 661L2174 720",
-    "flipped": true
+    "d": "M2084.5 557L2084.5 661L2174 661L2174 720"
   },
   {
     "id": "Line_Bus48_Load",
@@ -1087,22 +1047,19 @@
     "id": "Line_Bus49_Bus66",
     "source": "Bus49",
     "target": "Bus66",
-    "d": "M2244.5 727L2244.5 825L2369.5 825L2369.5 1073.75",
-    "flipped": true
+    "d": "M2244.5 727L2244.5 825L2369.5 825L2369.5 1073.75"
   },
   {
     "id": "Line_Bus49_Bus66_2",
     "source": "Bus49",
     "target": "Bus66",
-    "d": "M2218.73 727L2218.73 858.079L2352.39 857.885L2352 1074",
-    "flipped": true
+    "d": "M2218.73 727L2218.73 858.079L2352.39 857.885L2352 1074"
   },
   {
     "id": "Line_Bus49_Bus69",
     "source": "Bus49",
     "target": "Bus69",
-    "d": "M2085 727.001L2085 749.002L2042.5 749.002L2040 1079.5L2050.5 1079.5",
-    "flipped": true
+    "d": "M2085 727.001L2085 749.002L2042.5 749.002L2040 1079.5L2050.5 1079.5"
   },
   {
     "id": "Line_Bus49_Gen",
@@ -1138,15 +1095,13 @@
     "id": "Line_Bus5_Bus11",
     "source": "Bus5",
     "target": "Bus11",
-    "d": "M218 484.5V376H298.5V296",
-    "flipped": true
+    "d": "M218 484.5V376H298.5V296"
   },
   {
     "id": "Line_Bus5_Bus6",
     "source": "Bus5",
     "target": "Bus6",
-    "d": "M219 490V511H290V490",
-    "flipped": true
+    "d": "M219 490V511H290V490"
   },
   {
     "id": "Line_Bus50_Bus57",
@@ -1206,8 +1161,7 @@
     "id": "Line_Bus54_Bus55",
     "source": "Bus54",
     "target": "Bus55",
-    "d": "M2262.5 122.5V29L2495 29L2494.5 122",
-    "flipped": true
+    "d": "M2262.5 122.5V29L2495 29L2494.5 122"
   },
   {
     "id": "Line_Bus54_Bus56",
@@ -1219,8 +1173,7 @@
     "id": "Line_Bus54_Bus59",
     "source": "Bus54",
     "target": "Bus59",
-    "d": "M2631 228L2330.86 224.829L2245 224.325L2245.62 128",
-    "flipped": true
+    "d": "M2631 228L2330.86 224.829L2245 224.325L2245.62 128"
   },
   {
     "id": "Line_Bus54_Load",
@@ -1232,8 +1185,7 @@
     "id": "Line_Bus55_Bus56",
     "source": "Bus55",
     "target": "Bus56",
-    "d": "M2494 129V153H2396V129",
-    "flipped": true
+    "d": "M2494 129V153H2396V129"
   },
   {
     "id": "Line_Bus55_Bus59",
@@ -1317,8 +1269,7 @@
     "id": "Line_Bus6_Bus7",
     "source": "Bus6",
     "target": "Bus7",
-    "d": "M334 490V511H405V490",
-    "flipped": true
+    "d": "M334 490V511H405V490"
   },
   {
     "id": "Line_Bus6_Gen",
@@ -1342,8 +1293,7 @@
     "id": "Line_Bus60_Bus62",
     "source": "Bus60",
     "target": "Bus62",
-    "d": "M2637.5 473.5H2694V1019H2588.5V1074",
-    "flipped": true
+    "d": "M2637.5 473.5H2694V1019H2588.5V1074"
   },
   {
     "id": "Line_Bus60_Load",
@@ -1397,8 +1347,7 @@
     "id": "Line_Bus63_Bus64",
     "source": "Bus63",
     "target": "Bus64",
-    "d": "M2560 259L2494 259L2494 562.5L2537 562.5",
-    "flipped": true
+    "d": "M2560 259L2494 259L2494 562.5L2537 562.5"
   },
   {
     "id": "Line_Bus64_Bus61",
@@ -1410,8 +1359,7 @@
     "id": "Line_Bus64_Bus65",
     "source": "Bus64",
     "target": "Bus65",
-    "d": "M2537 598.5H2459V1228",
-    "flipped": true
+    "d": "M2537 598.5H2459V1228"
   },
   {
     "id": "Line_Bus65_Bus66",
@@ -1501,8 +1449,7 @@
     "id": "Line_Bus7_Bus12",
     "source": "Bus7",
     "target": "Bus12",
-    "d": "M459 488.5V509.5H503.5V234.5",
-    "flipped": true
+    "d": "M459 488.5V509.5H503.5V234.5"
   },
   {
     "id": "Line_Bus7_Load",
@@ -1514,8 +1461,7 @@
     "id": "Line_Bus70_Bus71",
     "source": "Bus70",
     "target": "Bus71",
-    "d": "M1613.69 1181V1306",
-    "flipped": true
+    "d": "M1613.69 1181V1306"
   },
   {
     "id": "Line_Bus70_Bus74",
@@ -1677,8 +1623,7 @@
     "id": "Line_Bus79_Bus80",
     "source": "Bus79",
     "target": "Bus80",
-    "d": "M2139 1338V1452",
-    "flipped": true
+    "d": "M2139 1338V1452"
   },
   {
     "id": "Line_Bus79_Load",
@@ -1702,8 +1647,7 @@
     "id": "Line_Bus8_Bus9",
     "source": "Bus8",
     "target": "Bus9",
-    "d": "M174 851V928.819V1004",
-    "flipped": true
+    "d": "M174 851V928.819V1004"
   },
   {
     "id": "Line_Bus8_Gen",
@@ -1751,8 +1695,7 @@
     "id": "Line_Bus81_Bus80",
     "source": "Bus81",
     "target": "Bus80",
-    "d": "M2199 1397V1452",
-    "flipped": true
+    "d": "M2199 1397V1452"
   },
   {
     "id": "Line_Bus82_Bus83",
@@ -1896,8 +1839,7 @@
     "id": "Line_Bus9_Bus10",
     "source": "Bus9",
     "target": "Bus10",
-    "d": "M174 1009V1070.54V1130",
-    "flipped": true
+    "d": "M174 1009V1070.54V1130"
   },
   {
     "id": "Line_Bus90_Bus91",
@@ -1939,8 +1881,7 @@
     "id": "Line_Bus92_Bus102",
     "source": "Bus92",
     "target": "Bus102",
-    "d": "M2155 1910V1976",
-    "flipped": true
+    "d": "M2155 1910V1976"
   },
   {
     "id": "Line_Bus92_Bus93",
@@ -2048,8 +1989,7 @@
     "id": "Line_Bus99_Bus100",
     "source": "Bus99",
     "target": "Bus100",
-    "d": "M2415 1459L2414 1737",
-    "flipped": true
+    "d": "M2415 1459L2414 1737"
   },
   {
     "id": "Line_Bus99_Gen",

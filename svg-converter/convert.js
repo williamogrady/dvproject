@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const { XMLParser } = require('fast-xml-parser');
 
@@ -53,13 +52,45 @@ function getXYWH(el) {
     return { x: cx - rr, y: cy - rr, width: rr * 2, height: rr * 2 };
   }
 
-  // Fallback: x/y only
   if (x != null && y != null) return { x, y, width: 0, height: 0 };
   return null;
 }
 
+// --- NEW: rotation helpers ---------------------------------------------------
+function parseRotateTransform(transformStr) {
+  if (!transformStr) return null;
+  const m = String(transformStr).match(/rotate\(\s*([-\d.]+)(?:[,\s]+([-\d.]+)[,\s]+([-\d.]+))?\s*\)/i);
+  if (!m) return null;
+  const angle = num(m[1]);
+  const cx = num(m[2]); // may be null if not present
+  const cy = num(m[3]);
+  return {
+    rotate: Number.isFinite(angle) ? angle : 0,
+    rotateX: Number.isFinite(cx) ? cx : null,
+    rotateY: Number.isFinite(cy) ? cy : null,
+  };
+}
+
+function rotationFromEndpoints(el) {
+  const x1 = num(el.x1), y1 = num(el.y1), x2 = num(el.x2), y2 = num(el.y2);
+  if ([x1, y1, x2, y2].every(v => v != null)) {
+    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    return {
+      rotate: Math.round(angle * 1000) / 1000,
+      rotateX: (x1 + x2) / 2,
+      rotateY: (y1 + y2) / 2,
+    };
+  }
+  return null;
+}
+
+function extractRotation(el) {
+  // Prefer geometric inference for lines; else parse transform rotate(...)
+  return rotationFromEndpoints(el) || parseRotateTransform(el.transform) || null;
+}
+// ----------------------------------------------------------------------------
+
 function parseSourceTargetFromId(id) {
-  // Accepted: Line_BusA_BusB, Line_BusX_Gen, Line_BusX_Load (also with hyphens)
   if (!id || !String(id).startsWith('Line')) return { source: '', target: '' };
   const parts = id.includes('_') ? id.split('_') : id.split('-');
   if (parts.length < 3) return { source: '', target: '' };
@@ -67,7 +98,6 @@ function parseSourceTargetFromId(id) {
   const rawA = parts[1];
   const rawB = parts[2];
 
-  // BusX_Gen or BusX_Load
   if (/^Gen$/i.test(rawB)) {
     const n = rawA.replace(/[^0-9]/g, '');
     return { source: `Bus${n}`, target: `Gen${n}` };
@@ -77,7 +107,6 @@ function parseSourceTargetFromId(id) {
     return { source: `Bus${n}`, target: `Load${n}` };
   }
 
-  // Bus-to-Bus (assume rawA/rawB are like "Bus##")
   return { source: rawA, target: rawB };
 }
 
@@ -106,17 +135,62 @@ function extract() {
   const seenLineIds = new Set();
   const seenNodeIds = new Set();
 
+  // pushNode now gets source element for rotation
+  function pushNode(id, geom, srcEl) {
+    if (!id) return;
+    if (seenNodeIds.has(id)) return;
+    const type = nodeTypeFromId(id);
+    if (!type) return;
+    seenNodeIds.add(id);
+
+    const out = { id, type };
+
+    if (type === 'bus') {
+      // Rect-like geometry + rotation metadata for MapView
+      if (geom) {
+        out.x = geom.x ?? null;
+        out.y = geom.y ?? null;
+        out.width  = geom.width  ?? null;
+        out.height = geom.height ?? null;
+      } else {
+        out.x = out.y = out.width = out.height = null;
+      }
+      const rot = extractRotation(srcEl || {});
+      out.rotate  = rot ? rot.rotate  : null;
+      out.rotateX = rot ? rot.rotateX : null;
+      out.rotateY = rot ? rot.rotateY : null;
+    } else {
+      // generator/load → store center point; rotation not required
+      if (geom) {
+        const gx = (geom.x != null) ? Math.round(geom.x + (geom.width  ? geom.width/2  : 0)) : null;
+        const gy = (geom.y != null) ? Math.round(geom.y + (geom.height ? geom.height/2 : 0)) : null;
+        out.x = gx ?? null;
+        out.y = gy ?? null;
+
+        // If the element itself had an explicit rotate(...), keep it (Map may use it for loads)
+        const rot = parseRotateTransform(srcEl?.transform);
+        out.rotate  = rot ? rot.rotate  : null;
+        out.rotateX = rot ? rot.rotateX : null;
+        out.rotateY = rot ? rot.rotateY : null;
+      } else {
+        out.x = out.y = null;
+        out.rotate = out.rotateX = out.rotateY = null;
+      }
+    }
+
+    nodes.push(out);
+  }
+
   walk(root, (el) => {
     if (!el || typeof el !== 'object') return;
 
     // ---- LINES ----
-    // <path id="Line_...">
     if (el.path) {
       const paths = Array.isArray(el.path) ? el.path : [el.path];
       for (const p of paths) {
         const id = p.id;
         if (!id || !String(id).startsWith('Line')) continue;
-        if (seenLineIds.has(id)) continue; // preserve names; ignore duplicates
+        if (seenLineIds.has(id)) continue;
         seenLineIds.add(id);
         const d = p.d || '';
         const { source, target } = parseSourceTargetFromId(id);
@@ -124,13 +198,12 @@ function extract() {
       }
     }
 
-    // <line id="Line_...">
     if (el.line) {
       const ls = Array.isArray(el.line) ? el.line : [el.line];
       for (const l of ls) {
         const id = l.id;
         if (!id || !String(id).startsWith('Line')) continue;
-        if (seenLineIds.has(id)) continue; // preserve names; ignore duplicates
+        if (seenLineIds.has(id)) continue;
         seenLineIds.add(id);
         const { x1, y1, x2, y2 } = l;
         const d = (x1 != null && y1 != null && x2 != null && y2 != null)
@@ -142,56 +215,21 @@ function extract() {
     }
 
     // ---- NODES ----
-    const pushNode = (id, geom) => {
-      if (!id) return;
-      if (seenNodeIds.has(id)) return; // preserve names; ignore duplicates
-      const type = nodeTypeFromId(id);
-      if (!type) return;
-      seenNodeIds.add(id);
-
-      const out = { id, type };
-      if (type === 'bus') {
-        if (geom) {
-          out.x = geom.x ?? null;
-          out.y = geom.y ?? null;
-          out.width  = geom.width  ?? null;
-          out.height = geom.height ?? null;
-        } else {
-          out.x = out.y = out.width = out.height = null;
-        }
-      } else {
-        // generator/load → point
-        if (geom) {
-          const gx = (geom.x != null) ? Math.round(geom.x + (geom.width  ? geom.width/2  : 0)) : null;
-          const gy = (geom.y != null) ? Math.round(geom.y + (geom.height ? geom.height/2 : 0)) : null;
-          out.x = gx ?? null;
-          out.y = gy ?? null;
-        } else {
-          out.x = out.y = null;
-        }
-      }
-      nodes.push(out);
-    };
-
-    // rect nodes
     if (el.rect) {
       const rs = Array.isArray(el.rect) ? el.rect : [el.rect];
-      for (const r of rs) { pushNode(r.id, getXYWH(r)); }
+      for (const r of rs) { pushNode(r.id, getXYWH(r), r); }
     }
 
-    // circle nodes
     if (el.circle) {
       const cs = Array.isArray(el.circle) ? el.circle : [el.circle];
-      for (const c of cs) { pushNode(c.id, getXYWH(c)); }
+      for (const c of cs) { pushNode(c.id, getXYWH(c), c); }
     }
 
-    // line nodes (some buses as thin lines)
     if (el.line) {
       const ls = Array.isArray(el.line) ? el.line : [el.line];
-      for (const l of ls) { pushNode(l.id, getXYWH(l)); }
+      for (const l of ls) { pushNode(l.id, getXYWH(l), l); }
     }
 
-    // path nodes named Bus/Gen/Load (use first M for anchor)
     if (el.path) {
       const ps = Array.isArray(el.path) ? el.path : [el.path];
       for (const p of ps) {
@@ -200,24 +238,21 @@ function extract() {
         let geom = null;
         const xy = firstMoveXY(p.d);
         if (xy) geom = { x: xy.x, y: xy.y, width: 0, height: 0 };
-        pushNode(p.id, geom);
+        pushNode(p.id, geom, p);
       }
     }
 
-    // <use> nodes
     if (el.use) {
       const us = Array.isArray(el.use) ? el.use : [el.use];
-      for (const u of us) { pushNode(u.id, getXYWH(u)); }
+      for (const u of us) { pushNode(u.id, getXYWH(u), u); }
     }
 
-    // <image> nodes
     if (el.image) {
       const is = Array.isArray(el.image) ? el.image : [el.image];
-      for (const im of is) { pushNode(im.id, getXYWH(im)); }
+      for (const im of is) { pushNode(im.id, getXYWH(im), im); }
     }
   });
 
-  // Stable order for diffs
   lines.sort((a,b) => a.id.localeCompare(b.id));
   nodes.sort((a,b) => a.id.localeCompare(b.id));
 
