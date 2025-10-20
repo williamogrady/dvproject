@@ -1492,11 +1492,7 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
 
 
 /**
- * Populate Lines card like MapView B:
- * - row-rich: top 3 overloaded (>=100%)
- * - row-top : next highest (up to 6), excluding those in row-rich
- */
-/** Lines card:
+ * Lines card:
  *  Row 3 = top-3 overloaded (>100%) — bigger warning tiles
  *  Row 4 = next top-3 remaining lines by load (over or not)
  *  Only overloaded minis are clickable (pingChevron)
@@ -1519,42 +1515,110 @@ function updateLinesCard(linesIn = []){
     card.appendChild(okPill);
   }
 
+// --- ensure blackout banner lives in the SAME parent as #row-rich
+const host = r3.parentNode; // this is the `.lines-card` element
+let banner = host.querySelector('#lines-blackout-banner');
+if (!banner) {
+  banner = document.createElement('div');
+  banner.id = 'lines-blackout-banner';
+  banner.style.display = 'none';
+  banner.style.margin = '4px 0 8px 0';
+}
+// If the banner is not already under the correct parent, move it before r3
+if (banner.parentNode !== host) host.insertBefore(banner, r3);
+
+
   r3.innerHTML = '';
   r4.innerHTML = '';
 
   // Normalize & sort by load %
-const norm = (linesIn || [])
-  .map(L => {
-    const rate = +(L.rate_a ?? L.rateA ?? 0);
-    const flow = +(L.flow_signed ?? L.flow ?? 0);
-    const pct01 = rate > 0 ? Math.abs(flow) / rate : 0; // 0..1
-    const id    = _lineId(L);
-    const prev  = previousLineLoads[id] ?? pct01;
-    const deltaPts = (pct01 - prev) * 100;
-    const dir   = Math.abs(deltaPts) < 0.5 ? 'neutral' : (deltaPts > 0 ? 'up' : 'down');
+  const norm = (linesIn || [])
+    .map(L => {
+      const rate = +(L.rate_a ?? L.rateA ?? 0);
+      const flow = +(L.flow_signed ?? L.flow ?? 0);
+      const pct01 = rate > 0 ? Math.abs(flow) / rate : 0; // 0..1
+      const id    = _lineId(L);
+      const prev  = previousLineLoads[id] ?? pct01;
+      const deltaPts = (pct01 - prev) * 100;
+      const dir   = Math.abs(deltaPts) < 0.5 ? 'neutral' : (deltaPts > 0 ? 'up' : 'down');
 
-    return {
-      id,
-      pct: pct01 * 100,
-      // invert sign globally except Bus68–Bus69
-      dirArrow: (shouldInvertChevronPair(L.from_bus ?? L.from ?? L.i ?? L.bus1,
-                                        L.to_bus   ?? L.to   ?? L.j ?? L.bus2)
-                ? -1 : 1) * (flow >= 0 ? 1 : -1),
-      flowAbs: Math.abs(flow),              // <-- add this
-      _prev01: prev,
-      _deltaPts: deltaPts,
-      _deltaDir: dir
-    };
-  })
-  .sort((a,b) => b.pct - a.pct);
+      return {
+            id,
+            pct: pct01 * 100,
+            // arrow direction: +flow = from→to, -flow = to→from, then flip if line.flipped
+            dirArrow: ((flow >= 0 ? 1 : -1) * (L.flipped ? -1 : 1)),
+            flowAbs: Math.abs(flow),
+            _prev01: prev,
+            _deltaPts: deltaPts,
+            _deltaDir: dir
+          };
+    })
+    .sort((a,b) => b.pct - a.pct);
 
-const S = (window.disabledLineSet instanceof Set) ? window.disabledLineSet : new Set();
-const normEnabled = norm.filter(d => !S.has(d.id));
+  const S = (window.disabledLineSet instanceof Set) ? window.disabledLineSet : new Set();
+  const normEnabled = norm.filter(d => !S.has(d.id));
+
+  // === BLACKOUT DETECTION (all enabled lines at 0%) ========================
+const blackout = normEnabled.length > 0 && normEnabled.every(d => d.pct <= 0.0001);
+
+
+ function styleOkPillDefault(){
+  okPill.textContent = 'All good!';
+  okPill.style.display = 'none';       // toggled after rows render
+  okPill.style.background = '#4caf50';
+  okPill.style.color = '#fff';
+  okPill.style.border = 'none';
+  okPill.style.borderRadius = '9999px';
+  okPill.style.padding = '2px 8px';
+  okPill.style.fontWeight = '700';
+  okPill.style.textTransform = 'none';
+  okPill.style.fontFamily = "'Figtree', sans-serif";
+}
+
+  function showBlackoutBanner(){
+    banner.innerHTML = `<span style="
+      display:inline-block;
+      font-weight:800;
+      font-size:1.05rem;
+      color:#b71c1c;
+      letter-spacing:0.4px;
+    ">Blackout state</span>`;
+    banner.style.display = 'block';
+
+    okPill.innerHTML = `⚠️ <span style="font-weight:700;font-size:0.85rem;letter-spacing:0.2px;">Grid offline</span>`;
+    okPill.style.display = 'inline-block';
+    okPill.style.background = '#ffebee';
+    okPill.style.color = '#b71c1c';
+    okPill.style.border = '1.5px solid #b71c1c';
+    okPill.style.borderRadius = '9999px';
+    okPill.style.padding = '3px 10px';
+    okPill.style.fontFamily = "'Figtree', sans-serif";
+    okPill.style.textTransform = 'none';
+  }
+
+  function hideBlackoutBanner(){
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+  }
+
+  if (blackout) {
+    // Clear rows & show blackout UI, update last-seen loads
+    r3.innerHTML = '';
+    r4.innerHTML = '';
+    showBlackoutBanner();
+    norm.forEach(d => { previousLineLoads[d.id] = 0; });
+    return; // skip normal population
+  } else {
+    // Revert styles when grid is online again
+    hideBlackoutBanner();
+    styleOkPillDefault();
+  }
+  // ========================================================================
+
   // Row 3: top-3 overloaded (>100%)
- const row3 = normEnabled.filter(d => d.pct > 100).slice(0,3);
-const used = new Set(row3.map(d => d.id));
-const row4 = normEnabled.filter(d => !used.has(d.id)).slice(0,3);
-
+  const row3 = normEnabled.filter(d => d.pct > 100).slice(0,3);
+  const used = new Set(row3.map(d => d.id));
+  const row4 = normEnabled.filter(d => !used.has(d.id)).slice(0,3);
 
   // placeholders occupy space but stay invisible (no reflow jumps)
   function buildLinePlaceholder(variant){
@@ -1567,61 +1631,61 @@ const row4 = normEnabled.filter(d => !used.has(d.id)).slice(0,3);
   }
 
   // build a single mini card (no side-effects)
-function buildMini(d, variant /* 'rich' | 'top' */){
-  const el = document.createElement('div');
-  el.className = `line-card ${variant} ${d.pct > 100 ? 'is-overloaded' : ''}`;
-  el.dataset.lineId = d.id;
+  function buildMini(d, variant /* 'rich' | 'top' */){
+    const el = document.createElement('div');
+    el.className = `line-card ${variant} ${d.pct > 100 ? 'is-overloaded' : ''}`;
+    el.dataset.lineId = d.id;
 
-  // left chevron FIRST so we can append to it safely
-  const left = document.createElement('div');
-  left.className = 'left';
-  el.appendChild(left);
+    // left chevron FIRST so we can append to it safely
+    const left = document.createElement('div');
+    left.className = 'left';
+    el.appendChild(left);
 
-  // color parity with map chevrons
-  const accent = getChevronColor(Math.min(1, Math.max(0, d.pct / 100)));
-  el.style.setProperty('--accent', accent);
-  el.style.borderColor = accent;
+    // color parity with map chevrons
+    const accent = getChevronColor(Math.min(1, Math.max(0, d.pct / 100)));
+    el.style.setProperty('--accent', accent);
+    el.style.borderColor = accent;
 
-  const isDisabled = window.disabledLineSet && window.disabledLineSet.has(d.id);
-  if (isDisabled) {
-    const x = document.createElement('span');
-    x.textContent = '❌';
-    x.style.fontSize = '18px';
-    x.style.lineHeight = '1';
-    left.appendChild(x);
-  } else {
-    // one and only mini chevron; centered, sign-aware, zero-flow circle supported
-    left.appendChild(_buildChevron(accent, d.dirArrow, 22, d.flowAbs));
+    const isDisabled = window.disabledLineSet && window.disabledLineSet.has(d.id);
+    if (isDisabled) {
+      const x = document.createElement('span');
+      x.textContent = '❌';
+      x.style.fontSize = '18px';
+      x.style.lineHeight = '1';
+      left.appendChild(x);
+    } else {
+      // one and only mini chevron; centered, sign-aware, zero-flow circle supported
+      left.appendChild(_buildChevron(accent, d.dirArrow, 22, d.flowAbs));
+    }
+
+    // right: % + delta
+    const right = document.createElement('div');
+    right.className = 'right';
+
+    const load = document.createElement('div');
+    load.className = 'load';
+    load.textContent = `${Math.round(d.pct)}%`;
+
+    const delta = document.createElement('div');
+    delta.className = `delta ${d._deltaDir}`;
+    const label = d._deltaDir === 'neutral'
+      ? '– 0%'
+      : `${d._deltaDir === 'up' ? '▲' : '▼'} ${Math.abs(d._deltaPts).toFixed(0)}%`;
+    delta.textContent = label;
+
+    right.appendChild(load);
+    right.appendChild(delta);
+    el.appendChild(right);
+
+    if (typeof pingChevron === 'function') {
+      el.tabIndex = 0;
+      el.addEventListener('click', (e) => { e.stopPropagation(); pingChevron(d.id); });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pingChevron(d.id); }
+      });
+    }
+    return el;
   }
-
-  // right: % + signed MW + delta
-  const right = document.createElement('div');
-  right.className = 'right';
-
-  const load = document.createElement('div');
-  load.className = 'load';
-  load.textContent = `${Math.round(d.pct)}%`;
-
-  const delta = document.createElement('div');
-  delta.className = `delta ${d._deltaDir}`;
-  const label = d._deltaDir === 'neutral'
-    ? '– 0%'
-    : `${d._deltaDir === 'up' ? '▲' : '▼'} ${Math.abs(d._deltaPts).toFixed(0)}%`;
-  delta.textContent = label;
-
-  right.appendChild(load);
-  right.appendChild(delta);
-  el.appendChild(right);
-
-  if (typeof pingChevron === 'function') {
-    el.tabIndex = 0;
-    el.addEventListener('click', (e) => { e.stopPropagation(); pingChevron(d.id); });
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pingChevron(d.id); }
-    });
-  }
-  return el;
-}
 
   // append real items + pad to exactly 3 with placeholders (no recursion!)
   row3.forEach(d => r3.appendChild(buildMini(d, 'rich')));
@@ -1633,10 +1697,11 @@ function buildMini(d, variant /* 'rich' | 'top' */){
   // update last-seen loads
   norm.forEach(d => { previousLineLoads[d.id] = d.pct / 100; });
 
-    // After row3/row4 are rendered:
-  const overloadedCount = row3.length;         // >100% load
+  // After row3/row4 are rendered:
+  const overloadedCount = row3.length; // >100% load
   okPill.style.display = overloadedCount === 0 ? 'inline-block' : 'none';
 }
+
 
 
 
@@ -1852,13 +1917,12 @@ function renderMapLineLoads(lines) {
         if (!base) return;
 
         // Signed flow in AB frame; negative flips 180° to B→A
-        // Signed flow in AB frame; negative flips 180° to B→A
         const fs = +(line.flow_signed ?? line.flow ?? 0);
 
-          // Global inversion (except Bus68–Bus69)
-        //const invertExtra = shouldInvertChevronPair(A, B) ? 180 : 0;
+        // Final angle: base AB + flow sign + flipped flag
+        let angle = base.deg + (fs < 0 ? 180 : 0);
+        if (line.flipped) angle += 180;
 
-        const angle = base.deg + (fs < 0 ? 180 : 0) /*+ invertExtra*/;
 
         const midX = base.midX, midY = base.midY;
 
