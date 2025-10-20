@@ -751,9 +751,7 @@ function buildDisabledLineSetFromScenario(scen = {}) {
 }
 
 
-// --- Always exclude these
-const EXCLUDE_BUSES = new Set([1]);          // bus numbers to drop
-const EXCLUDE_IDS   = new Set(["Gen1"]);     // normalized ids to drop
+
 
 function normalizeGenId(gen){
   // Prefer bus → consistent with map & API (e.g., "Gen23")
@@ -771,13 +769,6 @@ function normalizeGenId(gen){
   return m ? `Gen${m[0]}` : s;
 }
 
-function sanitizeGenerators(arr){
-  return (arr || []).filter(g => {
-    const bus = Number(g?.bus);
-    const id  = normalizeGenId(g);
-    return !EXCLUDE_BUSES.has(bus) && !EXCLUDE_IDS.has(id);
-  });
-}
 
 
 /** Compute universe + overlap/mismatches between API and Map */
@@ -953,7 +944,7 @@ async function loadScenario(scenarioId){
 
   currentScenarioId   = scenarioId;
   currentScenarioData = data.scenario ? data.scenario : data;
-    currentGenerators   = (data.generators || []).filter(g => g.bus !== 1);
+  currentGenerators   = (data.generators || []);
   const lines         = data.lines || data.powerflow?.lines || [];
   window.currentLines = Array.isArray(data.lines) ? data.lines : [];
   
@@ -2063,7 +2054,6 @@ function buildScenarioSets(scen = {}){
 
 
 function renderGenerators(gens){
-  gens = sanitizeGenerators(gens);
   window.currentGenerators = Array.isArray(gens) ? gens : (
     Array.isArray(window.activeGenerators) || Array.isArray(window.inactiveGenerators)
       ? [...(window.activeGenerators || []), ...(window.inactiveGenerators || [])]
@@ -2282,7 +2272,7 @@ if (gen.pg > 0 && gen.user_active && !disabled && !locked){
   const data = await res.json();
 
   // ✅ Always refresh both generators and lines from the response
-  currentGenerators   = sanitizeGenerators(data.generators);
+  currentGenerators = data.generators;
   window.currentLines = Array.isArray(data.lines) ? data.lines : [];
 
   // ✅ Repaint lists, map chevrons/❌, and overview using FRESH lines
@@ -2330,7 +2320,7 @@ levels.forEach((level, i) => {
           body: JSON.stringify({ percent, user_active: true })
         });
         const data = await res.json();
-        currentGenerators = sanitizeGenerators(data.generators);
+        currentGenerators = data.generators;
         window.currentLines = Array.isArray(data.lines) ? data.lines : [];
         renderGenerators(currentGenerators);
         renderLines(data.lines, data.solved !== false);
@@ -2412,7 +2402,7 @@ const doToggle = async () => {
     body: JSON.stringify(payload)
   });
   const data = await res.json();
-  currentGenerators = sanitizeGenerators(data.generators);
+  currentGenerators = data.generators;
   window.currentLines = Array.isArray(data.lines) ? data.lines : [];
   renderGenerators(currentGenerators);
   renderLines(data.lines, data.solved !== false);
@@ -2675,18 +2665,17 @@ zoomGroup.selectAll("rect.map-bus")
   .append("rect")
   .attr("class", "map-bus")
   .attr("id", d => d.id)
-  .attr("x", d => d.x - d.width / 2)
-  .attr("y", d => d.y - d.height / 2)
   .attr("width", d => d.width)
   .attr("height", d => d.height)
   .attr("fill", "#666")
   .attr("stroke", "#000")
   .attr("stroke-width", 0.8)
+  .attr("x", d => d.x)            // ← EXACT top-left from SVG
+  .attr("y", d => d.y)            // ← EXACT top-left from SVG
   .attr("transform", d => {
-    if (d.rotate && d.rotateX !== null && d.rotateY !== null) {
-      return `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`;
-    }
-    return null;
+    return (d.rotate != null && d.rotateX != null && d.rotateY != null)
+      ? `rotate(${d.rotate}, ${d.rotateX}, ${d.rotateY})`
+      : null;
   });
 
 zoomGroup.selectAll("path.map-load")

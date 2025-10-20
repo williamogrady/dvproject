@@ -254,30 +254,87 @@ class Grid:
             lo, hi = (a, b) if a <= b else (b, a)
             br.ui_id = self._ui_pair_to_id.get((lo, hi), f"Line_Bus{lo}_Bus{hi}")
 
+    def _assign_slack_bus(self):
+        # Bus and Gen column indices (MATPOWER)
+        BUS_I, BUS_TYPE = 0, 1
+        PV, REF = 2, 3
+        GEN_BUS, PG, GEN_STATUS, PMAX = 0, 1, 7, 8
+
+        # Start from current case (PG already written)
+        gen  = self.case['gen']
+        busm = self.case['bus']
+
+        # Build the "user touched" set
+        touched = set(i for i, g in enumerate(self.generators) if bool(getattr(g, "user_active", False)))
+
+        # Eligible pool: enabled, NOT user-touched, currently ON (PG > 0)
+        eligible = []
+        for i in range(gen.shape[0]):
+            if int(gen[i, GEN_STATUS]) != 1:
+                continue
+            if i in touched:
+                continue
+            if float(gen[i, PG]) <= 0.0:
+                continue
+            headroom = float(gen[i, PMAX] - gen[i, PG])
+            eligible.append((headroom, int(gen[i, GEN_BUS])))
+
+        # Fallback: if user touched everything, consider all enabled gens
+        if not eligible:
+            for i in range(gen.shape[0]):
+                if int(gen[i, GEN_STATUS]) != 1:
+                    continue
+                headroom = float(gen[i, PMAX] - gen[i, PG])
+                eligible.append((headroom, int(gen[i, GEN_BUS])))
+
+        if not eligible:
+            # No enabled generators → leave bus types as-is (de-energized handled upstream)
+            return
+
+        # Pick bus with max headroom
+        _, ref_bus = max(eligible, key=lambda t: t[0])
+
+        # Reset any existing REF → PV
+        mask_ref = (busm[:, BUS_TYPE] == REF)
+        busm[mask_ref, BUS_TYPE] = PV
+
+        # Set chosen bus to REF
+        idx = np.where(busm[:, BUS_I].astype(int) == int(ref_bus))[0]
+        if idx.size:
+            busm[idx[0], BUS_TYPE] = REF
+            print(f"🎛️ Slack assigned to Bus {int(ref_bus)}")
+
+
 
     def update_case_from_objects(self):
         """
-        Rules:
-        • Scenario 'initial_outputs' decides who starts ON (MW) vs OFF.
+        Soft-distributed balancing:
+        • Scenario 'initial_outputs' sets defaults.
         • Generators not listed start OFF but enabled (user can turn on).
         • disabled=True => hard OFF (GEN_STATUS=0), user cannot turn on.
-        • User edits always win:
-            - user_active & pg>0  => fix to that MW
-            - user_active & pg==0 => explicit OFF (keep 0), never add back via normalization
-        • Pre-PF normalization:
-            - If any gens are ON, spread small deficit/surplus ONLY across free,
-            scenario-ON gens that the user didn’t touch. This shrinks slack to ≈ losses.
-            - If no gens are ON, mark grid de-energized and do not run PF (handled in run_power_flow).
+        • User edits always win (including explicit OFF at 0 MW).
+        • If any gens are ON, distribute only a *soft* fraction (alpha) of the
+        net mismatch across free (non user-touched) ON generators, with a
+        per-gen clamp (±clamp_frac * PMAX). User-touched gens never change here.
+        • If no gens are ON, mark de-energized and skip PF upstream.
+
+        Tunables (optional on self):
+        self.soft_balance_alpha  ∈ [0,1], default 0.6
+        self.soft_balance_clamp_frac ∈ (0,1], default 0.05
         """
         import numpy as np
 
         # MATPOWER case['gen'] columns
         GEN_BUS, PG, QG, QMAX, QMIN, VG, MBASE, GEN_STATUS, PMAX, PMIN = range(10)
 
-        # Total active demand (Pd) already scenario-scaled
+        # Read tunables (with safe defaults)
+        alpha = float(getattr(self, "soft_balance_alpha", 0.6))         # how much of the mismatch to pre-close
+        clamp_frac = float(getattr(self, "soft_balance_clamp_frac", 0.05))  # per-gen cap as % of PMAX
+
+        # Total active demand (Pd), already scenario-scaled elsewhere
         total_pd = float(np.sum(self.case['bus'][:, 2]))
 
-        # Start from ZERO; we’ll fill with scenario/user values
+        # Start from ZERO; fill with scenario/user values
         desired_pg = np.zeros_like(self._base_gen_pg, dtype=float)
 
         # 1) Apply status & desired_pg from (disabled → user → scenario)
@@ -296,7 +353,7 @@ class Grid:
                 # user intent always wins (including explicit OFF at 0)
                 desired_pg[i] = user_pg
             else:
-                # not user-touched → scenario decides ON/OFF (apply_scenario set gen.pg from initial_outputs)
+                # not user-touched → scenario decides ON/OFF (apply_scenario set gen.pg)
                 scen_pg = float(getattr(gen, "pg", 0.0) or 0.0)
                 desired_pg[i] = scen_pg
 
@@ -307,16 +364,26 @@ class Grid:
             if desired_pg[i] > float(self.case['gen'][i, PMAX]):
                 self.case['gen'][i, PMAX] = desired_pg[i]
 
-        # 2) De-energized flag OR normalization among free, scenario-ON gens
+        # 2) De-energized flag OR soft distributed balancing among free, scenario-ON gens
         if not any_on:
             # mark: blackout baseline → skip PF, zero flows later
             self._deenergized = True
+            # Clear any stale annotations
+            for gen in self.generators:
+                setattr(gen, "auto_balance_delta", 0.0)
         else:
             self._deenergized = False
+
+            # Clear per-gen auto-balance annotations (UI can show these)
+            for gen in self.generators:
+                setattr(gen, "auto_balance_delta", 0.0)
+
             scheduled = float(np.sum(desired_pg))
-            deficit = total_pd - scheduled
-            if abs(deficit) > 1e-6:
-                # free = enabled, not user-touched, and currently ON (scenario ON) → desired_pg>0
+            deficit = total_pd - scheduled  # >0 means we need more generation
+
+            # Only act if there is a meaningful mismatch
+            if abs(deficit) > 1e-6 and alpha > 0.0 and clamp_frac > 0.0:
+                # free = enabled, not user-touched, and currently ON (desired_pg>0)
                 free_idx = []
                 for i, gen in enumerate(self.generators):
                     is_enabled = (self.case['gen'][i, GEN_STATUS] == 1)
@@ -324,18 +391,39 @@ class Grid:
                     if is_enabled and (not ua) and (desired_pg[i] > 0.0):
                         free_idx.append(i)
 
+                # Fallback: if user touched everything, spread across all enabled gens
+                if not free_idx:
+                    for i, gen in enumerate(self.generators):
+                        if self.case['gen'][i, GEN_STATUS] == 1:
+                            free_idx.append(i)
+
                 if free_idx:
-                    # Weight by current desired (scenario) outputs; fallback to PMAX if needed
+                    # Participation weights: prefer current desired outputs; fallback to PMAX
                     base = desired_pg[free_idx].copy()
                     if float(np.sum(base)) <= 1e-9:
                         base = np.maximum(self.case['gen'][free_idx, PMAX], 1e-3)
                     weights = base / float(np.sum(base))
 
-                    desired_pg[free_idx] = desired_pg[free_idx] + deficit * weights
-                    # Clamp within [0, PMAX]
-                    for j in free_idx:
+                    # SOFT distribution: only a fraction of the mismatch
+                    soft_deficit = alpha * deficit
+
+                    # Apply bounded adjustments
+                    for k, j in enumerate(free_idx):
                         pmax_j = float(self.case['gen'][j, PMAX])
-                        desired_pg[j] = float(np.clip(desired_pg[j], 0.0, pmax_j))
+                        delta_j = float(soft_deficit) * float(weights[k])
+
+                        # clamp by ±(clamp_frac * PMAX)
+                        cap = clamp_frac * pmax_j
+                        if delta_j > cap:  delta_j = cap
+                        if delta_j < -cap: delta_j = -cap
+
+                        # respect physical limits
+                        new_pg = float(np.clip(desired_pg[j] + delta_j, 0.0, pmax_j))
+                        gen_delta = new_pg - desired_pg[j]
+                        desired_pg[j] = new_pg
+
+                        # record for UI
+                        self.generators[j].auto_balance_delta = float(gen_delta)
 
         # 3) Write initial dispatch for PF
         self.case['gen'][:, PG] = desired_pg
@@ -344,6 +432,11 @@ class Grid:
         try:
             print("🧮 Scheduled total PG (MW):", float(np.sum(self.case['gen'][:, PG])))
             print("🔌 De-energized:", bool(getattr(self, "_deenergized", False)))
+            # Optional: quick summary of auto-balance
+            total_auto = sum(float(getattr(g, "auto_balance_delta", 0.0)) for g in self.generators)
+            if abs(total_auto) > 1e-6:
+                print(f"🪄 Auto-balance distributed (pre-PF): {total_auto:+.2f} MW "
+                    f"(alpha={alpha}, clamp={clamp_frac*100:.1f}% PMAX)")
         except Exception as _e:
             print("⚠️ Could not sum scheduled PG:", _e)
 
@@ -578,6 +671,9 @@ class Grid:
 
         # Update case with current generator/user/scenario state
         self.update_case_from_objects()
+
+        # 🔑 NEW: move slack away from user-touched units so their setpoints stick
+        self._assign_slack_bus()
 
         # Apply branch enable/disable flags from the active scenario (if any)
         try:

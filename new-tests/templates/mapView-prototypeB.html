@@ -1131,39 +1131,41 @@ function clearAllFocusFades(){
     .attr("opacity", null);
 }
 
-
 function applyVisualFocus(){
   const powerFocused = activeFilters.has('power');
   const linesFocused = (currentMapMode === "lines");
 
   // Always clear any lingering inline fades/scales first
   clearAllFocusFades();
-  smoothScale("#chevron-layer .chevron, .line-load-indicator", 1);
-  smoothScale(".map-gen-group", 1);
-  
 
-  // Selections
+  // Normalise scales back to 1
   const selGens   = ".map-gen-group";
   const selLines  = ".map-line";
   const selChevs  = "#chevron-layer .chevron, .line-load-indicator";
   const selBuses  = ".map-bus";
   const selLoads  = ".map-load";
 
-  // First: return everything to base (opacity=1, scale=1)
+  // Return everything to base (opacity=1, scale=1)
   smoothFade([selBuses, selLoads, selLines, selChevs, selGens].join(","), 1);
-  smoothScale([selChevs].join(","), 1);
-  smoothScale([selGens].join(","), 1);
+  smoothScale(selChevs, 1);
+  smoothScale(selGens, 1);
 
-  // Then apply the focused mode
-  if (linesFocused && !powerFocused){
-    // Lines focus → keep lines/chevrons full; fade all else; gently scale chevrons
+  // Prefer LINES if both flags are ever true (defensive guard)
+  if (linesFocused) {
+    // Lines focus → lines/chevrons full; fade others; gently scale chevrons
     smoothFade([selBuses, selLoads, selGens].join(","), 0.2);
     smoothScale(selChevs, FOCUS_CHV_SCALE);
-  } else if (powerFocused && !linesFocused){
-    // Power focus → keep generators full; fade all else; gently scale generators
+    return;
+  }
+
+  if (powerFocused) {
+    // Power focus → generators full; fade others; gently scale generators
     smoothFade([selBuses, selLoads, selLines, selChevs].join(","), 0.2);
     smoothScale(selGens, FOCUS_GEN_SCALE);
+    return;
   }
+
+  // none: all visuals already reset to base above
 }
 
 
@@ -1171,6 +1173,20 @@ function setLinesFocus(on){
   const card   = document.getElementById("scale-lines");
   const status = document.getElementById("status-lines");
   currentMapMode = on ? "lines" : "full";
+
+  // Exclusivity with Power
+  if (on) {
+    if (activeFilters.has('power')) {
+      activeFilters.delete('power');
+      const pCard = document.getElementById('scale-power');
+      const pStat = document.getElementById('status-power');
+      if (pCard)  pCard.classList.remove('selected','scale-power');
+      if (pStat)  pStat.textContent = 'Click to focus';
+    }
+
+    // NEW: hard-reset generator glyph size/scale when Lines focus turns on
+    smoothScale(".map-gen-group", 1);
+  }
 
   if (card){
     card.classList.toggle("selected", on);
@@ -1180,10 +1196,11 @@ function setLinesFocus(on){
     status.textContent = on ? "Lines in focus" : "Click to focus";
   }
 
-  // Redraw chevrons for lines mode sizing, then apply visual fades
   refreshChevrons(currentLines || [], currentMapMode);
   applyVisualFocus();
 }
+
+
 
 // Smooth focus constants
 const FOCUS_FADE_MS   = 320;
@@ -1430,8 +1447,9 @@ svg.call(zoomBehavior);
 
 
 function resetFilters() {
-  activeFilters.clear();
+  setLinesFocus(false); // NEW: also exit lines focus
 
+  activeFilters.clear();
   ["scale-power","scale-cost","scale-emissions"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove("selected","scale-power","scale-cost","scale-emissions");
@@ -1443,6 +1461,7 @@ function resetFilters() {
 
   updateMapGeneratorsFromScenario();
 }
+
 
 
 window.addEventListener("load", () => {
@@ -2313,6 +2332,19 @@ function makePowerWidthScale(gens = currentGenerators){
 }
 
 
+function wireLinesCard(){
+  const el = document.getElementById("scale-lines");
+  if (!el) { console.warn("Missing lines card:", "scale-lines"); return; }
+  if (el.dataset.wired === "1") return;
+  el.dataset.wired = "1";
+
+  el.addEventListener("click", (ev) => {
+    ev.preventDefault(); ev.stopPropagation();
+    // toggle Lines focus
+    const turnOn = (currentMapMode !== "lines");
+    setLinesFocus(turnOn);
+  }, { passive: false });
+}
 
 
 function wireToggle(key, elId, statusId){
@@ -2344,17 +2376,24 @@ function wireToggle(key, elId, statusId){
   setState(activeFilters.has(key));
 
   el.addEventListener("click", (ev) => {
-    ev.preventDefault(); ev.stopPropagation();
-    const next = !activeFilters.has(key);
-    //console.log(`[TOGGLE] ${key}: ${!next} → ${next}`);
-    setState(next);
-    safeUpdate();
-  }, { passive: false });
+  ev.preventDefault(); ev.stopPropagation();
+
+  // NEW: cost/emissions clicks should exit Lines focus if it's on
+  if ((elId === "scale-cost" || elId === "scale-emissions") && currentMapMode === "lines") {
+    setLinesFocus(false);
+  }
+
+  const next = !activeFilters.has(key);
+  setState(next);
+  safeUpdate();
+}, { passive: false });
+
 }
 
 wireToggle(FILTER_KEYS.power,     "scale-power",     "status-power");
 wireToggle(FILTER_KEYS.cost,      "scale-cost",      "status-cost");
 wireToggle(FILTER_KEYS.emissions, "scale-emissions", "status-emissions");
+wireLinesCard(); // ← NEW
 
 
 let __updating = false;

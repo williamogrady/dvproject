@@ -4,7 +4,7 @@
     "target_mw": 3000,
     "emissions_limit": 10000,
     "cost_limit": 20000,
-    "line_limit_pct": 0.04,
+    "line_limit_pct": 0.05,
     "locked_generators": [
         "Gen8", "Gen32", "Gen4", "Gen12"
     ],
