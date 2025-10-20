@@ -1874,6 +1874,80 @@ function updateLinesCard(/* liveLines not needed anymore */) {
   const S = window.disabledLineSet || new Set();
   const filtered = lines.filter(l => !S.has(l.id));
 
+// --- Detect blackout state: all lines at 0% ---
+const blackout = filtered.length > 0 && filtered.every(l => (l._pct || 0) === 0);
+
+if (blackout) {
+  const linesEl = document.getElementById("overview-lines");
+  const okPill  = document.getElementById("lines-ok-pill");
+  const rowRich = document.getElementById("row-rich");
+  const rowTop  = document.getElementById("row-top");
+  const status  = document.getElementById("status-lines");
+
+  // Headline
+  if (linesEl) {
+    linesEl.innerHTML = `<span style="
+      display:inline-block;
+      font-weight:800;
+      font-size:1.1rem;
+      color:#b71c1c;
+      letter-spacing:0.5px;
+    ">Blackout state</span>`;
+  }
+
+  // Subline pill
+   if (okPill) {
+    okPill.innerHTML = `⚠️ <span style="
+      font-weight:700;
+      font-size:0.8rem;
+      letter-spacing:0.3px;
+    ">Grid offline</span>`;
+    Object.assign(okPill.style, {
+      display: "inline-block",
+      background: "#ffebee",
+      color: "#b71c1c",
+      border: "1.5px solid #b71c1c",
+      borderRadius: "9999px",
+      padding: "3px 10px",
+      fontFamily: "'Figtree', sans-serif",
+      textTransform: "none",
+    });
+  }
+
+  // Clear the lists
+  if (rowRich) rowRich.innerHTML = "";
+  if (rowTop)  rowTop.innerHTML  = "";
+
+  // Update status line
+  if (status) {
+    status.textContent = "⚡ Grid offline due to blackout";
+    status.style.color = "#b71c1c";
+    status.style.fontWeight = "600";
+  }
+
+  return; // skip the rest of updateLinesCard()
+}
+
+// --- Otherwise, ensure blackout styles are reverted ---
+if (status) {
+  status.textContent = currentMapMode === "lines" ? "Lines in focus" : "Click to focus";
+  status.style.color = "#666";
+  status.style.fontWeight = "normal";
+}
+
+if (okPill) {
+  okPill.textContent = "All good!";
+  okPill.style.display = "none";           // will be toggled visible later if needed
+  okPill.style.background = "#4caf50";
+  okPill.style.color = "#fff";
+  okPill.style.border = "none";
+  okPill.style.borderRadius = "9999px";
+  okPill.style.padding = "2px 8px";
+  okPill.style.fontWeight = "700";
+  okPill.style.fontFamily = "'Figtree', sans-serif";
+  okPill.style.textTransform = "none";
+}
+
 
   // Partition/sort
   const byPctDesc = (a,b) => b._pct - a._pct;
