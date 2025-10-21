@@ -1015,10 +1015,7 @@ function _loadColor(pct){
   return '#43a047';                // green
 }
 
-// Inversion helper: invert everywhere EXCEPT Bus68–Bus69
-function shouldInvertChevronPair(a, b){
-  return;
-}
+
 
 // Mini chevron that matches MapView's shape, is perfectly centered, and supports zero-flow
 function _buildChevron(accent, dir, sizePx = 22, flowAbs = 1, zeroThreshMW = 0.1){
@@ -1510,7 +1507,8 @@ function renderOverview(gens = [], scenario = {}, lines = []) {
 
 
 
-
+function isBusId(x){ return typeof x === "string" && x.startsWith("Bus"); }
+function isBusBusLine(line){ return isBusId(line.source) && isBusId(line.target); }
 
 /**
  * Lines card:
@@ -1802,7 +1800,7 @@ function renderLines(lines, solved = true) {
     container.appendChild(card);
   });
 
-  if (solved) renderMapLineLoads(lines);
+  if (solved) drawChevrons(lines);
 }
 
 // Ping the generator on the map: quick grow + shrink, with anti-spam
@@ -1874,127 +1872,181 @@ function pingChevron(lineId){
         .on("end", () => chev.attr("data-animating", null));
 }
 
-// === Canonical directions (case118 fbus→tbus) + geometry base ===
-async function loadCanonicalDirections(){
-  if (window.__canonDir) return window.__canonDir;
-  try{
-    const r = await fetch('/api/branch-directions');
-    const { branches = [] } = await r.json();
-    const m = new Map();
-    for (const { fbus, tbus } of branches){
-      const lo = Math.min(fbus,tbus), hi = Math.max(fbus,tbus);
-      m.set(`${lo}|${hi}`, [fbus, tbus]);   // electrical AB = fbus→tbus
-    }
-    window.__canonDir = m;
-    return m;
-  }catch(e){
-    console.warn('Failed to load canonical directions', e);
-    window.__canonDir = new Map();
-    return window.__canonDir;
+
+// Draws a fresh chevron layer from enriched line data
+function drawChevrons(lines) {
+  // --- remove & recreate layer (kept only here to avoid flicker) ---
+d3.select("#chevron-layer").remove();
+  const chevronGroup = d3.select("#zoom-group")
+    .insert("g", ".map-gen-group")
+  .attr("id", "chevron-layer")
+   .style("opacity", 1);  // no power-focus mode in ListView
+
+ const nodes = window.staticNodes || [];
+
+  // --- local fallbacks so this is paste-safe -----------------------
+  const ZERO = (window.ZERO_MW ?? 0.1); // treat near-zero as zero (MW)
+  const circlePathFn = (typeof circlePath === "function")
+    ? circlePath
+    : (r) => {
+        const rr = Math.max(2, r);
+        return `
+          M ${-rr},0
+          a ${rr},${rr} 0 1,0 ${rr*2},0
+          a ${rr},${rr} 0 1,0 ${-rr*2},0
+          Z
+        `;
+      };
+
+  // --- helpers -----------------------------------------------------
+  function fallbackMidAndAngle(line) {
+    const from = nodes.find(n => n.id === line.source && n.type === "bus");
+    const to   = nodes.find(n => n.id === line.target && n.type === "bus");
+    if (!from || !to) return { midX: 0, midY: 0, angleDeg: 0, ok: false };
+    let angleDeg = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI;
+    if ((line.flow_signed ?? 0) < 0) angleDeg += 180; // flip on negative flow
+    return { midX: (from.x + to.x) / 2, midY: (from.y + to.y) / 2, angleDeg, ok: true };
   }
+
+  function pathMidAndAngle(line) {
+    const pathEl = document.getElementById(line.id);
+    if (!pathEl || typeof pathEl.getTotalLength !== "function") {
+      return fallbackMidAndAngle(line);
+    }
+    const L  = pathEl.getTotalLength();
+    const A  = pathEl.getPointAtLength(Math.max(0, L * 0.45));
+    const B  = pathEl.getPointAtLength(Math.min(L, L * 0.55));
+    const mid= pathEl.getPointAtLength(L * 0.50);
+    let angleDeg = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI;
+    if ((line.flow_signed ?? 0) < 0) angleDeg += 180; // flip on negative flow
+    return { midX: mid.x, midY: mid.y, angleDeg, ok: true };
+  }
+
+  function getMidAndAngle(line) {
+    const r = pathMidAndAngle(line);
+    return r.ok ? r : fallbackMidAndAngle(line);
+  }
+
+  function defaultChevronPath(size) {
+    // simple triangle; 'size' roughly equals width
+    const h = Math.max(6, size * 0.6);
+    const w = Math.max(8, size);
+    return `M0,${-h/2} L${w},0 L0,${h/2} Z`;
+  }
+
+  // --- data join (Bus↔Bus only) -----------------------------------
+  const sel = chevronGroup.selectAll("path.chevron")
+    .data(lines.filter(isBusBusLine), d => d.id);
+
+  // ENTER
+  const enter = sel.enter().append("path")
+    .attr("class", "chevron")
+    .attr("id", d => `chev-${d.id}`)
+    .attr("stroke", "#111")
+    .attr("stroke-width", 0.4)
+    .style("pointer-events", "auto")
+    .on("mouseenter", (event, d) => showChevronTooltip(event, d))
+    .on("mousemove",  (event, d) => showChevronTooltip(event, d))
+    .on("mouseleave", hideChevronTooltip);
+
+  // UPDATE + ENTER
+  enter.merge(sel)
+    .each(function(line) {
+      // utilization based on magnitude only
+      const flowSigned = +((line.flow ?? line.flow_signed) || 0);
+      const loadPct = (line.rate_a > 0) ? (Math.abs(flowSigned) / line.rate_a) : 0;
+      const color   = getChevronColor(loadPct);
+
+     const base  = 10;
+      const size  = Math.max(8, base * (1 + 0.6 * Math.max(0, loadPct)));
+
+      // --- Direction + placement (robust) ---
+      const g = getMidAndAngle(line); // uses line.id → midX, midY, angleDeg (already flips on negative flow)
+      if (!g || !Number.isFinite(g.midX) || !Number.isFinite(g.midY)) return;
+
+      let { midX, midY, angleDeg } = g;
+
+      // Static correction for visually reversed SVG paths
+      if (line.flipped) angleDeg += 180;
+        const dir = (flowSigned > 0) ? "fwd" : (flowSigned < 0 ? "rev" : "zero");
+
+        d3.select(this)
+          // ...existing attrs...
+          .attr("data-line-id", line.id)
+          .attr("data-dir", dir);
+      // Final transform
+      const _T = `translate(${midX}, ${midY}) rotate(${angleDeg})`;
+      console.log("[chev]", line.id,
+      "flipped=", !!line.flipped,
+      "angle=", ((angleDeg % 360)+360)%360  // normalize to [0,360)
+    );
+
+
+
+      // zero-flow → draw a circle; otherwise a chevron
+      const isZero = (Math.abs(flowSigned) < ZERO) || (loadPct === 0);
+      const pathD = isZero
+        ? circlePathFn(size * 0.45)
+        : (typeof chevronPath === "function") ? chevronPath(size) : defaultChevronPath(size);
+
+      // subtle opacity for tiny flows (optional)
+      const op = loadPct < 0.05 ? 0.2 : loadPct < 0.15 ? 0.6 : 1.0;
+
+      d3.select(this)
+      .datum(line)
+      .attr("d", pathD)
+      .attr("fill", color)
+      .attr("opacity", 1) // ← constant; no more low-load fading
+      .attr("data-x", midX)
+      .attr("data-y", midY)
+      .attr("data-shape", isZero ? "circle" : "chevron")
+      .attr("transform", _T)
+      .attr("data-base-transform", _T);
+
+      // optional: store pct for debugging
+      this.setAttribute("data-pct", loadPct.toFixed(3));
+    });
+
+  // EXIT
+  sel.exit().remove();
 }
 
-function baseAngleAB(A, B){
-  const idAB = `Line_Bus${A}_Bus${B}`;
-  const idBA = `Line_Bus${B}_Bus${A}`;
-  const path = document.getElementById(idAB) || document.getElementById(idBA);
-  if (!path || !path.getTotalLength) return null;
 
-  const L = path.getTotalLength();
-  const P1 = path.getPointAtLength(L * 0.45);
-  const P2 = path.getPointAtLength(L * 0.55);
-  const mid = path.getPointAtLength(L * 0.50);
 
-  let deg = Math.atan2(P2.y - P1.y, P2.x - P1.x) * 180 / Math.PI;
-  if (!document.getElementById(idAB)) deg += 180; // only BA path? invert once so base is AB
-  return { midX: mid.x, midY: mid.y, deg };
+// normalize to the canonical lo→hi id (same as MapView)
+function _lineId(L){
+  if (L?.id != null) return String(L.id);
+  const a = Number(L.from_bus ?? L.from ?? L.i ?? L.bus1 ?? NaN);
+  const b = Number(L.to_bus   ?? L.to   ?? L.j ?? L.bus2 ?? NaN);
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    const lo = Math.min(a,b), hi = Math.max(a,b);
+    return `Line_Bus${lo}_Bus${hi}`;
+  }
+  return `${a}-${b}`;
 }
 
-
-
-
-function renderMapLineLoads(lines) {
-  d3.selectAll(".line-load-indicator").remove();
-
-  // Ensure canonical directions are ready before drawing
-  const ensure = window.__canonDir ? Promise.resolve(window.__canonDir) : loadCanonicalDirections();
-
-  ensure.then(() => {
-    setTimeout(() => {
-      const group = d3.select("#zoom-group");
-      if (group.empty()) return;
-
-      (lines || []).forEach(line => {
-        const a0 = +line.from_bus, b0 = +line.to_bus;
-        if (!Number.isFinite(a0) || !Number.isFinite(b0)) return;
-
-        // Canonical electrical AB = fbus→tbus (case118)
-        const key = `${Math.min(a0,b0)}|${Math.max(a0,b0)}`;
-        const canon = (window.__canonDir && window.__canonDir.get(key)) || [a0, b0];
-        const [A, B] = canon;
-
-        // Base angle in AB frame from SVG geometry (normalize BA→AB if only BA exists)
-        const base = baseAngleAB(A, B);
-        if (!base) return;
-
-        // Signed flow in AB frame; negative flips 180° to B→A
-        const fs = +(line.flow_signed ?? line.flow ?? 0);
-
-        // Final angle: base AB + flow sign + flipped flag
-        let angle = base.deg + (fs < 0 ? 180 : 0);
-        if (line.flipped) angle += 180;
-
-
-        const midX = base.midX, midY = base.midY;
-
-        // Utilization and styling
-        const pct01 = (+line.rate_a > 0) ? Math.abs(fs) / +line.rate_a : 0;
-        const color = getChevronColor(pct01);
-        const size  = Math.max(8, 10 * (1 + 0.6 * pct01));
-
-        const baseT = `translate(${midX}, ${midY}) rotate(${angle})`;
-
-        // Unordered line id for lookups (disabled set, ping, etc.)
-        const lineId = `Line_Bus${Math.min(a0,b0)}_Bus${Math.max(a0,b0)}`;
-        const isDisabled = (window.disabledLineSet && window.disabledLineSet.has(lineId));
-
-        if (isDisabled) {
-          group.append("text")
-            .attr("class", "line-load-indicator line-x")
-            .attr("id", `chev-${lineId}`)
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "central")
-            .attr("transform", baseT)
-            .attr("data-base-transform", baseT)
-            .style("font-size", `${size * 3.0}px`)
-            .style("pointer-events", "none")
-            .text("❌");
-        } else {
-          const ZERO = 0.1; // MW
-          const isZero = Math.abs(fs) < ZERO || pct01 === 0;
-
-          const pathD = isZero
-            ? (function circlePath(r){
-                 const rr = Math.max(2, r*0.45);
-                 return `M ${-rr},0 a ${rr},${rr} 0 1,0 ${rr*2},0 a ${rr},${rr} 0 1,0 ${-rr*2},0 Z`;
-               })(size)
-            : chevronPath(size);
-
-          group.append("path")
-            .attr("class", "line-load-indicator")
-            .attr("id", `chev-${lineId}`)
-            .attr("d", pathD)
-            .attr("fill", color)
-            .attr("stroke", "#111")
-            .attr("stroke-width", 0.4)
-            .attr("opacity", 1)
-            .attr("transform", baseT)
-            .attr("data-base-transform", baseT);
-        }
-      });
-    }, 0);
-  });
-}
+function renderMapLineLoads(liveLines){
+const staticBusLines = (window.staticLines || []).filter(l =>
+    typeof l.source === "string" && l.source.startsWith("Bus") &&
+    typeof l.target === "string" && l.target.startsWith("Bus")
+  );
+  const liveIdx = new Map();
+  for (const L of (liveLines || [])){
+   const id = _lineId(L);
+   const fs   = +(L.flowSigned ?? L.flow_signed ?? L.flow ?? 0);
+    const rate = +(L.rate_a ?? L.rateA ?? 0);
+    liveIdx.set(id, { flow_signed: fs, flow: fs,            rate_a: rate });
+  }
+  const enriched = staticBusLines.map(S => {
+    const live = liveIdx.get(S.id) || { flow_signed: 0, flow: 0, rate_a: +(S.rate_a ?? 0) };
+   const pct  = (live.rate_a > 0) ? (Math.abs(live.flow_signed) / live.rate_a) : 0;
+    return {
+     id: S.id, source: S.source, target: S.target, flipped: !!S.flipped,
+     rate_a: live.rate_a, flow: live.flow, flow_signed: live.flow_signed, _pct: pct
+   };
+ });
+ drawChevrons(enriched);   // ← new no-mode call
+ }
 
 
 
@@ -2034,6 +2086,84 @@ function getChevronColor(pct01) {
 // Keep old name working (parity with existing calls)
 function getLoadColor(pct01) { return getChevronColor(pct01); }
 
+function ensureChevronTooltip() {
+  const root = d3.select("#zoom-group");     // ← live inside the zoomed group
+  let g = root.select("#chev-tooltip");
+  if (g.empty()) {
+  g = root.append("g")
+    .attr("id", "chev-tooltip")
+    .style("pointer-events", "none")
+    .style("display", "none");
+
+  g.append("rect")
+    .attr("rx", 6).attr("ry", 6)
+    .attr("height", 36)     // taller for two lines
+    .attr("width", 120);
+
+  g.append("text")          // line id (top line)
+    .attr("class", "tt-id")
+    .attr("x", 8).attr("y", 12)
+    .attr("font-family", "Figtree, sans-serif")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .attr("fill", "#111");
+
+  g.append("text")          // metrics (second line)
+    .attr("class", "tt-metrics")
+    .attr("x", 8).attr("y", 26)
+    .attr("font-family", "Figtree, sans-serif")
+    .attr("font-size", 12)
+    .attr("fill", "#111");
+}
+
+  return g;
+}
+
+function showChevronTooltip(event, d) {
+  const g = ensureChevronTooltip();
+const [x, y] = d3.pointer(event, d3.select("#zoom-group").node());
+
+const pct = (d._pct || 0);
+const pctLabel = Math.round(pct * 100);
+const flowSigned = +((d.flow_signed ?? d.flow) || 0);
+const mwLabel  = Math.round(Math.abs(flowSigned));
+const signChar = (flowSigned > 0) ? "+" : (flowSigned < 0 ? "−" : "0");
+
+// two lines: id, then metrics
+const idText = String(d.id || `${d.source}→${d.target}`);
+const metrics = `${pctLabel}% • (${signChar}${mwLabel} MW)`;
+const padX = 8;
+
+const fillColor = getChevronColor(pct);
+
+// write both lines
+const tId = g.select("text.tt-id").text(idText);
+const tMx = g.select("text.tt-metrics").text(metrics);
+
+// size the rect to the longest line
+const w1 = tId.node().getComputedTextLength();
+const w2 = tMx.node().getComputedTextLength();
+const w  = Math.max(w1, w2) + padX * 2;
+const h  = 36; // (line heights already set at y=12 and y=26)
+
+g.select("rect")
+  .attr("width", w)
+  .attr("height", h)
+  .attr("fill", fillColor)
+  .attr("stroke", "#111")
+  .attr("stroke-width", 0.5)
+  .attr("opacity", 0.95);
+
+// nudge so the box doesn’t overlap the cursor
+g.attr("transform", `translate(${x + 12}, ${y - 18})`)
+ .style("display", "block");
+
+}
+
+
+function hideChevronTooltip() {
+  d3.select("#chev-tooltip").style("display", "none");
+}
 
 // Normalize "4" → "Gen4", "Gen4" → "Gen4"
 function normalizeGenId(ref) {
@@ -2649,6 +2779,10 @@ Promise.all([
   fetch("/new-tests/full_nodes.json").then(res => res.json()),
   fetch("/new-tests/full_lines.json").then(res => res.json())
 ]).then(([nodes, lines]) => {
+
+    // after you receive [nodes, lines]
+  window.staticNodes = nodes;
+  window.staticLines = lines;
   // Lines
   zoomGroup.selectAll("path.map-line")
     .data(lines)
@@ -3381,18 +3515,7 @@ function _lv_disabledLineSet(scen){
   return s;
 }
 
-// Normalizes a line id the same way both views expect.
-// (If you already have this helper exactly like below, keep one copy.)
-function _lineId(L){
-  if (L?.id) return String(L.id); // prefer real id when present
-  const a = Number(L.from_bus ?? L.from ?? L.i ?? L.bus1 ?? NaN);
-  const b = Number(L.to_bus   ?? L.to   ?? L.j ?? L.bus2 ?? NaN);
-  if (Number.isFinite(a) && Number.isFinite(b)) {
-    const lo = Math.min(a,b), hi = Math.max(a,b);
-    return `Line_Bus${lo}_Bus${hi}`;
-  }
-  return `${a}-${b}`; // last-resort
-}
+
 
 function getHighestLoadPctAtSubmit(lines = [], scen = window.currentScenarioData){
   // Build/reuse the disabled line set so we don’t include turned-off lines
