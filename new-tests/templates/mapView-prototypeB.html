@@ -3478,8 +3478,6 @@ const hasDisabled = Array.isArray(disabList) && disabList.length > 0;
 
 
 }
-
-
 function evaluateScenarioState(scenario, lines) {
   const scen = scenario || {};
 
@@ -3496,77 +3494,78 @@ function evaluateScenarioState(scenario, lines) {
   const meetsPower = !Number.isFinite(Number(scen.target_mw)) ? true :
     (totalP >= scen.target_mw * 0.95 && totalP <= scen.target_mw * 1.05);
 
-  // Overloads (ignore disabled lines)
-  const disabled = window.disabledLineSet || new Set();
-  const overloads = (Array.isArray(lines) ? lines : []).reduce((n, L) => {
-    const id = String(L.id ?? `Line-${L.from_bus}-${L.to_bus}`);
-    const rate = Number(L.rate_a || 0), flow = Math.abs(Number(L.flow || 0));
-    return n + (!disabled.has(id) && rate > 0 && flow > rate ? 1 : 0);
-  }, 0);
-  const allowedOverloads = Number(scen.allowed_overloads ?? 0);
-  const meetsLines = overloads <= allowedOverloads;
+  // ------------------ BLACKOUT + OVERLOADS (INLINE) ------------------
+  const disabledSet = (window.disabledLineSet instanceof Set) ? window.disabledLineSet : new Set();
+  const gensArr  = Array.isArray(window.currentGenerators) ? window.currentGenerators : [];
+  const linesArr = Array.isArray(lines) ? lines : (lines ? Object.values(lines) : []);
 
-  // Score (based on budget; may be doubled by emissions)
+  const hasAnyGeneration = gensArr.some(g => (Number(g?.pg) || 0) > 0);
+
+  // Enabled lines only
+  const enabled = linesArr.filter(li => {
+    const id = String(li?.id ?? `Line_Bus${li?.from_bus}_Bus${li?.to_bus}`);
+    return !disabledSet.has(id);
+  });
+
+  let enabledCount = 0, zeroPctCount = 0, overloads = 0;
+  for (const li of enabled) {
+    const rate = Number(li?.rate_a ?? li?.rateA ?? 0);
+    const flow = Math.abs(Number(li?.flow ?? 0));
+    if (rate <= 0) continue;
+    enabledCount++;
+    const pct = flow / rate;     // 0..∞
+    if (pct === 0) zeroPctCount++;
+    if (pct > 1)  overloads++;
+  }
+
+  // Blackout = no gens on OR all enabled lines exactly 0%
+  const blackout = (!hasAnyGeneration) || (enabledCount > 0 && zeroPctCount === enabledCount);
+
+  const allowedOverloads = Number(scen.allowed_overloads ?? 0);
+  const meetsLines = !blackout && (overloads <= allowedOverloads);
+  // -------------------------------------------------------------------
+
   // --- Score (never negative). Only defined if a cost cap exists.
-  // Base = (cost_cap - total_cost) when under/equal; otherwise 0.
-  // Double only if an emissions cap exists AND totalE <= emiCap AND baseScore > 0.
   const hasCostCap = Number.isFinite(Number(costCap));
   const hasEmiCap  = Number.isFinite(Number(emiCap));
 
   let baseScore = null;
   if (hasCostCap) {
-    if (totalC <= costCap) {
-      baseScore = (costCap - totalC);   // positive or zero
-    } else {
-      baseScore = 0;                     // over budget → score floors at 0 (not negative)
-    }
+    baseScore = (totalC <= costCap) ? (costCap - totalC) : 0;
   }
 
   const emiOk   = hasEmiCap && (totalE <= emiCap);
   const doubled = !!(emiOk && baseScore != null && baseScore > 0);
   const score   = (baseScore == null) ? null : (doubled ? baseScore * 2 : baseScore);
 
-
-
   // --- Update checkboxes
-  const cPower  = document.getElementById("check-power");
-  const cLines  = document.getElementById("check-lines");
-
-
-  if (cPower)  cPower.checked = meetsPower;
-  if (cLines)  cLines.checked = meetsLines;
-
+  const cPower = document.getElementById("check-power");
+  const cLines = document.getElementById("check-lines");
+  if (cPower) cPower.checked = meetsPower;
+  if (cLines) cLines.checked = meetsLines;
 
   // --- Enable/disable Submit based on ALL requirements
   const allMet = meetsPower && meetsLines;
   const btn = document.getElementById("submit-button");
   if (btn) { btn.classList.toggle("active", allMet); btn.disabled = !allMet; }
 
-  // Paint the new big Score counter layout
-const scEl = document.getElementById("score-counter");
-if (scEl) {
-  if (baseScore == null) {
-    scEl.innerHTML = `<div class="score-main">Score: —</div>`;
-  } else if (doubled) {
-    scEl.innerHTML = `
-      <div class="score-main">Score: ${Math.round(score).toLocaleString()}</div>
-      <div class="score-sub">(${Math.round(baseScore).toLocaleString()} ×2)</div>
-    `;
-  } else {
-    scEl.innerHTML = `<div class="score-main">Score: ${Math.round(score).toLocaleString()}</div>`;
+  // --- Score counter UI
+  const scEl = document.getElementById("score-counter");
+  if (scEl) {
+    if (baseScore == null) {
+      scEl.innerHTML = `<div class="score-main">Score: —</div>`;
+    } else if (doubled) {
+      scEl.innerHTML = `
+        <div class="score-main">Score: ${Math.round(score).toLocaleString()}</div>
+        <div class="score-sub">(${Math.round(baseScore).toLocaleString()} ×2)</div>
+      `;
+    } else {
+      scEl.innerHTML = `<div class="score-main">Score: ${Math.round(score).toLocaleString()}</div>`;
+    }
+    scEl.classList.toggle("ready", allMet);
   }
-  scEl.classList.toggle("ready", meetsPower && meetsLines);
 }
 
-
-  // Optional: debug snapshot
-  /*
-  console.log("[submit-stats] eval",
-    { totalP, target: scen.target_mw, meetsPower,
-      overloads, allowedOverloads, meetsLines,
-    totalC, costCap, baseScore, score, doubled,
-    totalE, emiCap, allMet });
-*/}
 
 function computeSubmitStats() {
   const startedAt = window.lvScenarioStartedAt || performance.now();

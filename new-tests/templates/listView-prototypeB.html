@@ -1152,7 +1152,6 @@ function setSelectedGen(id){
 
 
 
-
 // --- NEW: pure state computation (no DOM here) ---
 function evaluateScenarioState(gens = [], lines = [], scenario = {}) {
   // Totals (cost/emissions)
@@ -1172,23 +1171,42 @@ function evaluateScenarioState(gens = [], lines = [], scenario = {}) {
     ? (totals.power >= targetMW * 0.95 && totals.power <= targetMW * 1.05)
     : true;
 
-  // No line overloads? (skip disabled)
+  // Build disabled set (existing helper if available)
   const disabled = (window.disabledLineSet instanceof Set)
     ? window.disabledLineSet
     : (typeof buildDisabledLineSetFromScenario === 'function'
         ? buildDisabledLineSetFromScenario(scenario)
         : new Set());
+
   const allowedOverloads = +(scenario.allowed_overloads ?? 0);
-  let overloads = 0;
-  for (const L of (lines||[])) {
+
+  // Normalize lines (array or map)
+  const Larr = Array.isArray(lines) ? lines : (lines ? Object.values(lines) : []);
+
+  // --- Blackout + overloads (pure computation) ---
+  const hasAnyGeneration = (gens||[]).some(g => (+g.pg || 0) > 0);
+
+  let enabledCount = 0, zeroPctCount = 0, overloads = 0;
+  for (const L of (Larr||[])) {
     if (!L) continue;
-    const id = _lineId(L); 
+    const id = (typeof _lineId === "function") ? _lineId(L) : String(L.id ?? "");
     if (disabled.has(id)) continue;
+
     const rate = +(L.rate_a ?? L.rateA ?? 0);
     const flow = Math.abs(+L.flow || 0);
-    if (rate > 0 && flow > rate) overloads++;
+    if (rate <= 0) continue;
+
+    enabledCount++;
+    const pct = flow / rate;          // 0..∞
+    if (pct === 0) zeroPctCount++;
+    if (pct > 1)  overloads++;
   }
-  const noOverloads = overloads <= allowedOverloads;
+
+  // Blackout = no gens on OR all enabled lines exactly 0%
+  const blackout = (!hasAnyGeneration) || (enabledCount > 0 && zeroPctCount === enabledCount);
+
+  // No overloads only counts when NOT in blackout
+  const noOverloads = !blackout && (overloads <= allowedOverloads);
 
   // Return a compact state object used by applyScenarioUI
   return {
@@ -1196,7 +1214,10 @@ function evaluateScenarioState(gens = [], lines = [], scenario = {}) {
     noOverloads,
     totals,
     targetCost,
-    targetEmissions: targetEmi
+    targetEmissions: targetEmi,
+    // extra info if you want to reflect it in UI (safe to ignore downstream)
+    blackout,
+    overloads
   };
 }
 
