@@ -260,49 +260,58 @@ class Grid:
         PV, REF = 2, 3
         GEN_BUS, PG, GEN_STATUS, PMAX = 0, 1, 7, 8
 
-        # Start from current case (PG already written)
         gen  = self.case['gen']
         busm = self.case['bus']
 
-        # Build the "user touched" set
-        touched = set(i for i, g in enumerate(self.generators) if bool(getattr(g, "user_active", False)))
+        # Identify user-touched gens
+        touched = {i for i, g in enumerate(self.generators) if bool(getattr(g, "user_active", False))}
 
-        # Eligible pool: enabled, NOT user-touched, currently ON (PG > 0)
-        eligible = []
-        for i in range(gen.shape[0]):
-            if int(gen[i, GEN_STATUS]) != 1:
-                continue
-            if i in touched:
-                continue
-            if float(gen[i, PG]) <= 0.0:
-                continue
-            headroom = float(gen[i, PMAX] - gen[i, PG])
-            eligible.append((headroom, int(gen[i, GEN_BUS])))
-
-        # Fallback: if user touched everything, consider all enabled gens
-        if not eligible:
+        def eligible(include_touched=False, restrict_to_agc=False):
+            pool = getattr(self, "_agc_pool", set())
+            lst = []
             for i in range(gen.shape[0]):
                 if int(gen[i, GEN_STATUS]) != 1:
                     continue
+                if not include_touched and i in touched:
+                    continue
+                if float(gen[i, PG]) <= 0.0:
+                    continue
+                busnum = int(gen[i, GEN_BUS])
+                if restrict_to_agc and busnum not in pool:
+                    continue
                 headroom = float(gen[i, PMAX] - gen[i, PG])
-                eligible.append((headroom, int(gen[i, GEN_BUS])))
+                lst.append((headroom, busnum))
+            return lst
 
-        if not eligible:
-            # No enabled generators → leave bus types as-is (de-energized handled upstream)
+        # Priority ladder
+        eligible_sets = [
+            eligible(False, True),   # 1) AGC pool, not touched
+            eligible(False, False),  # 2) Any, not touched
+            eligible(True, True),    # 3) AGC pool, even if touched
+            eligible(True, False),   # 4) Any, last resort
+        ]
+
+        chosen = None
+        for cand in eligible_sets:
+            if cand:
+                _, ref_bus = max(cand, key=lambda t: t[0])
+                chosen = ref_bus
+                break
+
+        if not chosen:
+            # No enabled gens → leave as-is
             return
 
-        # Pick bus with max headroom
-        _, ref_bus = max(eligible, key=lambda t: t[0])
-
-        # Reset any existing REF → PV
+        # Reset existing REF → PV
         mask_ref = (busm[:, BUS_TYPE] == REF)
         busm[mask_ref, BUS_TYPE] = PV
 
         # Set chosen bus to REF
-        idx = np.where(busm[:, BUS_I].astype(int) == int(ref_bus))[0]
+        idx = np.where(busm[:, BUS_I].astype(int) == int(chosen))[0]
         if idx.size:
             busm[idx[0], BUS_TYPE] = REF
-            print(f"🎛️ Slack assigned to Bus {int(ref_bus)}")
+            src = "AGC pool" if getattr(self, "_agc_pool", None) and chosen in self._agc_pool else "default"
+            print(f"🎛️ Slack assigned to Bus {int(chosen)} ({src})")
 
 
 
@@ -577,6 +586,19 @@ class Grid:
             extract_bus_id(gid) for gid in scenario_data.get("locked_generators", [])
         ]
         locked_gens = [bus for bus in locked_gens if bus is not None]
+
+        # --- NEW: AGC pool (optional) ----------------------------------------------
+        agc_pool_buses = []
+        for gid in scenario_data.get("agc_pool", []):
+            b = extract_bus_id(gid)
+            if b is not None:
+                agc_pool_buses.append(b)
+        self._agc_pool = set(agc_pool_buses)
+
+        # Warn if defined but empty or all invalid
+        if scenario_data.get("agc_pool") and not self._agc_pool:
+            print("⚠️ AGC pool defined but empty or invalid IDs — falling back to default slack logic.")
+
 
 
         for gen in self.generators:

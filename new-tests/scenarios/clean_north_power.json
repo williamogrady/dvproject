@@ -6,8 +6,9 @@
     "cost_limit": 20000,
     "line_limit_pct": 0.05,
     "locked_generators": [
-        "Gen8", "Gen32", "Gen4", "Gen12"
+        "Gen8", "Gen32", "Gen4", "Gen12", "Gen69", "Gen54"
     ],
+    "agc_pool": ["Gen69","Gen54"],
     "disabled_generators": [
         "Gen6"
     ],
@@ -20,8 +21,8 @@
         "Gen32": 100,
         "Gen36": 100,
         "Gen46": 100,
-        "Gen65": 200
-
-    
-}
+        "Gen65": 200,
+        "Gen69": 400, 
+        "Gen54": 250  
+    }
 }

@@ -779,7 +779,8 @@
 .gen-locked   { pointer-events: none; }            /* still clickable via icon layer if you want */
 .gen-disabled { opacity: 0.35; pointer-events: none; filter: grayscale(0.2); }
 
-.gen-lock-icon {
+.gen-disabled-icon,
+.gen-locked-icon {
   font: 700 14px/1.0 system-ui, sans-serif;
   fill: #111;
   paint-order: stroke;
@@ -3236,33 +3237,53 @@ drawPowerBlocks(
   }
 );
 
-
+g.select(".gen-badges").raise();
     // ---- LOCK BADGE (centered, large) ----
+  const iconSize = Math.min(W, H) * 0.9;
     const badges = g.select(".gen-badges");
     badges.selectAll("*").remove();
     if (isLocked) {
-  badges.append("text")
+  const ICON_PAD = 6;           // margin inside the card
+  const BASE_FONT = 100;        // baseline to measure from
+
+  const t = badges.append("text")
     .attr("class", "gen-locked-icon")
     .attr("text-anchor", "middle")
     .attr("dominant-baseline", "middle")
     .attr("x", 0).attr("y", 0)
-    .attr("font-size", Math.min(W, H)*0.7)   // big as rect
+    .attr("font-size", BASE_FONT)
     .text("🔒");
+
+  const bb   = t.node().getBBox();
+  const maxW = W - ICON_PAD * 2;
+  const maxH = H - ICON_PAD * 2;
+  const s    = Math.min(maxW / bb.width, maxH / bb.height);
+
+  // stays centered at (0,0) thanks to middle/middle anchors
+  t.attr("transform", `scale(${s})`);
+
   g.classed("gen-locked", true);
+
 } else if (isDisabled) {
-  badges.append("text")
+  const ICON_PAD = 6;
+  const BASE_FONT = 100;
+
+  const t = badges.append("text")
     .attr("class", "gen-disabled-icon")
     .attr("text-anchor", "middle")
     .attr("dominant-baseline", "middle")
     .attr("x", 0).attr("y", 0)
-    .attr("font-size", Math.min(W, H)*0.7)   // big as rect
+    .attr("font-size", BASE_FONT)
     .text("🚫");
-  g.classed("gen-disabled", true);
-} else {
-  g.classed("gen-locked", false)
-   .classed("gen-disabled", false);
-}
 
+  const bb   = t.node().getBBox();
+  const maxW = W - ICON_PAD * 2;
+  const maxH = H - ICON_PAD * 2;
+  const s    = Math.min(maxW / bb.width, maxH / bb.height);
+  t.attr("transform", `scale(${s})`);
+
+  g.classed("gen-disabled", true);
+}
   });
 
 
