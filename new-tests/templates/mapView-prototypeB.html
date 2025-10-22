@@ -3140,17 +3140,15 @@ const halo = g.select(".map-gen-halo")
   .attr("fill", "none");
 
 if (showCost) {
-  const thick = Math.max(6, S * 0.12);   // thickness scales with size
-  halo.attr("stroke", costHaloColor(Number(gen.cost_per_mw)))
+  const thick = Math.max(6, S * 0.12);
+  // after (continuous)
+  const color = makeCostColorScale(gens)(gen.cost_per_mw || 0);
+  halo.attr("stroke", color)
       .attr("stroke-width", thick)
-      .attr("opacity", 1);               // ← make visible
-} else {
-  halo.attr("stroke", "none")
-      .attr("opacity", 0);               // ← hide when OFF
+      .attr("opacity", 1);
 }
 
 
- // ---- EMISSIONS HATCH + OUTLINE ----
   // ---- EMISSIONS HATCH + OUTLINE ----
 const hatch = g.select(".gen-hatch")
   .attr("x", -W/2).attr("y", -H/2)

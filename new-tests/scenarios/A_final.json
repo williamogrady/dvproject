@@ -1,0 +1,28 @@
+{
+    "scenario_id": "A_final",
+    "title": "Scenario A",
+    "target_mw": 3000,
+    "emissions_limit": 10000,
+    "cost_limit": 20000,
+    "line_limit_pct": 0.05,
+    "locked_generators": [
+        "Gen8", "Gen32", "Gen4", "Gen12", "Gen69", "Gen54"
+    ],
+    "agc_pool": ["Gen69","Gen54"],
+    "disabled_generators": [
+        "Gen6"
+    ],
+    "initial_outputs": {
+        "Gen8": 100,
+        "Gen10": 400,
+        "Gen25": 320,
+        "Gen18": 100,
+        "Gen24": 100,
+        "Gen32": 100,
+        "Gen36": 100,
+        "Gen46": 100,
+        "Gen65": 200,
+        "Gen69": 400, 
+        "Gen54": 250  
+    }
+}

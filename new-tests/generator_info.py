@@ -148,3 +148,63 @@ GENERATOR_NAMES = {
     116: "KYGERC"
 }
 
+# --- NEW: fuel economics (interesting trade-offs) -----------------
+# Units: cost_per_mw (your existing UI scale), emissions_per_mw (relative tCO2/MWh)
+FUEL_BASE_COST = {
+    "hydro":    1.5,   # clean & cheap but scarce (pmax caps do the limiting)
+    "coal":     3.8,   # CHEAP but DIRTY  → forces emission pain when minimizing cost
+    "gas":      8.2,   # mid cost, mid emissions
+    "combined": 9.2,   # clean-ish but EXPENSIVE → cost pain when minimizing emissions
+}
+FUEL_BASE_EMI = {
+    "hydro":    0.1,
+    "coal":     8.0,   # very dirty
+    "gas":      4.2,   # medium
+    "combined": 1.8,   # low
+}
+
+# Gentle variance (keeps parity but breaks ties)
+FUEL_VARIANCE = {
+    "hydro":    {"cost_pct": 8,  "emi_pct": 10},
+    "coal":     {"cost_pct": 10, "emi_pct": 8},
+    "gas":      {"cost_pct": 10, "emi_pct": 10},
+    "combined": {"cost_pct": 8,  "emi_pct": 8},
+}
+
+# Optional subtle region flavor (kept tiny so difficulty stays equal)
+REGION_ADJ = {
+    "North": {"cost": +0.2, "emi": 0.0},
+    "South": {"cost":  0.0, "emi": +0.2},
+    "West":  {"cost": -0.1, "emi": -0.1},
+}
+
+def _jitter(val, pct, rng):
+    if pct <= 0: return val
+    return val * (1 + rng.uniform(-pct, pct) / 100.0)
+
+def build_costs_emissions(seed=118):
+    """
+    Returns two dicts keyed by GenID string (e.g., 'Gen65'):
+      COSTS['Gen65'] = cost_per_mw
+      EMIS['Gen65']  = emissions_per_mw
+    Reproducible via fixed seed.
+    """
+    import random
+    rng = random.Random(seed)
+    costs, emis = {}, {}
+    for bus, fuel in GENERATOR_FUEL_TYPES.items():
+        region = GENERATOR_REGIONS.get(bus, "West")
+        c0 = FUEL_BASE_COST.get(fuel, 7.0)
+        e0 = FUEL_BASE_EMI.get(fuel, 4.0)
+        var = FUEL_VARIANCE.get(fuel, {"cost_pct": 0, "emi_pct": 0})
+        adj = REGION_ADJ.get(region, {"cost": 0.0, "emi": 0.0})
+
+        c = _jitter(c0, var["cost_pct"], rng) + adj["cost"]
+        e = _jitter(e0, var["emi_pct"],  rng) + adj["emi"]
+
+        costs[f"Gen{bus}"] = round(c, 2)
+        emis[f"Gen{bus}"]  = round(e, 2)
+    return costs, emis
+
+# Export ready-made tables (used by grid.py)
+GEN_COSTS_BY_ID, GEN_EMIS_BY_ID = build_costs_emissions(seed=118)

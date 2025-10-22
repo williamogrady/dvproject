@@ -4,7 +4,12 @@ from pypower.ppoption import ppoption
 import numpy as np
 import copy
 from scenarios import load_scenario
-from generator_info import GENERATOR_FUEL_TYPES, GENERATOR_NAMES
+# grid.py (top imports)
+from generator_info import (
+    GENERATOR_FUEL_TYPES, GENERATOR_NAMES,
+    GEN_COSTS_BY_ID, GEN_EMIS_BY_ID
+)
+
 import os, json, re  # add to your imports if not present
 
 # Path to the same JSON the UI uses. Adjust if your backend runs from a different cwd.
@@ -100,32 +105,19 @@ class Generator:
         self.index = index
         self.bus = int(row[0])
 
+        # grid.py :: class Generator.__init__(...)
         self.fuel_type = GENERATOR_FUEL_TYPES.get(self.bus, "gas")
 
-        # Assign costs and emissions based on fuel type
-        fuel_costs = {
-            "coal": 6.0,
-            "gas": 7.5,
-            "combined": 4.0,
-            "hydro": 0.5
-        }
-        fuel_emissions = {
-        "coal": 2.0,     # previously 950
-        "gas": 1.2,      # previously 500
-        "combined": 0.8, # previously 400
-        "hydro": 0
-}
+        # NEW: pull per-generator values from generator_info tables
+        gkey = f"Gen{self.bus}"
+        self.cost_per_mw      = float(GEN_COSTS_BY_ID.get(gkey, 7.0))
+        self.emissions_per_mw = float(GEN_EMIS_BY_ID.get(gkey, 4.0))
 
-        self.cost_per_mw = fuel_costs.get(self.fuel_type, 75)
-        self.emissions_per_mw = fuel_emissions.get(self.fuel_type, 500)
-        
         self.pmax = float(row[8])
         self.pg = 0
         self.user_active = False  # Track user choice independently from pg
         self.locked = False  # New attribute to track if generator is locked
         self.disabled = False
-
-
 
     def to_dict(self):
         return {
