@@ -1,0 +1,20 @@
+{
+  "scenario_id": "C_final",
+  "title": "Scenario C",
+  "target_mw": 4100,
+  "emissions_limit": 16960,
+  "cost_limit": 18000,
+  "line_limit_pct": 0.05,
+  "locked_generators": ["Gen10", "Gen25", "Gen69"],
+  "agc_pool": ["Gen10", "Gen69"],
+  "disabled_generators": ["Gen54", "Gen61"],
+  "initial_outputs": {
+    "Gen10": 350,
+    "Gen25": 250,
+    "Gen69": 350,
+    "Gen32": 150,
+    "Gen36": 150,
+    "Gen70": 200,
+    "Gen8": 150
+  }
+}
