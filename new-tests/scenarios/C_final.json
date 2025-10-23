@@ -7,9 +7,9 @@
   "line_limit_pct": 0.05,
   "locked_generators": ["Gen10", "Gen25", "Gen69"],
   "agc_pool": ["Gen10", "Gen69"],
-  "disabled_generators": ["Gen54", "Gen61"],
+  "disabled_generators": ["Gen1", "Gen6", "Gen54", "Gen61", "Gen80", "Gen85", "Gen87", "Gen90", "Gen107"],
   "initial_outputs": {
-    "Gen10": 350,
+    "Gen10": 500,
     "Gen25": 250,
     "Gen69": 350,
     "Gen32": 150,
