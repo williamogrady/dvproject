@@ -1642,31 +1642,74 @@ function renderOverview(gens, scenarioData = {}, lines = []) {
     if (typeof updateLinesCard === "function") updateLinesCard(lines);
   }
 }
+// Minimal, safe reset between scenarios
+function hardResetScenarioUI() {
+  // 1) Remove per-scenario layers
+  d3.select("#chevron-layer").remove();   // flow chevrons
+  d3.select("#debug-overlay").remove();   // debug labels, if any
 
- async function loadScenario(scenarioId) {
+  // 2) Clear per-generator dynamic UI but keep the groups themselves
+  d3.selectAll(".map-gen-group").each(function () {
+    const g = d3.select(this);
+
+    // neutral classes
+    g.classed("gen-disabled", false)
+     .classed("gen-locked",  false)
+     .classed("non-interactive", false);
+
+    // base face re-enabled; badges inert
+    g.select(".map-gen").style("pointer-events", "auto");
+
+    const badges = g.select(".gen-badges");
+    if (!badges.empty()) {
+      badges.classed("blocks", false).style("pointer-events", "none");
+      badges.selectAll("*").remove();
+    }
+
+    // clear blocks
+    g.select(".dice-blocks").selectAll("*").remove();
+
+    // clear emissions + halos + outlines
+    g.select(".gen-hatch")
+      .attr("fill", "none").attr("opacity", 0).attr("stroke", "none");
+    g.select(".map-gen-halo")
+      .attr("stroke", "none").attr("stroke-width", null).attr("opacity", 0);
+    g.select(".gen-outline")
+      .attr("stroke", "none").attr("stroke-width", null).attr("opacity", 0);
+  });
+
+  // 3) Reset lightweight per-scenario state
+  selectedGeneratorId = null;
+  previousLineLoads = {};
+  if (lineMetrics && typeof lineMetrics.clear === "function") lineMetrics.clear();
+}
+
+async function loadScenario(scenarioId) {
   console.log("loadScenario", scenarioId)
   const res = await fetch(`/api/scenario/${scenarioId}`);
   const data = await res.json();
-  currentScenarioId = scenarioId;
-  window.lvScenarioStartedAt = performance.now();   // ← start timer for this scenario
+
+  currentScenarioId   = scenarioId;
+  window.lvScenarioStartedAt = performance.now();
   currentScenarioData = data;
-  currentGenerators = data.generators;
-  currentLines = data.lines;
+  currentGenerators   = data.generators;
+  currentLines        = data.lines;
   window.disabledLineSet = buildDisabledLineSet(currentScenarioData);
 
-  // NEW: keep the globals in sync like ListView
+  // keep globals in sync
   window.currentScenarioData = currentScenarioData;
   window.currentGenerators   = currentGenerators;
   window.currentLines        = currentLines;
 
+  // ✳️ minimal hard reset so nothing leaks from previous scenario
+  hardResetScenarioUI();
 
-  //console.log("calling renderOverview");
-  await loadCanonicalDirections();          // ✅ ensure case118 AB is loaded
+  await loadCanonicalDirections();
   setupTaskSection(currentScenarioData);
   updateMapGeneratorsFromScenario();
   renderOverview(currentGenerators, currentScenarioData || {}, currentLines);
-
 }
+
 
 function formatDuration(ms){
   const s = Math.max(0, Math.floor(ms/1000));
