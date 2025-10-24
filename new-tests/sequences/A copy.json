@@ -1,8 +1,0 @@
-{
-  "series": [
-    { "view": "map",  "scenarios": ["test_A_stabilityLow"], "seconds": 300 },
-    { "break": { "note": "Next: Task 2 in Map View" } },
-
-    { "view": "map", "scenarios": ["test_D_balanceHigh"], "seconds": 300 }
-  ]
-}
