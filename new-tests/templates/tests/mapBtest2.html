@@ -134,7 +134,7 @@ async function fetchAllScenarios(){
   const res = await fetch('/api/scenarios');
   const data = await res.json();
   availableScenarios = data;
-  const def = data.find(s => s.scenario_id === 'clean_north_power') || data[0];
+  const def = data.find(s => s.scenario_id === 'A_final') || data[0];
   if(def){ currentScenarioId = def.scenario_id; currentScenarioData = def; populateScenarioDropdown(data, currentScenarioId); loadScenario(currentScenarioId); }
 }
 function populateScenarioDropdown(scenarios, selectedId){ const sel = document.createElement('select'); sel.id='scenario-select'; sel.innerHTML = scenarios.map(s=>`<option value="${s.scenario_id}" ${s.scenario_id===selectedId?'selected':''}>${s.title||s.scenario_id}</option>`).join(''); const task = document.getElementById('overview-task-section'); const old = task.querySelector('#scenario-select'); if(old) old.replaceWith(sel); else task.prepend(sel); sel.addEventListener('change', e=>loadScenario(e.target.value)); }

@@ -6,7 +6,7 @@ async function fetchAllScenarios() {
   const urlScenario = new URLSearchParams(location.search).get('scenario');
 
   const fromUrl = urlScenario && data.find(s => s.scenario_id === urlScenario)?.scenario_id;
-  const fromDefault = data.find(s => s.scenario_id === "clean_north_power")?.scenario_id;
+  const fromDefault = data.find(s => s.scenario_id === "A_final")?.scenario_id;
   const fallback = data[0]?.scenario_id;
 
   const initialId = fromUrl || fromDefault || fallback;
@@ -311,7 +311,7 @@ async function fetchAllScenarios() {
       availableScenarios = data;
 
       // Find default scenario
-      const defaultScenario = data.find(s => s.scenario_id === "clean_north_power");
+      const defaultScenario = data.find(s => s.scenario_id === "A_final");
 
         if (defaultScenario) {
     currentScenarioId = defaultScenario.scenario_id;

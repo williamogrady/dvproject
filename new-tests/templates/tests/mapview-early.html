@@ -177,7 +177,7 @@ async function fetchAllScenarios() {
   availableScenarios = data;
 
   // Pick default
-  const defaultScenario = data.find(s => s.scenario_id === "clean_north_power") || data[0];
+  const defaultScenario = data.find(s => s.scenario_id === "A_final") || data[0];
 
   if (defaultScenario) {
     currentScenarioId = defaultScenario.scenario_id;
@@ -241,11 +241,11 @@ const mapCenterX = 1400;
 const mapCenterY = 1100;
 
 Promise.all([
-  fetch("/api/scenario/clean_north_power").then(res => res.json()),
+  fetch("/api/scenario/A_final").then(res => res.json()),
   fetch("/new-tests/full_nodes.json").then(res => res.json())
 ]).then(([scenarioData, nodeData]) => {
   currentGenerators = scenarioData.generators;
-  currentScenarioId = "clean_north_power";
+  currentScenarioId = "A_final";
 
   const gens = nodeData.filter(d => d.type === "generator");
 
