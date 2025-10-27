@@ -1,15 +1,15 @@
 {
   "series": [
-    { "view": "map",  "scenarios": ["D_final"], "seconds": 360 },
-    { "break": { "note": "Next: Task 2 in List View" } },
-
     { "view": "list",  "scenarios": ["A_final"], "seconds": 360 },
-    { "break": { "note": "Next: Task 3 in Map View" } },
+    { "break": { "note": "Next: Task 2 in Map View" } },
 
     { "view": "map",  "scenarios": ["B_final"], "seconds": 360 },
-    { "break": { "note": "Next: Last Task in List View" } },
+    { "break": { "note": "Next: Task 3 in List View" } },
 
     { "view": "list",  "scenarios": ["C_final"], "seconds": 360 },
+    { "break": { "note": "Next: Last Task in Map View" } },
+
+    { "view": "map",  "scenarios": ["D_final"], "seconds": 360 },
     { "break": { "note": "Next: Results" } }
   ]
 }

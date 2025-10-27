@@ -242,14 +242,7 @@
     .gblock.off{ fill: #e5e7eb; }
     .gblock.on { fill: var(--green); stroke: rgba(76,175,80,.6); }
 
-    /* responsive images used in the overview slides */
-.slide-img{
-  max-width: 96%;
-  height: auto;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.06);
-}
+  
   </style>
   <style>
     /* === Tutorial sizing + readability overrides === */
@@ -301,13 +294,42 @@
 }
 
 .slide--image .slide-img{
-  width: 80%;
+  width: 90%;              /* reduced by 40% from 120% */
   height: auto;
   object-fit: contain;
   border: 1px solid #ddd;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
+
+.slide--image .slide-img2{
+  width: 105.5%;              /* reduced by 40% from 120% */
+  height: auto;
+  object-fit: contain;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+
+
+/* Let this specific slide's wrapper go wider */
+.content-wide{
+  width: 100%;
+  max-width: 1400px;   /* was 1200px from .content; now we allow ~16% more */
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Force the list-view screenshot to render larger */
+.slide-img-big{
+  max-width: 140%;     /* bigger than normal */
+  width: 140%;
+  flex-shrink: 0;      /* don't let flex squeeze it back down */
+}
+
 
 .slide--image .slide-img-legend{
   width: 60%;
@@ -356,47 +378,28 @@
 
       <div class="panel" aria-live="polite">
 
-  <!-- Slide 1: Introduction -->
-  <section id="slide-0" class="slide" role="group" aria-label="Introduction" aria-hidden="false" data-done="view">
-    <div class="content" style="text-align:left; align-items:start; max-width:720px; line-height:1.6;">
-      <h2 style="margin-bottom:1em;">Introduction</h2>
+  <!-- Slide 1: Introduction (replaced with image) -->
+<section id="slide-0" class="slide slide--image" role="group" aria-label="Introduction" aria-hidden="false" data-done="view">
+  <div class="content">
+    <img class="slide-img" src="/new-tests/PowerGridImage.JPG" alt="Power Grid Overview">
+  </div>
+</section>
 
-      <p>The power grid is a network of stations, lines, and loads.  
-      It must stay balanced at all times to keep electricity reliable.</p>
-
-      <p>Operators use data and visual interfaces to monitor and control the grid.</p>
-
-      <p>In this study you will use two interfaces:</p>
-      <ul style="margin:0 0 1em 1.4em; padding:0;">
-        <li><strong>List View</strong></li>
-        <li><strong>Map View</strong></li>
-      </ul>
-
-      <p>Your objective is to solve tasks in both.  
-      When deciding, keep these priorities (in order):</p>
-      <ol style="margin:0 0 1em 1.6em; padding:0; font-weight:600;">
-        <li>Safest</li>
-        <li>Cheapest</li>
-        <li>Cleanest</li>
-      </ol>
-
-      <p>The next slides introduce each interface and how they work.</p>
-    </div>
-  </section>
 
   <!-- Slide 2: List View — Image -->
   <section id="slide-1" class="slide slide--image" role="group" aria-label="List View Overview" aria-hidden="true" data-done="view">
     <div class="content">
-      <img class="slide-img" src="/new-tests/listviewt.png" alt="List View Overview">
+      <img class="slide-img2" src="/new-tests/listviewt.png" alt="List View Overview">
     </div>
   </section>
 
   <!-- Slide 3: Map View — Image -->
-  <section id="slide-2" class="slide slide--image" role="group" aria-label="Map View Overview" aria-hidden="true" data-done="view">
-    <div class="content">
-      <img class="slide-img-legend" src="/new-tests/mapviewt.png" alt="Map View Overview">
-    </div>
-  </section>
+<section id="slide-1" class="slide slide--image" role="group" aria-label="List View Overview" aria-hidden="true" data-done="view">
+  <div class="content content-wide">
+    <img class="slide-img slide-img-big" src="/new-tests/mapviewt.png" alt="List View Overview">
+  </div>
+</section>
+
 
   <!-- Slide 3: Legend -->
 <section id="slide-3" class="slide slide--image" role="group" aria-label="Legend" aria-hidden="true" data-done="view">
