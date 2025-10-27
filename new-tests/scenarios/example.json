@@ -1,0 +1,28 @@
+{
+  "scenario_id": "example",
+  "title": "Example Scenario",
+  "target_mw": 2000,
+  "emissions_limit": 10000,
+  "cost_limit": 10000,
+  "line_limit_pct": 0.08,
+  "disabled_generators": [],
+  "locked_generators": [
+    "Gen25", "Gen26", "Gen99", "Gen49", "Gen61"
+  ],
+  "initial_outputs": {
+    "Gen25": 314,
+    "Gen26": 414,
+    "Gen80": 600,
+    "Gen49": 300,
+    "Gen61": 300,
+    "Gen59": 200,
+    "Gen34": 100,
+    "Gen36": 100,
+    "Gen46": 100,
+    "Gen65": 100
+
+
+  },
+  "disabled_lines": [],
+  "bonus": null
+}

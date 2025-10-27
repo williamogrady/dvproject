@@ -788,7 +788,7 @@ async function fetchAllScenarios() {
       availableScenarios = data;
 
       // Find default scenario
-      const defaultScenario = data.find(s => s.scenario_id === "A_final");
+      const defaultScenario = data.find(s => s.scenario_id === "example");
 
         if (defaultScenario) {
     currentScenarioId = defaultScenario.scenario_id;
