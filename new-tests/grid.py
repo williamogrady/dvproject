@@ -204,7 +204,7 @@ class Branch:
 def scale_bus_loads(case, multipliers):
     """
     multipliers: dict {bus_number: scale}  (applies to both Pd and Qd)
-    Example: {69: 1.6, 77: 1.5, 80: 1.5, 81: 1.4}
+    E_final: {69: 1.6, 77: 1.5, 80: 1.5, 81: 1.4}
     """
     BUS_I, PD, QD = 0, 2, 3
     bus = case['bus']

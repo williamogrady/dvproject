@@ -1523,8 +1523,8 @@ function buildDisabledLineSet(scen = {}){
 
 
 
-async function fetchAllScenarios() {
-  //console.log("fetchAllScenarios");
+ async function fetchAllScenarios() {
+  console.log("fetchAllScenarios");
   const res = await fetch("/api/scenarios");
   const data = await res.json();
   availableScenarios = data || [];
@@ -1532,30 +1532,24 @@ async function fetchAllScenarios() {
   // 1) URL override: ?scenario=<id>
   const urlId = new URLSearchParams(location.search).get("scenario");
 
-  // 2) Next best: first pilot_* in list
-  const pilot = availableScenarios.find(s => /^pilot_/i.test(s.scenario_id));
-
-  // 3) Fallback: the first item in the list
-  const first = availableScenarios[0];
-
-  const chosen =
-    (urlId && availableScenarios.find(s => s.scenario_id === urlId)) ||
-    pilot || first;
-
-  if (!chosen) {
-    console.error("No scenarios returned from /api/scenarios");
-    return;
+  if (urlId) {
+    currentScenarioId = urlId;
+    currentScenarioData =
+      availableScenarios.find(s => s.scenario_id === urlId) || null;
+  } else {
+    const pilot = availableScenarios.find(s => /^pilot_/i.test(s.scenario_id));
+    const first = availableScenarios[0];
+    const chosen = pilot || first;
+    if (!chosen) {
+      console.error("No scenarios returned from /api/scenarios");
+      return;
+    }
+    currentScenarioId = chosen.scenario_id;
+    currentScenarioData = chosen;
   }
 
-  currentScenarioId = chosen.scenario_id;
-  currentScenarioData = chosen;
-
-  if (typeof populateScenarioDropdown === "function") {
-    populateScenarioDropdown(availableScenarios, currentScenarioId);
-  }
   loadScenario(currentScenarioId);
 }
-
 
 function renderOverview(gens, scenarioData = {}, lines = []) {
   const scen = scenarioData || {};

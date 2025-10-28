@@ -166,7 +166,7 @@ Generators: { id: "gen-busId", group: "generator" }
 
 Loads: { id: "load-busId", group: "load" }
 
-Example:
+E_final:
 
 { id: 1, group: "bus" }
 { id: "gen-1", group: "generator" }
