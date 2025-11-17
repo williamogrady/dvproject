@@ -164,8 +164,8 @@
     <div class="card">
       <h2>Files</h2>
       <div class="sub">Using:</div>
-      <div class="sub">new-tests/full_nodes.json</div>
-      <div class="sub">new-tests/full_lines.json</div>
+      <div class="sub">system/full_nodes.json</div>
+      <div class="sub">system/full_lines.json</div>
     </div>
   </aside>
 
@@ -199,8 +199,8 @@
 
     // Load data
     const [nodesRaw, linesRaw] = await Promise.all([
-      fetch("/new-tests/full_nodes.json").then(r => r.json()),
-      fetch("/new-tests/full_lines.json").then(r => r.json())
+      fetch("/system/full_nodes.json").then(r => r.json()),
+      fetch("/system/full_lines.json").then(r => r.json())
     ]);
 
     // Normalize buses map: id -> {x,y,label}

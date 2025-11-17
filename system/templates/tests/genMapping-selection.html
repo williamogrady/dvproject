@@ -103,7 +103,7 @@ svg.call(
 );
 
 // Load generators
-fetch("/new-tests/full_nodes.json")
+fetch("/system/full_nodes.json")
   .then(res => res.json())
   .then(data => {
     const gens = data.filter(d => d.type === "generator");

@@ -70,15 +70,15 @@ def results_page():
 def serve_legacy_css(filename):
     return send_from_directory(LEGACY_CSS, filename)
 
-@app.route('/new-tests/<path:filename>')
+@app.route('/system/<path:filename>')
 def serve_new_tests(filename):
-    # app.py is inside ...\new-tests, so this points at the new-tests folder itself
+    # app.py is inside ...\system, so this points at the system folder itself
     directory = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(directory, filename)
 
 @app.route("/sequences/<path:filename>")
 def serve_sequences(filename):
-    base = Path("sequences").resolve()        # points to new-tests/sequences
+    base = Path("sequences").resolve()        # points to system/sequences
     p = (base / filename).resolve()
     if not str(p).startswith(str(base)) or not p.exists():
         abort(404)

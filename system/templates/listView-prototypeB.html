@@ -5,7 +5,7 @@
   <title>DV Project - ListView B</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <link rel="icon" type="image/x-icon" href="/system/circle.ico">
   <link rel="stylesheet" href="/css/listview-coreB.css">
 
 <style id="listview-core-bootstrap">
@@ -572,7 +572,7 @@
           <!-- Legend toggle (ListView) -->
 <button id="lv-legend-toggle" class="legend-btn lv-corner">Legend</button>
 <div id="lv-legend-panel" class="legend-box" hidden>
-  <img src="/new-tests/legendlv.png" alt="Legend" />
+  <img src="/system/legendlv.png" alt="Legend" />
 </div>
 
           <!-- ✅ In‑panel icon toggles (like Admin) -->
@@ -2771,8 +2771,8 @@ mapContainer.call(
 
 // 4. THEN fetch data and draw shapes
 Promise.all([
-  fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json())
+  fetch("/system/full_nodes.json").then(res => res.json()),
+  fetch("/system/full_lines.json").then(res => res.json())
 ]).then(([nodes, lines]) => {
 
     // after you receive [nodes, lines]
@@ -2863,10 +2863,10 @@ genGroups.append("text")
   .style("display", "none");   // shown when locked
 
 
-d3.selectAll(".map-gen-disabled").attr("href", "/new-tests/disabled.png");
+d3.selectAll(".map-gen-disabled").attr("href", "/system/disabled.png");
 
 genGroups.append("image")
-  .attr("class","map-gen-disabled").attr("href","/new-tests/disabled.png")
+  .attr("class","map-gen-disabled").attr("href","/system/disabled.png")
   .attr("x",-12).attr("y",-12).attr("width",24).attr("height",24).style("display","none");
 
 // Basic collapsed (“dice”) look first; updater will size/color

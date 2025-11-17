@@ -324,8 +324,8 @@ const initialZoom = d3.zoomIdentity
 mapContainer.call(zoomBehavior.transform, initialZoom);
 
   Promise.all([
-    fetch("/new-tests/full_nodes.json").then(res => res.json()),
-    fetch("/new-tests/full_lines.json").then(res => res.json())
+    fetch("/system/full_nodes.json").then(res => res.json()),
+    fetch("/system/full_lines.json").then(res => res.json())
   ]).then(([nodes, lines]) => {
     
     

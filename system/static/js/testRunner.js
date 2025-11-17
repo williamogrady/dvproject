@@ -1,4 +1,4 @@
-// /new-tests/static/js/testRunner.js
+// /system/static/js/testRunner.js
 // Build the runner UI + logic, with sequence selection if no plan is provided.
 
 (() => {

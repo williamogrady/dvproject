@@ -904,8 +904,8 @@ function costHaloColor(cost) {
 
    // === Fetch and Draw Map ===
 Promise.all([
-  fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json()),
+  fetch("/system/full_nodes.json").then(res => res.json()),
+  fetch("/system/full_lines.json").then(res => res.json()),
   fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
 ]).then(([nodes, lines, generatorData]) => {
   currentGenerators = generatorData;

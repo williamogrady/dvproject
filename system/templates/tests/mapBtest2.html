@@ -308,8 +308,8 @@ function updateGeneratorStrokes(){ /* optional highlight logic */ }
 
 // Bootstrap static map assets + live generators
 Promise.all([
-  fetch('/new-tests/full_nodes.json').then(r=>r.json()),
-  fetch('/new-tests/full_lines.json').then(r=>r.json()),
+  fetch('/system/full_nodes.json').then(r=>r.json()),
+  fetch('/system/full_lines.json').then(r=>r.json()),
   fetch('/api/generators').then(r=>r.json())
 ]).then(([nodes, lines, gens])=>{ staticNodes=nodes; staticLines=lines; currentGenerators=gens; drawAll(); renderOverview(currentGenerators, currentScenarioData||{}, currentLines); });
 </script>

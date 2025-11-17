@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>MapView Prototype (9/6)</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+    <link rel="icon" type="image/x-icon" href="/system/circle.ico">
   <link rel="stylesheet" href="/css/listview-core.css" /> <!-- Reuse listView styling -->
   <link rel="stylesheet" href="/css/mapview-core.css" /> 
  <style>
@@ -242,7 +242,7 @@ const mapCenterY = 1100;
 
 Promise.all([
   fetch("/api/scenario/E_final").then(res => res.json()),
-  fetch("/new-tests/full_nodes.json").then(res => res.json())
+  fetch("/system/full_nodes.json").then(res => res.json())
 ]).then(([scenarioData, nodeData]) => {
   currentGenerators = scenarioData.generators;
   currentScenarioId = "E_final";

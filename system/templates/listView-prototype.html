@@ -5,7 +5,7 @@
   <title>DV Project - ListView</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <link rel="icon" type="image/x-icon" href="/system/circle.ico">
   <link rel="stylesheet" href="/css/listview-core.css">
 </head>
 <body class="light-theme">
@@ -803,8 +803,8 @@ mapContainer.call(zoomBehavior.transform, initialZoom);
 
 // === Fetch and Draw Map ===
 Promise.all([
-  fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json())
+  fetch("/system/full_nodes.json").then(res => res.json()),
+  fetch("/system/full_lines.json").then(res => res.json())
 ]).then(([nodes, lines]) => {
   // Lines
   zoomGroup.selectAll("path.map-line")

@@ -1,0 +1,11 @@
+# Ignore everything
+/*
+
+# But don't ignore the .gitignore itself
+!.gitignore
+
+# Don't ignore directories (needed so negation works)
+!*/
+
+# Keep only this folder tracked:
+!system/

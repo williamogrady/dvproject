@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>DV Project - MapView B</title>
-  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <link rel="icon" type="image/x-icon" href="/system/circle.ico">
 <script src="https://d3js.org/d3.v7.min.js" defer></script>
-<link rel="stylesheet" href="/new-tests/css/mapView-coreB.css" />
+<link rel="stylesheet" href="/system/css/mapView-coreB.css" />
 <style>
   
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
@@ -1048,7 +1048,7 @@
 <button id="mv-legend-toggle" class="legend-btn mv-corner">Legend</button>
 <div id="mv-legend-panel" class="legend-box" hidden>
   <!-- Reuse the same asset the ListView uses to keep parity -->
-  <img src="/new-tests/legendmv.png" alt="Legend" />
+  <img src="/system/legendmv.png" alt="Legend" />
   <h3 class="overview-label">Click anywhere to collapse</h3>
 </div>
 
@@ -2641,8 +2641,8 @@ function costHaloColor(cost) {
 
    // === Fetch and Draw Map ===
 Promise.all([
-  fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json()),
+  fetch("/system/full_nodes.json").then(res => res.json()),
+  fetch("/system/full_lines.json").then(res => res.json()),
   fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
 ]).then(([nodes, lines, generatorData]) => {
   currentGenerators = generatorData;

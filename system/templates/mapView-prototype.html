@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>DV Project - MapView</title>
-  <link rel="icon" type="image/x-icon" href="/new-tests/circle.ico">
+  <link rel="icon" type="image/x-icon" href="/system/circle.ico">
   <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
@@ -973,8 +973,8 @@ function refreshChevrons(liveLines, currentMapMode) {
 
    // === Fetch and Draw Map ===
 Promise.all([
-  fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json()),
+  fetch("/system/full_nodes.json").then(res => res.json()),
+  fetch("/system/full_lines.json").then(res => res.json()),
   fetch("/api/generators").then(res => res.json())  // <-- ✅ Add this
 ]).then(([nodes, lines, generatorData]) => {
   currentGenerators = generatorData;

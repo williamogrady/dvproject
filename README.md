@@ -59,7 +59,7 @@ The system is used for **scenario-based experiments**, allowing users  to solve 
 ## 📂 Project Structure
 
 ```
-/new-tests/
+/system/
     app.py
     grid.py
     scenarios.py

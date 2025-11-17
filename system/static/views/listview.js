@@ -1483,8 +1483,8 @@ mapContainer.call(
 
 // 4. THEN fetch data and draw shapes
 Promise.all([
-  fetch("/new-tests/full_nodes.json").then(res => res.json()),
-  fetch("/new-tests/full_lines.json").then(res => res.json())
+  fetch("/system/full_nodes.json").then(res => res.json()),
+  fetch("/system/full_lines.json").then(res => res.json())
 ]).then(([nodes, lines]) => {
   // Lines
   zoomGroup.selectAll("path.map-line")
@@ -1536,10 +1536,10 @@ genGroups.append("text")
   .style("display", "none");   // shown when locked
 
 
-d3.selectAll(".map-gen-disabled").attr("href", "/new-tests/disabled.png");
+d3.selectAll(".map-gen-disabled").attr("href", "/system/disabled.png");
 
 genGroups.append("image")
-  .attr("class","map-gen-disabled").attr("href","/new-tests/disabled.png")
+  .attr("class","map-gen-disabled").attr("href","/system/disabled.png")
   .attr("x",-12).attr("y",-12).attr("width",24).attr("height",24).style("display","none");
 
 // Basic collapsed (“dice”) look first; updater will size/color

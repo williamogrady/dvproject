@@ -1,4 +1,4 @@
-// /new-tests/static/js/results.js
+// /system/static/js/results.js
 (() => {
   'use strict';
 
