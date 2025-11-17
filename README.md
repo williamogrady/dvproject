@@ -17,8 +17,7 @@ This project is an interactive system for visualizing and manipulating the IEEE-
 * **List View** — a structured, card-based interface which shows exact numbers. Has an interactive map element, but is not the focus.
 * **Map View** — a geographic-based visualization which extends the map element to be the only way to control the grid. 
 
-The system is used for **scenario-based experiments**, allowing users  to solve grid-control tasks while the system evaluates safety, efficiency, and performance metrics through a gameified scoring system.
-
+The system is used for solving **scenario tasks**, wbich require the user to meet power demand, prevent line overloads, and meeting cost and emissions' targets, allowing them to pursue a high score.
 ---
 
 ### Run the Server
