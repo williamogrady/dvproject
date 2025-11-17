@@ -21,6 +21,19 @@ The system is used for **scenario-based experiments**, allowing users  to solve 
 
 ---
 
+### Run the Server
+
+```bash
+cd system
+python app.py
+```
+
+### Open in Browser
+
+```
+http://localhost:5000
+```
+
 ## 🚀 Features
 
 ### Core Functionality
